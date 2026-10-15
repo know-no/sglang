@@ -1,0 +1,41 @@
+SGLang source course evidence snapshot
+======================================
+
+Repository: SGLang working tree (local absolute path intentionally omitted)
+Captured on: 2026-08-26 (Asia/Shanghai)
+HEAD: f01a0c7f97ec50d3800b3cee8520d86235562720
+SRT tracked-diff SHA-256: 0a4f3ee0b90eb73c1f1892ea94481e27832315c442c3565a881b74669dfad78d
+
+The working tree is intentionally dirty and contains user-owned changes. Course
+claims are checked against the working-tree files, not an assumed clean HEAD.
+The tracked SRT files differing from HEAD at capture time are:
+
+- python/sglang/srt/managers/overlap_utils.py
+- python/sglang/srt/managers/schedule_batch.py
+- python/sglang/srt/managers/scheduler.py
+- python/sglang/srt/model_executor/forward_batch_info.py
+- python/sglang/srt/speculative/dspark_components/dspark_draft.py
+- python/sglang/srt/speculative/dspark_components/dspark_verify.py
+- python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py
+
+Evidence levels used by the course
+----------------------------------
+
+SOURCE_CURRENT
+    Directly checked against the source snapshot above.
+
+STATIC_VERIFIED
+    Checked by static tooling, generated-link validation, or source-anchor
+    validation. It is not GPU or serving runtime evidence.
+
+DESIGN_INFERENCE
+    A reasoned design explanation supported by nearby source, but not directly
+    asserted or measured by the code path.
+
+RUNTIME_UNVALIDATED
+    The path exists in source, but CUDA, RDMA, collective, hardware-specific,
+    or end-to-end behavior was not executed as part of this course build.
+
+EXTERNAL_REFERENCE
+    General background or an external specification; it is never substituted
+    for current-checkout source evidence.

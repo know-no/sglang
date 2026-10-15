@@ -1,0 +1,30 @@
+/* Companion prose uses the course shell; only content-specific rules live here. */
+.sf-note-meta { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:10px; }
+.sf-note-meta .sf-hero__eyebrow { margin:0; }
+.sf-note-meta .sf-hero__actions { margin:0; gap:16px; font-size:13px; }
+.sf-note-article { max-width:100%; min-width:0; overflow-wrap:anywhere; }
+.sf-note-article h1 { margin:20px 0 26px; font-size:30px; line-height:1.25; letter-spacing:-.025em; }
+.sf-note-article h2 { margin-top:42px; }
+.sf-note-article img { max-width:100%; height:auto; }
+.sf-note-article [id] { scroll-margin-top:24px; }
+.sf-note-article pre { max-width:100%; overflow:auto; }
+.sf-note-article pre code { white-space:pre; overflow-wrap:normal; word-break:normal; padding:0; background:transparent; }
+.sf-note-article .codehilite { line-height:1.6; tab-size:4; }
+.sf-note-article .table-scroll { width:100%; overflow-x:auto; margin:20px 0; border:1px solid var(--border); border-radius:8px; background:var(--panel); }
+.sf-note-article table { width:100%; margin:0; border-collapse:collapse; }
+.sf-note-article th, .sf-note-article td { vertical-align:top; min-width:125px; padding:12px 14px; text-align:left; }
+.sf-note-article .task-item input { margin-right:8px; }
+.sf-note-article .note-diagram { margin:26px 0; padding:16px; border:1px solid var(--border); border-radius:8px; background:var(--panel); max-width:100%; }
+.sf-note-article .diagram-canvas { overflow:auto; max-width:100%; }
+.sf-note-article .mermaid { white-space:pre-wrap; }
+.sf-note-article .mermaid svg { display:block; margin:auto; max-width:100%; height:auto; }
+.sf-note-article .note-diagram figcaption { display:flex; align-items:flex-start; gap:16px; margin-top:14px; font-size:12px; }
+.sf-note-article .note-diagram details { flex:1; min-width:0; }
+.sf-note-article .note-diagram summary { cursor:pointer; color:var(--muted); }
+.sf-note-article .note-diagram details pre { font-size:12px; }
+.sf-note-article .diagram-error, .sf-note-article .note-math[data-error] { color:var(--red); }
+.sf-note-article .note-math[data-display=true] { max-width:100%; overflow-x:auto; overflow-y:hidden; padding:8px 0; }
+.sf-note-article .note-math .katex { font-size:1.08em; }
+.sf-note-article .note-math .katex-display { margin:.5em 0; }
+.sf-note-article .note-math .katex-display>.katex { text-align:left; }
+@media print { .sf-note-meta { display:none; } .sf-note-article { max-width:none; } }

@@ -143,7 +143,7 @@ def get_last_loc_torch(
     )
 
 
-def alloc_token_slots(
+def alloc_token_slots( # 空间不足时也有类似分工：当前 alloc_token_slots() 会先尝试从前缀缓存逐出可释放内容，再调用 allocator.alloc()；仍然不足才报错。
     tree_cache: BasePrefixCache,
     num_tokens: int,
 ):

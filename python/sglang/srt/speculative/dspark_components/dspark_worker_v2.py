@@ -688,8 +688,8 @@ class DSparkWorkerV2(BaseSpecWorker):
         return GenerationBatchResult(
             logits_output=logits_output,
             next_token_ids=accept.out_tokens.reshape(-1),
-            accept_lens=accept.commit_lens,
-            block_accept_lens=accept.commit_lens + accept.cap_trim_lens,
+            accept_lens=accept.commit_lens,  # [bs] 本轮实际commit的token数(=correct_len+1), 用于推进kv_committed_len
+            block_accept_lens=accept.commit_lens + accept.cap_trim_lens,  # [bs] 草稿模型本轮潜在猜对数(含ragged截断丢弃部分), 纯metrics不控制写入
             cap_lens=(
                 layout.verify_lens.to(torch.int32) if layout is not None else None
             ),

@@ -1,0 +1,192 @@
+/* SpecForge-style mechanism labs: flat, dense, source-first, with no empty JS shell. */
+.step-lab,
+.source-microscope {
+  margin: 18px 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.step-lab__head,
+.source-microscope__head {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--panel-2);
+}
+
+.step-lab__head h3,
+.step-lab__head h4,
+.source-microscope__head h3,
+.source-microscope__head h4 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.step-lab__head p,
+.source-microscope__head p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12.8px;
+}
+
+.step-lab__tabs,
+.source-microscope__tabs,
+.variant-controls {
+  display: flex;
+  gap: 6px;
+  max-width: 100%;
+  padding: 9px 11px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--code-bg);
+  scrollbar-width: thin;
+}
+
+.step-lab__tabs .button,
+.source-microscope__tabs .button,
+.variant-controls .button {
+  min-width: max-content;
+  min-height: 28px;
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  font: 11.5px var(--font-mono);
+}
+
+.step-lab__tabs .button[aria-selected="true"],
+.source-microscope__tabs .button[aria-selected="true"],
+.variant-controls .button[aria-pressed="true"] {
+  border-color: var(--purple);
+  color: var(--text);
+  background: color-mix(in srgb, var(--purple) 12%, var(--panel));
+}
+
+.step-lab__stage,
+.source-microscope__stage { padding: 14px 16px; }
+.step-lab__panel,
+.source-microscope__panel { min-width: 0; overflow-x: auto; padding: 2px 0; scrollbar-width: thin; }
+
+[data-step-lab][data-enhanced="true"] [data-lab-panel][hidden],
+[data-source-microscope][data-enhanced="true"] [data-source-panel][hidden] { display: none !important; }
+
+[data-step-lab]:not([data-enhanced="true"]) [data-lab-panel] + [data-lab-panel],
+[data-source-microscope]:not([data-enhanced="true"]) [data-source-panel] + [data-source-panel] {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-soft);
+}
+
+html:not(.js) :where(.step-lab__tabs, .source-microscope__tabs, .step-lab__toolbar, .source-microscope__toolbar, .variant-controls) { display: none !important; }
+
+.step-lab__toolbar,
+.source-microscope__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 13px 12px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.step-lab__actions,
+.source-microscope__actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.step-lab__status,
+.source-microscope__status { color: var(--orange); font: 11.5px var(--font-mono); }
+
+.source-microscope__lenses {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0 0 13px;
+  border: 1px solid var(--border);
+  background: var(--border);
+}
+
+.source-lens {
+  --lens-tone: var(--blue);
+  min-width: 0;
+  padding: 11px 12px;
+  border-top: 3px solid var(--lens-tone);
+  background: var(--panel);
+}
+.source-lens[data-lens="what"] { --lens-tone: var(--blue); }
+.source-lens[data-lens="how"] { --lens-tone: var(--purple); }
+.source-lens[data-lens="why"] { --lens-tone: var(--green); }
+.source-lens[data-lens="failure"] { --lens-tone: var(--red); }
+.source-lens b { display: block; margin-bottom: 5px; color: var(--lens-tone); font: 700 10.5px var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; }
+.source-lens p { margin: 0; color: var(--text-soft); font-size: 12.4px; }
+.source-block { overflow: hidden; border: 1px solid var(--border); border-radius: 7px; }
+.source-block__head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 5px 12px; padding: 7px 10px; border-bottom: 1px solid var(--border-soft); color: var(--muted); background: var(--panel-2); font: 10.8px var(--font-mono); }
+.source-block pre { max-height: 430px; margin: 0; border: 0; border-radius: 0; }
+
+.state-transition {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 9px;
+  align-items: stretch;
+  margin: 10px 0;
+}
+.state-transition__state { min-width: 0; padding: 11px 12px; border: 1px solid color-mix(in srgb, var(--blue) 45%, var(--border)); border-radius: 6px; color: var(--text-soft); background: color-mix(in srgb, var(--blue) 7%, var(--panel)); font-size: 12.8px; }
+.state-transition__state:last-child { border-color: color-mix(in srgb, var(--green) 45%, var(--border)); background: color-mix(in srgb, var(--green) 7%, var(--panel)); }
+.state-transition__arrow { display: grid; place-items: center; color: var(--orange); font: 700 11.5px var(--font-mono); text-align: center; }
+
+.variant-group { margin: 0; }
+[data-variants] { transition: opacity 140ms ease, filter 140ms ease; }
+[data-variant-group][data-enhanced="true"] [data-variants][data-active="false"] { opacity: 0.24; filter: saturate(0.2); }
+[data-variant-group][data-enhanced="true"] [data-variants][data-active="true"] { opacity: 1; }
+.variant-note { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+
+.tensor-canvas,
+.state-canvas { min-width: 0; padding: 11px; overflow-x: auto; border: 1px solid var(--border-soft); border-radius: 7px; background: var(--code-bg); scrollbar-width: thin; }
+.tensor-grid,
+.state-grid { display: grid; grid-template-columns: repeat(var(--columns, 4), minmax(4.7rem, 1fr)); gap: 6px; min-width: var(--grid-min-width, 31rem); }
+.tensor-cell,
+.state-cell {
+  --cell-tone: var(--blue);
+  min-width: 0;
+  padding: 9px 8px;
+  border: 1px solid color-mix(in srgb, var(--cell-tone) 35%, var(--border));
+  border-top: 3px solid var(--cell-tone);
+  border-radius: 5px;
+  color: var(--text-soft);
+  background: color-mix(in srgb, var(--cell-tone) 7%, var(--panel));
+  font: 11.5px/1.55 var(--font-mono);
+  text-align: center;
+}
+.tensor-cell[data-kind="main"], .state-cell[data-kind="main"] { --cell-tone: var(--green); }
+.tensor-cell[data-kind="guard"], .state-cell[data-kind="guard"] { --cell-tone: var(--orange); border-top-style: dashed; }
+.tensor-cell[data-kind="async"], .state-cell[data-kind="async"] { --cell-tone: var(--purple); border-top-style: dashed; }
+.tensor-cell[data-kind="failure"], .state-cell[data-kind="failure"] { --cell-tone: var(--red); border-top-style: double; }
+.tensor-cell[data-kind="off"], .state-cell[data-kind="off"] { --cell-tone: var(--muted); border-top-style: dotted; opacity: 0.72; }
+
+.lane-timeline {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.75fr) repeat(var(--phases, 5), minmax(8rem, 1fr));
+  gap: 1px;
+  min-width: 52rem;
+  border: 1px solid var(--border);
+  background: var(--border);
+}
+.lane-timeline > * { min-width: 0; padding: 9px; color: var(--text-soft); background: var(--panel); font-size: 11.5px; }
+.lane-timeline__head, .lane-timeline__name { color: var(--text); background: var(--panel-2) !important; font: 700 11px var(--font-mono); }
+.lane-timeline [data-kind="main"] { background: color-mix(in srgb, var(--green) 8%, var(--panel)); }
+.lane-timeline [data-kind="guard"] { background: color-mix(in srgb, var(--orange) 8%, var(--panel)); }
+.lane-timeline [data-kind="async"] { background: color-mix(in srgb, var(--purple) 8%, var(--panel)); }
+.lane-timeline [data-kind="failure"] { background: color-mix(in srgb, var(--red) 8%, var(--panel)); }
+
+.lab-field { display: grid; gap: 6px; min-width: min(100%, 16rem); }
+.lab-field label { color: var(--text-soft); font-size: 12.5px; font-weight: 650; }
+.lab-field input[type="range"] { width: 100%; accent-color: var(--blue); }
+.lab-field output { color: var(--orange); font: 700 12px var(--font-mono); }
+
+@media (max-width: 62rem) {
+  .source-microscope__lenses { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 46rem) {
+  .step-lab__stage, .source-microscope__stage, .step-lab__head, .source-microscope__head { padding-inline: 12px; }
+  .source-microscope__lenses { grid-template-columns: minmax(0, 1fr); }
+  .state-transition { grid-template-columns: minmax(0, 1fr); }
+  .state-transition__arrow { min-height: 22px; transform: rotate(90deg); }
+}

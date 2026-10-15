@@ -1,0 +1,1275 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Draft proposal → Target verify → accept → KV commit">
+  <link rel="icon" href="data:,">
+  <title>SGLang dFlash / dSpark 启动参数与迁移参考 · 投机解码专题</title>
+  <link rel="stylesheet" href="course/assets/css/specforge-course.css">
+  <link rel="stylesheet" href="course/assets/css/labs.css">
+  <link rel="stylesheet" href="course/assets/css/print.css">
+  
+  <!-- Generated from notes/speculative/sglang-dflash-dspark-startup-args-and-migration.md by notes/speculative/course/build.py. -->
+  <link rel="stylesheet" href="course/assets/notes/navigation.css">
+  <link rel="stylesheet" href="course/assets/notes/syntax.css">
+  
+
+</head>
+<body class="sf-course-page sf-note-page" data-root-url="visualizations/sglang-course-v2/index.html"
+      data-nav-open="false" data-nav-pinned="false"
+      data-page-id="note-sglang-dflash-dspark-startup-args-and-migration" data-chapter-id="note-sglang-dflash-dspark-startup-args-and-migration"
+      data-section-id="note"
+      
+      style="--page-accent: var(--domain-speculative, var(--domain-entry))">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+
+  <div class="sf-shell">
+    <div class="sf-navigation">
+      <nav class="sf-rail" aria-label="课程工具">
+        <button class="sf-rail__button sf-rail__menu" type="button" data-nav-toggle aria-controls="course-navigation" aria-expanded="false">
+          <span aria-hidden="true">☰</span><span class="sr-only">打开课程目录</span>
+        </button>
+        <a class="sf-rail__brand" href="visualizations/sglang-course-v2/index.html" aria-label="回到 SGLang 课程地图">S</a>
+        <div class="sf-rail__spacer"></div>
+        <button class="sf-rail__button" type="button" data-search-open aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span class="sr-only">搜索课程</span></button>
+        <button class="sf-rail__button" type="button" data-theme-toggle><span aria-hidden="true">◐</span><span class="sr-only" data-theme-label>深色</span></button>
+      </nav>
+
+      <aside class="sf-drawer" id="course-navigation" aria-label="全部课程目录">
+        <header class="sf-drawer__head">
+          <div><p class="sf-drawer__eyebrow">SGLang source course</p><a href="visualizations/sglang-course-v2/index.html">投机解码专题</a></div>
+          <button class="sf-icon-button" type="button" data-nav-close aria-label="关闭课程目录">×</button>
+        </header>
+        <div class="sf-drawer__tools">
+          <button class="sf-button sf-button--quiet" type="button" data-search-open><span aria-hidden="true">⌕</span> 搜索</button>
+          <button class="sf-button sf-button--quiet" type="button" data-theme-toggle><span aria-hidden="true">◐</span> <span data-theme-label>深色</span></button>
+          <button class="sf-button sf-button--quiet sf-drawer__pin" type="button" data-nav-pin aria-pressed="false"><span aria-hidden="true">⌖</span> <span data-nav-pin-label>固定目录</span></button>
+        </div>
+        <p class="sf-drawer__context"><b>深入源码笔记</b><span>SGLang dFlash / dSpark 启动参数与迁移参考</span></p>
+        <nav class="sf-drawer__tree" aria-label="全部章节"><div class="sf-course-tree">
+    
+      <details class="sf-course-tree__section">
+        <summary><span class="sf-course-tree__number">01</span><span>Speculative Decoding 全家族</span></summary>
+        <ul class="sf-course-tree__children sf-course-tree__children--section">
+          <li class="sf-course-tree__overview"><a href="visualizations/sglang-course-v2/index.html" data-course-link data-chapter-id="speculative"
+     data-search-title="Speculative Decoding 全家族" data-search-section="Speculative Decoding 全家族"
+     
+     
+     >Speculative Decoding 全家族</a></li>
+          <li><a href="visualizations/sglang-course-v2/common-contract.html" data-course-link data-chapter-id="spec-common-contract"
+     data-search-title="Draft 只提案：共同 worker 合同与四个长度" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。"
+     
+     >Draft 只提案：共同 worker 合同与四个长度</a></li><li><a href="visualizations/sglang-course-v2/eagle-tree.html" data-course-link data-chapter-id="eagle-tree"
+     data-search-title="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。"
+     
+     >EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a></li><li><a href="visualizations/sglang-course-v2/dflash-block.html" data-course-link data-chapter-id="dflash-block"
+     data-search-title="DFlash fixed-block draft、hidden injection 与 compact cache" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。"
+     
+     >DFlash fixed-block draft、hidden injection 与 compact cache</a></li><li><a href="visualizations/sglang-course-v2/dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"
+     data-search-title="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。"
+     
+     >DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a></li><li><a href="visualizations/sglang-course-v2/dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"
+     data-search-title="DSpark confidence、history、per-step budget 与 ragged layout" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。"
+     
+     >DSpark confidence、history、per-step budget 与 ragged layout</a></li><li><a href="visualizations/sglang-course-v2/dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"
+     data-search-title="DSpark Target verify、accept/finalize 与 KV commit/reclaim" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。"
+     
+     >DSpark Target verify、accept/finalize 与 KV commit/reclaim</a></li><li><a href="visualizations/sglang-course-v2/dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"
+     data-search-title="DSpark folded fast path、capture/replay 与 overlap" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。"
+     
+     >DSpark folded fast path、capture/replay 与 overlap</a></li><li><a href="visualizations/sglang-course-v2/boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"
+     data-search-title="Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。"
+     
+     >Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a></li>
+          
+        </ul>
+      </details>
+    
+  </div></nav>
+      </aside>
+    </div>
+
+    <button class="sf-nav-backdrop" type="button" data-nav-backdrop aria-label="关闭课程目录"></button>
+
+    <div class="sf-main-frame">
+      <main class="sf-main sf-main--wide" id="main-content" tabindex="-1">
+        <div class="sf-page-grid">
+          <div class="sf-content-column">
+            
+              <nav aria-label="面包屑"><ol class="sf-breadcrumbs">
+                <li><a href="visualizations/sglang-course-v2/index.html">投机解码专题</a></li><li><a href="../index.html">SGLang 全景图</a></li><li><span aria-current="page">SGLang dFlash / dSpark 启动参数与迁移参考</span></li>
+              </ol></nav>
+            
+
+            
+  <header class="sf-note-meta">
+    <p class="sf-hero__eyebrow">投机解码 · 深入源码与专题笔记</p>
+    <nav class="sf-hero__actions" aria-label="笔记操作"><a href="index.html">主题阅读顺序</a><a href="sglang-dflash-dspark-startup-args-and-migration.md" download>下载 Markdown 源文</a></nav>
+  </header>
+
+
+            <nav class="sf-hero__actions" aria-label="关联阅读入口" data-repository-companion><a href="../index.html">SGLang 全景图</a></nav>
+            
+
+            
+
+            
+            <details class="sf-mobile-toc"><summary>本页目录</summary><ol><li><a href="#1-先记住的核心结论">1. 先记住的核心结论</a></li><li><a href="#2-关键源码地图">2. 关键源码地图</a></li><li><a href="#3-参数在启动流程中的位置">3. 参数在启动流程中的位置</a></li><li><a href="#4-通用-speculative-参数">4. 通用 speculative 参数</a></li><li><a href="#5-dflash-参数处理">5. dFlash 参数处理</a></li><li><a href="#6-dspark-参数处理">6. dSpark 参数处理</a></li><li><a href="#7-dspark-为什么是-gamma--1">7. dSpark 为什么是 gamma + 1</a></li><li><a href="#8-并行设备与功能兼容性">8. 并行、设备与功能兼容性</a></li><li><a href="#9-启动时的共同副作用和全局限制">9. 启动时的共同副作用和全局限制</a></li><li><a href="#10-dspark-ragged-verify-与高级调优">10. dSpark ragged verify 与高级调优</a></li><li><a href="#11-最小启动示例">11. 最小启动示例</a></li><li><a href="#12-迁移时应按模块拆分">12. 迁移时应按模块拆分</a></li><li><a href="#13-迁移检查清单">13. 迁移检查清单</a></li><li><a href="#14-后续让-codex-回顾时的建议提示词">14. 后续让 Codex 回顾时的建议提示词</a></li></ol></details>
+
+            <article class="sf-article sf-note-article" data-toc-source><h1 id="sglang-dflash--dspark-启动参数与迁移参考">SGLang dFlash / dSpark 启动参数与迁移参考</h1>
+<blockquote>
+<p>用途：记录当前 SGLang 工作区中 dFlash、dSpark 的启动参数解析、默认值归一化、
+兼容性检查和运行时消费关系，供后续功能迁移及 Codex 回顾代码时使用。</p>
+<p>参数主体代码快照：2026-07-29。dSpark sampling 提示与运行时文档导航于 2026-08-09
+更新；相关实现仍在快速演进，迁移前应按本文末尾的“回顾检查清单”重新核对当前源码。</p>
+</blockquote>
+<h2 id="1-先记住的核心结论">1. 先记住的核心结论</h2>
+<p>dFlash 和 dSpark 都属于 speculative decoding（投机解码），共用
+<code>ServerArgs</code> 中的通用 <code>speculative_*</code> 参数，但在
+<code>handle_speculative_decoding()</code> 中进入不同的算法处理器：</p>
+<pre class="codehilite"><code class="language-text">DFLASH -&gt; _handle_dflash()
+DSPARK -&gt; _handle_dspark()
+</code></pre>
+<p>最重要的参数关系：</p>
+<pre class="codehilite"><code class="language-text">DFLASH:
+    speculative_num_draft_tokens = dflash block_size
+
+DSPARK:
+    gamma = 实际提出的 draft token 数
+    speculative_num_draft_tokens = verify window = gamma + 1
+</code></pre>
+<p>对 dSpark 来说，<code>gamma + 1</code> 不是多验证一个 anchor 候选，而是 Target forward
+需要输入：</p>
+<pre class="codehilite"><code class="language-text">[anchor] + [gamma 个 draft token]
+</code></pre>
+<p>其中 anchor 的 logits 用来验证第一个 draft token，最后一个 draft token 的 logits
+用来生成 bonus token。</p>
+<h2 id="2-关键源码地图">2. 关键源码地图</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>内容</th>
+<th>文件 / 符号</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>参数 dataclass 定义</td>
+<td><code>python/sglang/srt/server_args.py::ServerArgs</code></td>
+</tr>
+<tr>
+<td><code>__post_init__</code> 总调度</td>
+<td><code>python/sglang/srt/server_args.py::ServerArgs.__post_init__</code></td>
+</tr>
+<tr>
+<td>speculative 参数入口</td>
+<td><code>python/sglang/srt/arg_groups/speculative_hook.py::handle_speculative_decoding</code></td>
+</tr>
+<tr>
+<td>dFlash 参数处理</td>
+<td><code>python/sglang/srt/arg_groups/speculative_hook.py::_handle_dflash</code></td>
+</tr>
+<tr>
+<td>dSpark 参数处理</td>
+<td><code>python/sglang/srt/arg_groups/speculative_hook.py::_handle_dspark</code></td>
+</tr>
+<tr>
+<td>dFlash draft attention backend</td>
+<td><code>python/sglang/srt/arg_groups/speculative_hook.py::_resolve_dflash_draft_attention_backend</code></td>
+</tr>
+<tr>
+<td>算法枚举及 worker 分发</td>
+<td><code>python/sglang/srt/speculative/spec_info.py::SpeculativeAlgorithm</code></td>
+</tr>
+<tr>
+<td>dFlash worker</td>
+<td><code>python/sglang/srt/speculative/dflash_worker_v2.py::DFlashWorkerV2</code></td>
+</tr>
+<tr>
+<td>dSpark worker</td>
+<td><code>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py::DSparkWorkerV2</code></td>
+</tr>
+<tr>
+<td>dSpark checkpoint 配置</td>
+<td><code>python/sglang/srt/speculative/dspark_components/dspark_config.py</code></td>
+</tr>
+<tr>
+<td>dSpark verify 执行</td>
+<td><code>python/sglang/srt/speculative/dspark_components/dspark_verify.py</code></td>
+</tr>
+<tr>
+<td>dSpark verify 窗口 kernel</td>
+<td><code>python/sglang/kernels/ops/speculative/dspark/dspark_verify_window.py</code></td>
+</tr>
+<tr>
+<td>ragged verify 模式</td>
+<td><code>python/sglang/srt/speculative/ragged_verify.py</code></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="3-参数在启动流程中的位置">3. 参数在启动流程中的位置</h2>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart TD
+    A[&quot;CLI 参数&quot;] --&gt; B[&quot;argparse.Namespace&quot;]
+    B --&gt; C[&quot;ServerArgs(**vars(namespace))&quot;]
+    C --&gt; D[&quot;ServerArgs.__post_init__()&quot;]
+
+    D --&gt; E[&quot;模型路径、设备、默认值&quot;]
+    E --&gt; F[&quot;CUDA Graph / Attention backend&quot;]
+    F --&gt; G[&quot;DP / CP / MoE / PP&quot;]
+    G --&gt; H[&quot;handle_speculative_decoding()&quot;]
+
+    H --&gt; I[&quot;draft revision 默认值&quot;]
+    I --&gt; J[&quot;算法名转大写、处理别名&quot;]
+    J --&gt; K[&quot;SpeculativeAlgorithm.from_string()&quot;]
+
+    K --&gt;|DFLASH| L[&quot;_handle_dflash()&quot;]
+    K --&gt;|DSPARK| M[&quot;_handle_dspark()&quot;]
+
+    L --&gt; N[&quot;算法默认值与兼容性检查&quot;]
+    M --&gt; N
+    N --&gt; O[&quot;materialize_declarations()&quot;]
+    O --&gt; P[&quot;check_server_args()&quot;]
+    P --&gt; Q[&quot;Scheduler 创建对应 V2 worker&quot;]
+">flowchart TD
+    A[&quot;CLI 参数&quot;] --&gt; B[&quot;argparse.Namespace&quot;]
+    B --&gt; C[&quot;ServerArgs(**vars(namespace))&quot;]
+    C --&gt; D[&quot;ServerArgs.__post_init__()&quot;]
+
+    D --&gt; E[&quot;模型路径、设备、默认值&quot;]
+    E --&gt; F[&quot;CUDA Graph / Attention backend&quot;]
+    F --&gt; G[&quot;DP / CP / MoE / PP&quot;]
+    G --&gt; H[&quot;handle_speculative_decoding()&quot;]
+
+    H --&gt; I[&quot;draft revision 默认值&quot;]
+    I --&gt; J[&quot;算法名转大写、处理别名&quot;]
+    J --&gt; K[&quot;SpeculativeAlgorithm.from_string()&quot;]
+
+    K --&gt;|DFLASH| L[&quot;_handle_dflash()&quot;]
+    K --&gt;|DSPARK| M[&quot;_handle_dspark()&quot;]
+
+    L --&gt; N[&quot;算法默认值与兼容性检查&quot;]
+    M --&gt; N
+    N --&gt; O[&quot;materialize_declarations()&quot;]
+    O --&gt; P[&quot;check_server_args()&quot;]
+    P --&gt; Q[&quot;Scheduler 创建对应 V2 worker&quot;]
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart TD
+    A[&quot;CLI 参数&quot;] --&gt; B[&quot;argparse.Namespace&quot;]
+    B --&gt; C[&quot;ServerArgs(**vars(namespace))&quot;]
+    C --&gt; D[&quot;ServerArgs.__post_init__()&quot;]
+
+    D --&gt; E[&quot;模型路径、设备、默认值&quot;]
+    E --&gt; F[&quot;CUDA Graph / Attention backend&quot;]
+    F --&gt; G[&quot;DP / CP / MoE / PP&quot;]
+    G --&gt; H[&quot;handle_speculative_decoding()&quot;]
+
+    H --&gt; I[&quot;draft revision 默认值&quot;]
+    I --&gt; J[&quot;算法名转大写、处理别名&quot;]
+    J --&gt; K[&quot;SpeculativeAlgorithm.from_string()&quot;]
+
+    K --&gt;|DFLASH| L[&quot;_handle_dflash()&quot;]
+    K --&gt;|DSPARK| M[&quot;_handle_dspark()&quot;]
+
+    L --&gt; N[&quot;算法默认值与兼容性检查&quot;]
+    M --&gt; N
+    N --&gt; O[&quot;materialize_declarations()&quot;]
+    O --&gt; P[&quot;check_server_args()&quot;]
+    P --&gt; Q[&quot;Scheduler 创建对应 V2 worker&quot;]
+</code></pre></details></figcaption></figure>
+<h3 id="31-为什么-speculative-处理放得比较靠后">3.1 为什么 speculative 处理放得比较靠后</h3>
+<p>算法处理器会读取已经处理过的配置：</p>
+<ul>
+<li><code>device</code></li>
+<li><code>attention_backend</code></li>
+<li><code>enable_dp_attention</code></li>
+<li><code>enable_dp_lm_head</code></li>
+<li><code>moe_a2a_backend</code></li>
+<li><code>attn_cp_size</code></li>
+<li><code>pp_size</code></li>
+</ul>
+<p>因此迁移时不能只移动 <code>_handle_dflash()</code> / <code>_handle_dspark()</code> 的函数体，还必须保持
+它们与前置 handler 的顺序关系。</p>
+<h3 id="32-resolve-at-end-注意事项">3.2 resolve-at-end 注意事项</h3>
+<p><code>ServerArgs.__post_init__()</code> 中一部分 model override 不会立即写回字段，而是先放入
+declaration stash，最后由 <code>materialize_declarations()</code> 统一落盘。</p>
+<p>dFlash 检查 DP attention 时使用：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">resolved_view</span><span class="p">(</span><span class="n">server_args</span><span class="p">)</span><span class="o">.</span><span class="n">enable_dp_attention</span>
+</code></pre>
+<p>这是为了读取当前解析阶段的“有效值”，而不仅是 dataclass 字段的原始值。</p>
+<p>迁移参数处理逻辑时需要区分：</p>
+<pre class="codehilite"><code class="language-text">CLI 原始值
+    ↓
+解析过程中的 resolved view
+    ↓
+materialize_declarations()
+    ↓
+最终 ServerArgs 字段
+</code></pre>
+<h2 id="4-通用-speculative-参数">4. 通用 speculative 参数</h2>
+<h3 id="41-核心启动参数">4.1 核心启动参数</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>CLI 参数</th>
+<th>字段</th>
+<th style="text-align:right">dFlash</th>
+<th style="text-align:right">dSpark</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--speculative-algorithm</code></td>
+<td><code>speculative_algorithm</code></td>
+<td style="text-align:right">必需</td>
+<td style="text-align:right">必需</td>
+<td>分别设为 <code>DFLASH</code> / <code>DSPARK</code></td>
+</tr>
+<tr>
+<td><code>--speculative-draft-model-path</code></td>
+<td><code>speculative_draft_model_path</code></td>
+<td style="text-align:right">必需</td>
+<td style="text-align:right">通常必需</td>
+<td>dSpark checkpoint 内置 draft 权重时可自动使用 target path</td>
+</tr>
+<tr>
+<td><code>--speculative-draft-model-revision</code></td>
+<td><code>speculative_draft_model_revision</code></td>
+<td style="text-align:right">可选</td>
+<td style="text-align:right">可选</td>
+<td>有独立 draft path 且未设置时通常补为 <code>main</code></td>
+</tr>
+<tr>
+<td><code>--speculative-num-draft-tokens</code></td>
+<td><code>speculative_num_draft_tokens</code></td>
+<td style="text-align:right">核心</td>
+<td style="text-align:right">核心</td>
+<td>两种算法的含义不同，见后文</td>
+</tr>
+<tr>
+<td><code>--speculative-num-steps</code></td>
+<td><code>speculative_num_steps</code></td>
+<td style="text-align:right">强制为 1</td>
+<td style="text-align:right">强制为 1</td>
+<td>只为通用 Scheduler/KV 计算保留安全值</td>
+</tr>
+<tr>
+<td><code>--speculative-eagle-topk</code></td>
+<td><code>speculative_eagle_topk</code></td>
+<td style="text-align:right">强制为 1</td>
+<td style="text-align:right">强制为 1</td>
+<td>两者不使用 EAGLE 树状 top-k</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="42-draft-模型加载参数">4.2 draft 模型加载参数</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>CLI 参数</th>
+<th>字段</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--speculative-draft-load-format</code></td>
+<td><code>speculative_draft_load_format</code></td>
+<td>单独指定 draft 权重加载格式</td>
+</tr>
+<tr>
+<td><code>--speculative-draft-model-quantization</code></td>
+<td><code>speculative_draft_model_quantization</code></td>
+<td>单独指定 draft 量化方式</td>
+</tr>
+<tr>
+<td><code>--trust-remote-code</code></td>
+<td><code>trust_remote_code</code></td>
+<td>加载 draft HF config/model 时是否允许远程代码</td>
+</tr>
+<tr>
+<td><code>--json-model-override-args</code></td>
+<td><code>json_model_override_args</code></td>
+<td>覆盖 target/draft 的 HF config</td>
+</tr>
+<tr>
+<td><code>--model-config-parser</code></td>
+<td><code>model_config_parser</code></td>
+<td>影响部分 draft config 的读取方式</td>
+</tr>
+</tbody>
+</table></div>
+<p>如果没有单独设置 draft quantization：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">speculative_draft_model_quantization</span> <span class="o">=</span> <span class="n">quantization</span>
+</code></pre>
+<p>即 draft 默认继承 target 模型的量化方式。显式传入 <code>unquant</code> 会归一化为 <code>None</code>，
+表示不要量化 draft。</p>
+<h3 id="43-attention-与采样相关参数">4.3 attention 与采样相关参数</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>CLI 参数</th>
+<th>作用</th>
+<th>迁移提示</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--speculative-attention-mode</code></td>
+<td>speculative target verify / draft extend 选择 <code>prefill</code> 或 <code>decode</code> 路径</td>
+<td>属于通用 speculative attention 行为</td>
+</tr>
+<tr>
+<td><code>--speculative-draft-attention-backend</code></td>
+<td>单独覆盖 draft attention backend</td>
+<td>dFlash 启动处理器会进一步检查和回退</td>
+</tr>
+<tr>
+<td><code>--speculative-accept-threshold-single</code></td>
+<td>单 token 接受阈值</td>
+<td>dFlash 验证 logits 调整会读取</td>
+</tr>
+<tr>
+<td><code>--speculative-accept-threshold-acc</code></td>
+<td>累积接受阈值</td>
+<td>dFlash 验证 logits 调整会读取</td>
+</tr>
+<tr>
+<td><code>--speculative-use-rejection-sampling</code></td>
+<td>通用/EAGLE rejection-sampling 开关</td>
+<td>不是 dSpark sampling 的启停开关；dSpark 按请求 <code>greedy_mask</code>，使用保存的实际 proposal 分布进入自己的 accept/reject 路径</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="5-dflash-参数处理">5. dFlash 参数处理</h2>
+<h3 id="51-dflash-专属参数">5.1 dFlash 专属参数</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>CLI 参数</th>
+<th>字段</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--speculative-dflash-block-size</code></td>
+<td><code>speculative_dflash_block_size</code></td>
+<td>dFlash block/verify window 长度；是 <code>speculative_num_draft_tokens</code> 的语义化别名</td>
+</tr>
+<tr>
+<td><code>--speculative-draft-window-size</code></td>
+<td><code>speculative_draft_window_size</code></td>
+<td>draft KV cache 保留的最近上下文窗口</td>
+</tr>
+<tr>
+<td><code>--speculative-draft-attention-backend</code></td>
+<td><code>speculative_draft_attention_backend</code></td>
+<td>draft worker 使用的 attention backend</td>
+</tr>
+</tbody>
+</table></div>
+<p>旧参数 <code>--speculative-dflash-draft-window-size</code> 是
+<code>--speculative-draft-window-size</code> 的 deprecated alias。</p>
+<h3 id="52-_handle_dflash-完整主流程">5.2 <code>_handle_dflash()</code> 完整主流程</h3>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart TD
+    A[&quot;_handle_dflash&quot;] --&gt; B{&quot;device 是 CUDA 或 NPU？&quot;}
+    B --&gt;|否| X[&quot;报错&quot;]
+    B --&gt;|是| C{&quot;DP attention 关闭？&quot;}
+    C --&gt;|否| X
+    C --&gt;|是| D{&quot;pp_size == 1？&quot;}
+    D --&gt;|否| X
+    D --&gt;|是| E{&quot;有 draft_model_path？&quot;}
+    E --&gt;|否| X
+
+    E --&gt;|是| F[&quot;num_steps = 1&quot;]
+    F --&gt; G[&quot;eagle_topk = 1&quot;]
+    G --&gt; H[&quot;解析 dFlash block_size&quot;]
+    H --&gt; I[&quot;num_draft_tokens = block_size&quot;]
+    I --&gt; J[&quot;校验 draft_window_size &gt;= block_size&quot;]
+    J --&gt; K[&quot;解析 draft attention backend&quot;]
+    K --&gt; L[&quot;max_running_requests 未设置则设为 48&quot;]
+    L --&gt; M[&quot;关闭 mixed chunk&quot;]
+">flowchart TD
+    A[&quot;_handle_dflash&quot;] --&gt; B{&quot;device 是 CUDA 或 NPU？&quot;}
+    B --&gt;|否| X[&quot;报错&quot;]
+    B --&gt;|是| C{&quot;DP attention 关闭？&quot;}
+    C --&gt;|否| X
+    C --&gt;|是| D{&quot;pp_size == 1？&quot;}
+    D --&gt;|否| X
+    D --&gt;|是| E{&quot;有 draft_model_path？&quot;}
+    E --&gt;|否| X
+
+    E --&gt;|是| F[&quot;num_steps = 1&quot;]
+    F --&gt; G[&quot;eagle_topk = 1&quot;]
+    G --&gt; H[&quot;解析 dFlash block_size&quot;]
+    H --&gt; I[&quot;num_draft_tokens = block_size&quot;]
+    I --&gt; J[&quot;校验 draft_window_size &gt;= block_size&quot;]
+    J --&gt; K[&quot;解析 draft attention backend&quot;]
+    K --&gt; L[&quot;max_running_requests 未设置则设为 48&quot;]
+    L --&gt; M[&quot;关闭 mixed chunk&quot;]
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart TD
+    A[&quot;_handle_dflash&quot;] --&gt; B{&quot;device 是 CUDA 或 NPU？&quot;}
+    B --&gt;|否| X[&quot;报错&quot;]
+    B --&gt;|是| C{&quot;DP attention 关闭？&quot;}
+    C --&gt;|否| X
+    C --&gt;|是| D{&quot;pp_size == 1？&quot;}
+    D --&gt;|否| X
+    D --&gt;|是| E{&quot;有 draft_model_path？&quot;}
+    E --&gt;|否| X
+
+    E --&gt;|是| F[&quot;num_steps = 1&quot;]
+    F --&gt; G[&quot;eagle_topk = 1&quot;]
+    G --&gt; H[&quot;解析 dFlash block_size&quot;]
+    H --&gt; I[&quot;num_draft_tokens = block_size&quot;]
+    I --&gt; J[&quot;校验 draft_window_size &gt;= block_size&quot;]
+    J --&gt; K[&quot;解析 draft attention backend&quot;]
+    K --&gt; L[&quot;max_running_requests 未设置则设为 48&quot;]
+    L --&gt; M[&quot;关闭 mixed chunk&quot;]
+</code></pre></details></figcaption></figure>
+<h3 id="53-block-size-的解析优先级">5.3 block size 的解析优先级</h3>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart TD
+    A{&quot;设置 dflash_block_size？&quot;}
+    A --&gt;|是| B[&quot;检查 &gt; 0&quot;]
+    B --&gt; C{&quot;同时设置 num_draft_tokens？&quot;}
+    C --&gt;|不同| X[&quot;报错&quot;]
+    C --&gt;|相同或未设置| D[&quot;num_draft_tokens = dflash_block_size&quot;]
+
+    A --&gt;|否| E{&quot;设置 num_draft_tokens？&quot;}
+    E --&gt;|是| F[&quot;直接使用&quot;]
+    E --&gt;|否| G[&quot;读取 draft checkpoint config&quot;]
+    G --&gt; H{&quot;能解析 block_size？&quot;}
+    H --&gt;|是| I[&quot;使用 checkpoint block_size&quot;]
+    H --&gt;|否| J[&quot;回退到 16，并打印 warning&quot;]
+">flowchart TD
+    A{&quot;设置 dflash_block_size？&quot;}
+    A --&gt;|是| B[&quot;检查 &gt; 0&quot;]
+    B --&gt; C{&quot;同时设置 num_draft_tokens？&quot;}
+    C --&gt;|不同| X[&quot;报错&quot;]
+    C --&gt;|相同或未设置| D[&quot;num_draft_tokens = dflash_block_size&quot;]
+
+    A --&gt;|否| E{&quot;设置 num_draft_tokens？&quot;}
+    E --&gt;|是| F[&quot;直接使用&quot;]
+    E --&gt;|否| G[&quot;读取 draft checkpoint config&quot;]
+    G --&gt; H{&quot;能解析 block_size？&quot;}
+    H --&gt;|是| I[&quot;使用 checkpoint block_size&quot;]
+    H --&gt;|否| J[&quot;回退到 16，并打印 warning&quot;]
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart TD
+    A{&quot;设置 dflash_block_size？&quot;}
+    A --&gt;|是| B[&quot;检查 &gt; 0&quot;]
+    B --&gt; C{&quot;同时设置 num_draft_tokens？&quot;}
+    C --&gt;|不同| X[&quot;报错&quot;]
+    C --&gt;|相同或未设置| D[&quot;num_draft_tokens = dflash_block_size&quot;]
+
+    A --&gt;|否| E{&quot;设置 num_draft_tokens？&quot;}
+    E --&gt;|是| F[&quot;直接使用&quot;]
+    E --&gt;|否| G[&quot;读取 draft checkpoint config&quot;]
+    G --&gt; H{&quot;能解析 block_size？&quot;}
+    H --&gt;|是| I[&quot;使用 checkpoint block_size&quot;]
+    H --&gt;|否| J[&quot;回退到 16，并打印 warning&quot;]
+</code></pre></details></figcaption></figure>
+<p>最终不应同时维护两套运行时长度。worker 主要读取：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">server_args</span><span class="o">.</span><span class="n">speculative_num_draft_tokens</span>
+</code></pre>
+<h3 id="54-draft-window">5.4 draft window</h3>
+<p>如果设置：</p>
+<pre class="codehilite"><code class="language-bash">--speculative-dflash-block-size<span class="w"> </span><span class="m">16</span>
+--speculative-draft-window-size<span class="w"> </span><span class="m">128</span>
+</code></pre>
+<p>则表示：</p>
+<ul>
+<li>一次 dFlash block 长度为 16；</li>
+<li>draft 本地 KV cache 只保留最近约 128 个 target token；</li>
+<li>必须满足 <code>draft_window_size &gt;= block_size</code>。</li>
+</ul>
+<p>该参数目前明确对 dFlash 有效，对 dSpark 无效。</p>
+<h3 id="55-draft-attention-backend">5.5 draft attention backend</h3>
+<p>dFlash 启动处理支持：</p>
+<pre class="codehilite"><code class="language-text">flashinfer
+fa3
+fa4
+triton
+trtllm_mha
+ascend
+</code></pre>
+<p>选择顺序：</p>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart TD
+    A{&quot;显式设置 draft backend？&quot;}
+    A --&gt;|是| B[&quot;使用指定值&quot;]
+    A --&gt;|否| C[&quot;尝试继承普通 attention backend&quot;]
+    C --&gt; D{&quot;仍为空？&quot;}
+    D --&gt;|CUDA| E[&quot;回退 flashinfer&quot;]
+    D --&gt;|ROCm| F[&quot;回退 triton&quot;]
+
+    B --&gt; G{&quot;dFlash 支持？&quot;}
+    C --&gt; G
+    E --&gt; G
+    F --&gt; G
+    G --&gt;|否| H[&quot;回退 flashinfer / triton&quot;]
+    G --&gt;|是| I[&quot;写入最终 draft backend&quot;]
+">flowchart TD
+    A{&quot;显式设置 draft backend？&quot;}
+    A --&gt;|是| B[&quot;使用指定值&quot;]
+    A --&gt;|否| C[&quot;尝试继承普通 attention backend&quot;]
+    C --&gt; D{&quot;仍为空？&quot;}
+    D --&gt;|CUDA| E[&quot;回退 flashinfer&quot;]
+    D --&gt;|ROCm| F[&quot;回退 triton&quot;]
+
+    B --&gt; G{&quot;dFlash 支持？&quot;}
+    C --&gt; G
+    E --&gt; G
+    F --&gt; G
+    G --&gt;|否| H[&quot;回退 flashinfer / triton&quot;]
+    G --&gt;|是| I[&quot;写入最终 draft backend&quot;]
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart TD
+    A{&quot;显式设置 draft backend？&quot;}
+    A --&gt;|是| B[&quot;使用指定值&quot;]
+    A --&gt;|否| C[&quot;尝试继承普通 attention backend&quot;]
+    C --&gt; D{&quot;仍为空？&quot;}
+    D --&gt;|CUDA| E[&quot;回退 flashinfer&quot;]
+    D --&gt;|ROCm| F[&quot;回退 triton&quot;]
+
+    B --&gt; G{&quot;dFlash 支持？&quot;}
+    C --&gt; G
+    E --&gt; G
+    F --&gt; G
+    G --&gt;|否| H[&quot;回退 flashinfer / triton&quot;]
+    G --&gt;|是| I[&quot;写入最终 draft backend&quot;]
+</code></pre></details></figcaption></figure>
+<p><code>trtllm_mha</code> 还有 checkpoint 结构检查：draft 必须是全 sliding attention，或明确
+标记为 causal，否则回退到默认 backend。</p>
+<h2 id="6-dspark-参数处理">6. dSpark 参数处理</h2>
+<h3 id="61-dspark-专属参数">6.1 dSpark 专属参数</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>CLI 参数</th>
+<th>字段</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--speculative-dspark-block-size</code></td>
+<td><code>speculative_dspark_block_size</code></td>
+<td><code>gamma</code>，实际提出的 draft token 数</td>
+</tr>
+<tr>
+<td><code>--speculative-dspark-sps-table-path</code></td>
+<td><code>speculative_dspark_sps_table_path</code></td>
+<td>离线 profile 的 SPS 成本表</td>
+</tr>
+<tr>
+<td><code>--speculative-dspark-confidence-sts-path</code></td>
+<td><code>speculative_dspark_confidence_sts_path</code></td>
+<td>置信度 STS 校准表</td>
+</tr>
+<tr>
+<td><code>--speculative-dspark-align-verify-tokens-to-graph-tier</code></td>
+<td><code>speculative_dspark_align_verify_tokens_to_graph_tier</code></td>
+<td>compact ragged verify 利用 CUDA Graph padding tier</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="62-_handle_dspark-完整主流程">6.2 <code>_handle_dspark()</code> 完整主流程</h3>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart TD
+    A[&quot;_handle_dspark&quot;] --&gt; B{&quot;device 是 CUDA？&quot;}
+    B --&gt;|否| X[&quot;报错&quot;]
+    B --&gt;|是| C{&quot;开启 DP attention？&quot;}
+
+    C --&gt;|是| D[&quot;检查 dp_lm_head / MoE backend / CP&quot;]
+    C --&gt;|否| E{&quot;pp_size == 1？&quot;}
+    D --&gt; E
+    E --&gt;|否| X
+
+    E --&gt;|是| F{&quot;有 draft_model_path？&quot;}
+    F --&gt;|是| G[&quot;使用独立 draft checkpoint&quot;]
+    F --&gt;|否| H{&quot;target checkpoint 内置 dSpark draft？&quot;}
+    H --&gt;|否| X
+    H --&gt;|是| I[&quot;draft path/revision = target path/revision&quot;]
+
+    G --&gt; J[&quot;num_steps = 1&quot;]
+    I --&gt; J
+    J --&gt; K[&quot;eagle_topk = 1&quot;]
+    K --&gt; L[&quot;解析 gamma&quot;]
+    L --&gt; M[&quot;num_draft_tokens = gamma + 1&quot;]
+    M --&gt; N[&quot;检查 num_draft_tokens &gt;= 2&quot;]
+    N --&gt; O[&quot;max_running_requests 未设置则设为 48&quot;]
+    O --&gt; P[&quot;关闭 mixed chunk&quot;]
+    P --&gt; Q[&quot;检查 ragged verify 参数是否有效&quot;]
+">flowchart TD
+    A[&quot;_handle_dspark&quot;] --&gt; B{&quot;device 是 CUDA？&quot;}
+    B --&gt;|否| X[&quot;报错&quot;]
+    B --&gt;|是| C{&quot;开启 DP attention？&quot;}
+
+    C --&gt;|是| D[&quot;检查 dp_lm_head / MoE backend / CP&quot;]
+    C --&gt;|否| E{&quot;pp_size == 1？&quot;}
+    D --&gt; E
+    E --&gt;|否| X
+
+    E --&gt;|是| F{&quot;有 draft_model_path？&quot;}
+    F --&gt;|是| G[&quot;使用独立 draft checkpoint&quot;]
+    F --&gt;|否| H{&quot;target checkpoint 内置 dSpark draft？&quot;}
+    H --&gt;|否| X
+    H --&gt;|是| I[&quot;draft path/revision = target path/revision&quot;]
+
+    G --&gt; J[&quot;num_steps = 1&quot;]
+    I --&gt; J
+    J --&gt; K[&quot;eagle_topk = 1&quot;]
+    K --&gt; L[&quot;解析 gamma&quot;]
+    L --&gt; M[&quot;num_draft_tokens = gamma + 1&quot;]
+    M --&gt; N[&quot;检查 num_draft_tokens &gt;= 2&quot;]
+    N --&gt; O[&quot;max_running_requests 未设置则设为 48&quot;]
+    O --&gt; P[&quot;关闭 mixed chunk&quot;]
+    P --&gt; Q[&quot;检查 ragged verify 参数是否有效&quot;]
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart TD
+    A[&quot;_handle_dspark&quot;] --&gt; B{&quot;device 是 CUDA？&quot;}
+    B --&gt;|否| X[&quot;报错&quot;]
+    B --&gt;|是| C{&quot;开启 DP attention？&quot;}
+
+    C --&gt;|是| D[&quot;检查 dp_lm_head / MoE backend / CP&quot;]
+    C --&gt;|否| E{&quot;pp_size == 1？&quot;}
+    D --&gt; E
+    E --&gt;|否| X
+
+    E --&gt;|是| F{&quot;有 draft_model_path？&quot;}
+    F --&gt;|是| G[&quot;使用独立 draft checkpoint&quot;]
+    F --&gt;|否| H{&quot;target checkpoint 内置 dSpark draft？&quot;}
+    H --&gt;|否| X
+    H --&gt;|是| I[&quot;draft path/revision = target path/revision&quot;]
+
+    G --&gt; J[&quot;num_steps = 1&quot;]
+    I --&gt; J
+    J --&gt; K[&quot;eagle_topk = 1&quot;]
+    K --&gt; L[&quot;解析 gamma&quot;]
+    L --&gt; M[&quot;num_draft_tokens = gamma + 1&quot;]
+    M --&gt; N[&quot;检查 num_draft_tokens &gt;= 2&quot;]
+    N --&gt; O[&quot;max_running_requests 未设置则设为 48&quot;]
+    O --&gt; P[&quot;关闭 mixed chunk&quot;]
+    P --&gt; Q[&quot;检查 ragged verify 参数是否有效&quot;]
+</code></pre></details></figcaption></figure>
+<h3 id="63-draft-path-的自动补全">6.3 draft path 的自动补全</h3>
+<p>dSpark 如果没有显式设置 draft path，会检查 target HF config 是否带有任一字段：</p>
+<pre class="codehilite"><code class="language-text">dspark_block_size
+dspark_markov_rank
+dspark_noise_token_id
+dspark_target_layer_ids
+</code></pre>
+<p>存在时认为 target checkpoint 内置 dSpark draft 权重，并执行：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">speculative_draft_model_path</span> <span class="o">=</span> <span class="n">model_path</span>
+<span class="n">speculative_draft_model_revision</span> <span class="o">=</span> <span class="n">revision</span>
+</code></pre>
+<p>否则启动失败，要求显式传入 <code>--speculative-draft-model-path</code>。</p>
+<h3 id="64-gamma-的解析优先级">6.4 gamma 的解析优先级</h3>
+<p>当前默认值：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">DEFAULT_DSPARK_GAMMA</span> <span class="o">=</span> <span class="mi">7</span>
+</code></pre>
+<p>解析流程：</p>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart TD
+    A{&quot;设置 dspark_block_size？&quot;}
+    A --&gt;|是| B[&quot;gamma = CLI 值，检查 &gt; 0&quot;]
+    A --&gt;|否| C[&quot;尝试读取 draft checkpoint block_size&quot;]
+    C --&gt; D{&quot;读取成功？&quot;}
+    D --&gt;|是| E[&quot;gamma = checkpoint block_size&quot;]
+    D --&gt;|否且 num_draft_tokens 为空| F[&quot;gamma = DEFAULT_DSPARK_GAMMA&quot;]
+
+    B --&gt; G[&quot;verify_window = gamma + 1&quot;]
+    E --&gt; G
+    F --&gt; G
+    G --&gt; H[&quot;num_draft_tokens = verify_window&quot;]
+">flowchart TD
+    A{&quot;设置 dspark_block_size？&quot;}
+    A --&gt;|是| B[&quot;gamma = CLI 值，检查 &gt; 0&quot;]
+    A --&gt;|否| C[&quot;尝试读取 draft checkpoint block_size&quot;]
+    C --&gt; D{&quot;读取成功？&quot;}
+    D --&gt;|是| E[&quot;gamma = checkpoint block_size&quot;]
+    D --&gt;|否且 num_draft_tokens 为空| F[&quot;gamma = DEFAULT_DSPARK_GAMMA&quot;]
+
+    B --&gt; G[&quot;verify_window = gamma + 1&quot;]
+    E --&gt; G
+    F --&gt; G
+    G --&gt; H[&quot;num_draft_tokens = verify_window&quot;]
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart TD
+    A{&quot;设置 dspark_block_size？&quot;}
+    A --&gt;|是| B[&quot;gamma = CLI 值，检查 &gt; 0&quot;]
+    A --&gt;|否| C[&quot;尝试读取 draft checkpoint block_size&quot;]
+    C --&gt; D{&quot;读取成功？&quot;}
+    D --&gt;|是| E[&quot;gamma = checkpoint block_size&quot;]
+    D --&gt;|否且 num_draft_tokens 为空| F[&quot;gamma = DEFAULT_DSPARK_GAMMA&quot;]
+
+    B --&gt; G[&quot;verify_window = gamma + 1&quot;]
+    E --&gt; G
+    F --&gt; G
+    G --&gt; H[&quot;num_draft_tokens = verify_window&quot;]
+</code></pre></details></figcaption></figure>
+<p>若同时显式设置：</p>
+<pre class="codehilite"><code class="language-text">speculative_dspark_block_size = 5
+speculative_num_draft_tokens = 5
+</code></pre>
+<p>会报错。正确关系是：</p>
+<pre class="codehilite"><code class="language-text">gamma = 5
+speculative_num_draft_tokens = 6
+</code></pre>
+<h2 id="7-dspark-为什么是-gamma--1">7. dSpark 为什么是 gamma + 1</h2>
+<p>完整的单轮运行时 Tensor、Target logits 对齐、输出/KV 错位与 rolling anchor 生命周期见
+<a href="sglang-dspark-single-round-decode.html"><code>scheduler/speculative/sglang-dspark-single-round-decode.md</code></a>。本节保留迁移时需要快速核对的参数量纲与最小运行时语义。</p>
+<h3 id="71-anchor-不是被比较的候选-token">7.1 anchor 不是被比较的候选 token</h3>
+<p>假设当前已确认的最后一个 token 是 <code>anchor</code>，dSpark 提出：</p>
+<pre class="codehilite"><code class="language-text">draft1 draft2 draft3 draft4 draft5
+</code></pre>
+<p>其中：</p>
+<pre class="codehilite"><code class="language-text">gamma = 5
+</code></pre>
+<p>Target forward 的输入是：</p>
+<pre class="codehilite"><code class="language-text">[anchor] [draft1] [draft2] [draft3] [draft4] [draft5]
+</code></pre>
+<p>共 6 个位置，因此：</p>
+<pre class="codehilite"><code class="language-text">verify_num_draft_tokens = gamma + 1 = 6
+</code></pre>
+<p>真正的 logits 对齐关系：</p>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart TB
+    A[&quot;输入 anchor&quot;] --&gt; L1[&quot;logits：验证 draft1&quot;]
+    D1[&quot;输入 draft1&quot;] --&gt; L2[&quot;logits：验证 draft2&quot;]
+    D2[&quot;输入 draft2&quot;] --&gt; L3[&quot;logits：验证 draft3&quot;]
+    D3[&quot;输入 draft3&quot;] --&gt; L4[&quot;logits：验证 draft4&quot;]
+    D4[&quot;输入 draft4&quot;] --&gt; L5[&quot;logits：验证 draft5&quot;]
+    D5[&quot;输入 draft5&quot;] --&gt; LB[&quot;logits：生成 bonus token&quot;]
+">flowchart TB
+    A[&quot;输入 anchor&quot;] --&gt; L1[&quot;logits：验证 draft1&quot;]
+    D1[&quot;输入 draft1&quot;] --&gt; L2[&quot;logits：验证 draft2&quot;]
+    D2[&quot;输入 draft2&quot;] --&gt; L3[&quot;logits：验证 draft3&quot;]
+    D3[&quot;输入 draft3&quot;] --&gt; L4[&quot;logits：验证 draft4&quot;]
+    D4[&quot;输入 draft4&quot;] --&gt; L5[&quot;logits：验证 draft5&quot;]
+    D5[&quot;输入 draft5&quot;] --&gt; LB[&quot;logits：生成 bonus token&quot;]
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart TB
+    A[&quot;输入 anchor&quot;] --&gt; L1[&quot;logits：验证 draft1&quot;]
+    D1[&quot;输入 draft1&quot;] --&gt; L2[&quot;logits：验证 draft2&quot;]
+    D2[&quot;输入 draft2&quot;] --&gt; L3[&quot;logits：验证 draft3&quot;]
+    D3[&quot;输入 draft3&quot;] --&gt; L4[&quot;logits：验证 draft4&quot;]
+    D4[&quot;输入 draft4&quot;] --&gt; L5[&quot;logits：验证 draft5&quot;]
+    D5[&quot;输入 draft5&quot;] --&gt; LB[&quot;logits：生成 bonus token&quot;]
+</code></pre></details></figcaption></figure>
+<p>所以更准确的说法是：</p>
+<blockquote>
+<p>anchor 不是“被验证者”，而是产生第一个验证分布所必需的 Target 输入。</p>
+</blockquote>
+<p>代码证据：</p>
+<pre class="codehilite"><code class="language-python"><span class="c1"># dspark_verify_window.py::compact_verify_ids</span>
+<span class="n">anchors</span> <span class="o">=</span> <span class="n">draft_block_ids</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+<span class="n">drafts</span> <span class="o">=</span> <span class="n">draft_tokens</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">(</span><span class="n">within</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">clamp_min</span><span class="p">(</span><span class="mi">0</span><span class="p">)]</span>
+<span class="n">verify_ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">within</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">anchors</span><span class="p">,</span> <span class="n">drafts</span><span class="p">)</span>
+</code></pre>
+<h3 id="72-为什么最后还能得到-bonus-token">7.2 为什么最后还能得到 bonus token</h3>
+<p>如果 <code>draft1 ... draft5</code> 全部通过，Target 在输入 <code>draft5</code> 时已经计算出：</p>
+<pre class="codehilite"><code class="language-text">P(next | history, anchor, draft1, ..., draft5)
+</code></pre>
+<p>因此可以直接从该分布得到一个 bonus token，不需要再跑一次 Target forward。</p>
+<p>最大输出为：</p>
+<pre class="codehilite"><code class="language-text">gamma 个被接受 draft token + 1 个 bonus token
+</code></pre>
+<p>代码中的输出布局：</p>
+<pre class="codehilite"><code class="language-python"><span class="c1"># dspark_verify_window.py::build_out_tokens</span>
+<span class="n">out_tokens</span><span class="p">[:,</span> <span class="p">:</span><span class="n">gamma</span><span class="p">]</span><span class="o">.</span><span class="n">copy_</span><span class="p">(</span><span class="n">draft_tokens</span><span class="p">)</span>
+<span class="n">out_tokens</span><span class="p">[:,</span> <span class="n">gamma</span><span class="p">]</span><span class="o">.</span><span class="n">fill_</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">out_tokens</span><span class="o">.</span><span class="n">scatter_</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">bonus</span><span class="p">)</span>
+</code></pre>
+<h3 id="73-验证-anchor这句代码注释怎么理解">7.3 “验证 anchor”这句代码注释怎么理解</h3>
+<p>ragged verify 代码要求：</p>
+<pre class="codehilite"><code class="language-text">verify_len &gt;= 1
+</code></pre>
+<p>并写着 “every request must verify the anchor”。这里的“verify anchor”是实现层简称，
+表示 Target verify forward 至少要执行 anchor 这个输入位置，以产生一个合法的
+next-token 分布；不是把 anchor 与某个 draft 候选进行相等性比较。</p>
+<h2 id="8-并行设备与功能兼容性">8. 并行、设备与功能兼容性</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>条件</th>
+<th>dFlash</th>
+<th>dSpark</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CUDA</td>
+<td>支持</td>
+<td>支持</td>
+</tr>
+<tr>
+<td>NPU</td>
+<td>支持</td>
+<td>不支持</td>
+</tr>
+<tr>
+<td><code>pp_size &gt; 1</code></td>
+<td>不支持</td>
+<td>不支持</td>
+</tr>
+<tr>
+<td>DP attention</td>
+<td>不支持</td>
+<td>有条件支持</td>
+</tr>
+<tr>
+<td>mixed chunked prefill</td>
+<td>自动关闭</td>
+<td>自动关闭</td>
+</tr>
+<tr>
+<td>overlap schedule</td>
+<td>V2 worker 支持</td>
+<td>V2 worker 支持</td>
+</tr>
+<tr>
+<td><code>--disable-overlap-schedule</code></td>
+<td>V2 worker 同步运行</td>
+<td>V2 worker 同步运行</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="81-dspark--dp-attention-条件">8.1 dSpark + DP attention 条件</h3>
+<p>必须满足：</p>
+<pre class="codehilite"><code class="language-text">enable_dp_lm_head = True
+moe_a2a_backend = &quot;none&quot;
+attn_cp_size = 1
+</code></pre>
+<p>此外，如果显式设置 <code>speculative_moe_a2a_backend</code>，它不能与 target 的
+<code>moe_a2a_backend</code> 不一致。</p>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart TD
+    A[&quot;DSPARK + DP attention&quot;] --&gt; B{&quot;enable_dp_lm_head？&quot;}
+    B --&gt;|否| X[&quot;报错&quot;]
+    B --&gt;|是| C{&quot;moe_a2a_backend == none？&quot;}
+    C --&gt;|否| X
+    C --&gt;|是| D{&quot;attn_cp_size == 1？&quot;}
+    D --&gt;|否| X
+    D --&gt;|是| E[&quot;允许继续启动&quot;]
+">flowchart TD
+    A[&quot;DSPARK + DP attention&quot;] --&gt; B{&quot;enable_dp_lm_head？&quot;}
+    B --&gt;|否| X[&quot;报错&quot;]
+    B --&gt;|是| C{&quot;moe_a2a_backend == none？&quot;}
+    C --&gt;|否| X
+    C --&gt;|是| D{&quot;attn_cp_size == 1？&quot;}
+    D --&gt;|否| X
+    D --&gt;|是| E[&quot;允许继续启动&quot;]
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart TD
+    A[&quot;DSPARK + DP attention&quot;] --&gt; B{&quot;enable_dp_lm_head？&quot;}
+    B --&gt;|否| X[&quot;报错&quot;]
+    B --&gt;|是| C{&quot;moe_a2a_backend == none？&quot;}
+    C --&gt;|否| X
+    C --&gt;|是| D{&quot;attn_cp_size == 1？&quot;}
+    D --&gt;|否| X
+    D --&gt;|是| E[&quot;允许继续启动&quot;]
+</code></pre></details></figcaption></figure>
+<h3 id="82-一个迁移陷阱speculative_skip_dp_mlp_sync">8.2 一个迁移陷阱：<code>speculative_skip_dp_mlp_sync</code></h3>
+<p>dSpark planner 会读取：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">server_args</span><span class="o">.</span><span class="n">speculative_skip_dp_mlp_sync</span>
+</code></pre>
+<p>但当前 <code>handle_speculative_decoding()</code> 的通用校验又规定，该参数为 <code>True</code> 时算法
+必须是 <code>EAGLE</code>。因此当前它不能作为可用的 dSpark CLI 开关打开，只能保持默认
+<code>False</code>。</p>
+<p>迁移这段逻辑时不要只看到 planner 的读取就认为 dSpark 支持该开关；需要同时核对
+启动校验是否已经调整。</p>
+<h2 id="9-启动时的共同副作用和全局限制">9. 启动时的共同副作用和全局限制</h2>
+<h3 id="91-max_running_requests">9.1 <code>max_running_requests</code></h3>
+<p>如果用户没有显式设置，两种算法都会执行：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">max_running_requests</span> <span class="o">=</span> <span class="mi">48</span>
+</code></pre>
+<p>用户显式设置的值不会被覆盖。</p>
+<h3 id="92-mixed-chunk">9.2 mixed chunk</h3>
+<p>两种算法都会把：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">enable_mixed_chunk</span> <span class="o">=</span> <span class="kc">False</span>
+</code></pre>
+<p>并输出 warning。后面的 <code>check_server_args()</code> 还会再次检查 speculative decoding
+不能保留 mixed chunk。</p>
+<h3 id="93-num_steps--eagle_topk">9.3 <code>num_steps</code> / <code>eagle_topk</code></h3>
+<p>两种算法都强制：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">speculative_num_steps</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">speculative_eagle_topk</span> <span class="o">=</span> <span class="mi">1</span>
+</code></pre>
+<p>原因不是算法需要 EAGLE 参数，而是通用 Scheduler、KV cache 回收、buffer sizing
+和 RoPE 预留仍然会读取这些字段。迁移时不能简单删除归一化。</p>
+<h3 id="94-weight-cache">9.4 weight cache</h3>
+<p>当前只要同时满足：</p>
+<pre class="codehilite"><code class="language-text">weight_cache_mode != &quot;off&quot;
+speculative_algorithm is not None
+</code></pre>
+<p>启动就会报错，因为 weight cache daemon 尚不能导出 draft 模型权重。</p>
+<h2 id="10-dspark-ragged-verify-与高级调优">10. dSpark ragged verify 与高级调优</h2>
+<p>STATIC、CAP_ACCEPT、COMPACT 在 Target 实算行数和接受裁剪上的运行时差异，见
+<a href="sglang-dspark-single-round-decode.html"><code>scheduler/speculative/sglang-dspark-single-round-decode.md</code></a>。本节聚焦配置和调优入口。</p>
+<h3 id="101-sglang_ragged_verify_mode">10.1 <code>SGLANG_RAGGED_VERIFY_MODE</code></h3>
+<p>这是环境变量，不是 CLI 参数。当前模式：</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>值</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>static</code></td>
+<td>固定验证窗口，默认模式</td>
+</tr>
+<tr>
+<td><code>cap-accept</code></td>
+<td>根据置信度控制每个请求的验证长度</td>
+</tr>
+<tr>
+<td><code>compact</code></td>
+<td>压紧不同请求的 ragged verify token</td>
+</tr>
+</tbody>
+</table></div>
+<p>非法值会在启动 speculative handler 时直接报错。</p>
+<p>非 <code>static</code> 模式还要求：</p>
+<ul>
+<li>draft checkpoint 带 confidence head；</li>
+<li><code>SGLANG_PREP_IN_CUDA_GRAPH=1</code>；</li>
+<li>相应 CUDA Graph prepare 路径可用。</li>
+</ul>
+<h3 id="102-sps-table">10.2 SPS table</h3>
+<p><code>--speculative-dspark-sps-table-path</code> 指向离线 profile 的成本表，用来估算：</p>
+<pre class="codehilite"><code class="language-text">验证多少 token -&gt; 大约花费多少执行时间
+</code></pre>
+<p>未提供时使用平坦的未初始化表，预算调度会退化成接近 verify-all，正确性不受影响，
+但不会获得预期调度收益。</p>
+<p>如果 ragged mode 是 <code>static</code>，该参数不生效，并在启动时打印 warning。</p>
+<h3 id="103-sts-confidence-calibration">10.3 STS confidence calibration</h3>
+<p><code>--speculative-dspark-confidence-sts-path</code> 校准 confidence head 对不同位置的接受概率
+估计。</p>
+<pre class="codehilite"><code class="language-text">不提供：identity，不做校准
+提供：调度器的 survival probability 估计可能更准确
+</code></pre>
+<p>它影响调度性能，不改变 lossless correctness。</p>
+<h3 id="104-对齐-cuda-graph-tier">10.4 对齐 CUDA Graph tier</h3>
+<p><code>--speculative-dspark-align-verify-tokens-to-graph-tier</code> 只在：</p>
+<pre class="codehilite"><code class="language-text">SGLANG_RAGGED_VERIFY_MODE=compact
+</code></pre>
+<p>时生效。</p>
+<p>例子：</p>
+<pre class="codehilite"><code class="language-text">原计划真实验证：40 tokens
+CUDA Graph 已选择：64-token bucket
+
+关闭：
+    40 个真实 token + 24 个 padding
+
+开启：
+    尝试用置信度较高的真实 draft token 填充部分空位
+</code></pre>
+<p>在其他 ragged mode 下传入该参数只会产生 no-op warning。</p>
+<h2 id="11-最小启动示例">11. 最小启动示例</h2>
+<h3 id="111-dflash">11.1 dFlash</h3>
+<pre class="codehilite"><code class="language-bash">python<span class="w"> </span>-m<span class="w"> </span>sglang.launch_server<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--model-path<span class="w"> </span>TARGET_MODEL<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--speculative-algorithm<span class="w"> </span>DFLASH<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--speculative-draft-model-path<span class="w"> </span>DRAFT_MODEL<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--speculative-dflash-block-size<span class="w"> </span><span class="m">16</span>
+</code></pre>
+<p>归一化后的关键字段：</p>
+<pre class="codehilite"><code class="language-text">speculative_algorithm = &quot;DFLASH&quot;
+speculative_num_steps = 1
+speculative_eagle_topk = 1
+speculative_num_draft_tokens = 16
+speculative_dflash_block_size = 16
+</code></pre>
+<h3 id="112-dspark">11.2 dSpark</h3>
+<pre class="codehilite"><code class="language-bash">python<span class="w"> </span>-m<span class="w"> </span>sglang.launch_server<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--model-path<span class="w"> </span>TARGET_MODEL<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--speculative-algorithm<span class="w"> </span>DSPARK<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--speculative-draft-model-path<span class="w"> </span>DRAFT_MODEL<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--speculative-dspark-block-size<span class="w"> </span><span class="m">5</span>
+</code></pre>
+<p>归一化后的关键字段：</p>
+<pre class="codehilite"><code class="language-text">speculative_algorithm = &quot;DSPARK&quot;
+speculative_num_steps = 1
+speculative_eagle_topk = 1
+speculative_dspark_block_size = 5
+speculative_num_draft_tokens = 6
+</code></pre>
+<h2 id="12-迁移时应按模块拆分">12. 迁移时应按模块拆分</h2>
+<p>不要把“dFlash/dSpark 迁移”理解为只复制 worker。至少分成以下层次：</p>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart TD
+    A[&quot;1. CLI / ServerArgs 字段&quot;] --&gt; B[&quot;2. __post_init__ 参数归一化&quot;]
+    B --&gt; C[&quot;3. 算法枚举与 worker factory&quot;]
+    C --&gt; D[&quot;4. draft checkpoint config 解析&quot;]
+    D --&gt; E[&quot;5. Scheduler / KV / CUDA Graph 容量计算&quot;]
+    E --&gt; F[&quot;6. Draft forward&quot;]
+    F --&gt; G[&quot;7. Target verify&quot;]
+    G --&gt; H[&quot;8. Accept / bonus / KV commit&quot;]
+    H --&gt; I[&quot;9. DP / overlap / ragged verify&quot;]
+    I --&gt; J[&quot;10. 测试、profile、可观测性&quot;]
+">flowchart TD
+    A[&quot;1. CLI / ServerArgs 字段&quot;] --&gt; B[&quot;2. __post_init__ 参数归一化&quot;]
+    B --&gt; C[&quot;3. 算法枚举与 worker factory&quot;]
+    C --&gt; D[&quot;4. draft checkpoint config 解析&quot;]
+    D --&gt; E[&quot;5. Scheduler / KV / CUDA Graph 容量计算&quot;]
+    E --&gt; F[&quot;6. Draft forward&quot;]
+    F --&gt; G[&quot;7. Target verify&quot;]
+    G --&gt; H[&quot;8. Accept / bonus / KV commit&quot;]
+    H --&gt; I[&quot;9. DP / overlap / ragged verify&quot;]
+    I --&gt; J[&quot;10. 测试、profile、可观测性&quot;]
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart TD
+    A[&quot;1. CLI / ServerArgs 字段&quot;] --&gt; B[&quot;2. __post_init__ 参数归一化&quot;]
+    B --&gt; C[&quot;3. 算法枚举与 worker factory&quot;]
+    C --&gt; D[&quot;4. draft checkpoint config 解析&quot;]
+    D --&gt; E[&quot;5. Scheduler / KV / CUDA Graph 容量计算&quot;]
+    E --&gt; F[&quot;6. Draft forward&quot;]
+    F --&gt; G[&quot;7. Target verify&quot;]
+    G --&gt; H[&quot;8. Accept / bonus / KV commit&quot;]
+    H --&gt; I[&quot;9. DP / overlap / ragged verify&quot;]
+    I --&gt; J[&quot;10. 测试、profile、可观测性&quot;]
+</code></pre></details></figcaption></figure>
+<h3 id="第一阶段先跑通">第一阶段：先跑通</h3>
+<p>优先迁移：</p>
+<ul>
+<li><code>speculative_algorithm</code></li>
+<li>draft path / revision / load format / quantization</li>
+<li>dFlash block size 或 dSpark gamma</li>
+<li><code>speculative_num_draft_tokens</code> 最终值</li>
+<li><code>num_steps = 1</code>、<code>topk = 1</code></li>
+<li>device、PP、DP compatibility</li>
+<li>worker factory</li>
+<li>固定长度 verify</li>
+<li>accept / bonus / KV commit</li>
+</ul>
+<h3 id="第二阶段恢复性能">第二阶段：恢复性能</h3>
+<p>再迁移：</p>
+<ul>
+<li>overlap schedule</li>
+<li>CUDA Graph capture</li>
+<li>dFlash draft window</li>
+<li>draft attention backend 选择</li>
+<li>dSpark DP attention</li>
+<li>ragged verify</li>
+<li>SPS table</li>
+<li>STS calibration</li>
+<li>graph tier alignment</li>
+<li>observability / profiling</li>
+</ul>
+<h2 id="13-迁移检查清单">13. 迁移检查清单</h2>
+<p>以下 checkbox 是一次具体迁移任务的重新核对清单，不代表投机解码专题的学习完成度。</p>
+<h3 id="参数层">参数层</h3>
+<ul>
+<li class="task-item"><input type="checkbox" disabled> CLI 字段名称和默认值一致</li>
+<li class="task-item"><input type="checkbox" disabled> deprecated alias 是否需要保留</li>
+<li class="task-item"><input type="checkbox" disabled> <code>draft_model_revision</code> 的默认行为一致</li>
+<li class="task-item"><input type="checkbox" disabled> draft quantization 继承 target 的行为一致</li>
+<li class="task-item"><input type="checkbox" disabled> dFlash block size 与 <code>num_draft_tokens</code> 冲突时会报错</li>
+<li class="task-item"><input type="checkbox" disabled> dSpark 保持 <code>num_draft_tokens = gamma + 1</code></li>
+<li class="task-item"><input type="checkbox" disabled> <code>num_steps</code>、<code>eagle_topk</code> 最终为 1</li>
+</ul>
+<h3 id="启动兼容性">启动兼容性</h3>
+<ul>
+<li class="task-item"><input type="checkbox" disabled> dFlash 设备、DP attention、PP 限制一致</li>
+<li class="task-item"><input type="checkbox" disabled> dSpark CUDA、PP 限制一致</li>
+<li class="task-item"><input type="checkbox" disabled> dSpark DP attention 的 LM head / MoE / CP 限制一致</li>
+<li class="task-item"><input type="checkbox" disabled> mixed chunk 被关闭</li>
+<li class="task-item"><input type="checkbox" disabled> weight cache 冲突被提前拒绝</li>
+<li class="task-item"><input type="checkbox" disabled> overlap 与 <code>disable_overlap_schedule</code> 行为一致</li>
+</ul>
+<h3 id="verify-语义">verify 语义</h3>
+<ul>
+<li class="task-item"><input type="checkbox" disabled> dSpark verify 输入第 0 个位置是 anchor</li>
+<li class="task-item"><input type="checkbox" disabled> anchor logits 对齐 draft1</li>
+<li class="task-item"><input type="checkbox" disabled> draft[i] logits 对齐 draft[i+1]</li>
+<li class="task-item"><input type="checkbox" disabled> 最后一个 draft logits 产生 bonus</li>
+<li class="task-item"><input type="checkbox" disabled> rejection 时正确提交 accepted prefix 和 replacement/bonus</li>
+<li class="task-item"><input type="checkbox" disabled> KV cache 只提交最终接受的长度</li>
+<li class="task-item"><input type="checkbox" disabled> hidden-state/KV injection 长度与 commit length 一致</li>
+</ul>
+<h3 id="高级路径">高级路径</h3>
+<ul>
+<li class="task-item"><input type="checkbox" disabled> ragged verify 三种模式行为一致</li>
+<li class="task-item"><input type="checkbox" disabled> 非 static 模式要求 confidence head</li>
+<li class="task-item"><input type="checkbox" disabled> CUDA Graph prepare 前置条件一致</li>
+<li class="task-item"><input type="checkbox" disabled> DP rank 的 graph tier 和 verify token 数同步</li>
+<li class="task-item"><input type="checkbox" disabled> SPS/STS 文件缺失时的降级行为一致</li>
+<li class="task-item"><input type="checkbox" disabled> graph tier alignment 只在 compact 模式生效</li>
+</ul>
+<h2 id="14-后续让-codex-回顾时的建议提示词">14. 后续让 Codex 回顾时的建议提示词</h2>
+<p>可以直接让 Codex 先阅读本文，再核对当前源码：</p>
+<pre class="codehilite"><code class="language-text">请先阅读 notes/speculative/sglang-dflash-dspark-startup-args-and-migration.md，
+然后基于当前代码重新核对：
+1. ServerArgs 中 dFlash/dSpark 参数是否变化；
+2. handle_speculative_decoding、_handle_dflash、_handle_dspark 的顺序和默认值；
+3. gamma、speculative_num_draft_tokens、verify window 的关系；
+4. DP attention、PP、overlap、ragged verify 的限制；
+5. 列出本文已经过期的地方，但先不要修改代码。
+</code></pre>
+<p>如果开始实际迁移，可以使用：</p>
+<pre class="codehilite"><code class="language-text">请以 notes/speculative/sglang-dflash-dspark-startup-args-and-migration.md 为背景，
+对比源实现与目标实现，按“参数层、worker factory、draft、verify、accept/KV、
+并行与 CUDA Graph、测试”生成迁移差异表。所有结论都要给出当前源码符号位置。
+</code></pre>
+</article>
+
+            
+
+            <footer class="sf-footer"><span>投机解码源码专题</span><span>纯静态 · 本地依赖 · 可离线分享</span></footer>
+            <p class="print-only">投机解码源码专题 · SGLang dFlash / dSpark 启动参数与迁移参考 · None</p>
+          </div>
+
+          <aside class="sf-page-toc" aria-label="本页目录">
+            <p class="sf-page-toc__title">On this page</p>
+            <ol data-page-toc-list><li><a href="#1-先记住的核心结论" data-level="2">1. 先记住的核心结论</a></li><li><a href="#2-关键源码地图" data-level="2">2. 关键源码地图</a></li><li><a href="#3-参数在启动流程中的位置" data-level="2">3. 参数在启动流程中的位置</a></li><li><a href="#4-通用-speculative-参数" data-level="2">4. 通用 speculative 参数</a></li><li><a href="#5-dflash-参数处理" data-level="2">5. dFlash 参数处理</a></li><li><a href="#6-dspark-参数处理" data-level="2">6. dSpark 参数处理</a></li><li><a href="#7-dspark-为什么是-gamma--1" data-level="2">7. dSpark 为什么是 gamma + 1</a></li><li><a href="#8-并行设备与功能兼容性" data-level="2">8. 并行、设备与功能兼容性</a></li><li><a href="#9-启动时的共同副作用和全局限制" data-level="2">9. 启动时的共同副作用和全局限制</a></li><li><a href="#10-dspark-ragged-verify-与高级调优" data-level="2">10. dSpark ragged verify 与高级调优</a></li><li><a href="#11-最小启动示例" data-level="2">11. 最小启动示例</a></li><li><a href="#12-迁移时应按模块拆分" data-level="2">12. 迁移时应按模块拆分</a></li><li><a href="#13-迁移检查清单" data-level="2">13. 迁移检查清单</a></li><li><a href="#14-后续让-codex-回顾时的建议提示词" data-level="2">14. 后续让 Codex 回顾时的建议提示词</a></li></ol>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="search-dialog" id="course-search-dialog" data-search-dialog aria-labelledby="course-search-title">
+    <div class="search-dialog__head"><strong id="course-search-title">搜索课程</strong><button class="sf-icon-button" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+    <form class="search-dialog__form" data-search-form role="search"><label class="sr-only" for="course-search-input">搜索对象、方法、状态或章节</label><input id="course-search-input" type="search" data-search-input autocomplete="off" placeholder="例如：running_batch、ForwardBatch、TARGET_VERIFY"><button class="sf-button" type="submit">搜索</button></form>
+    <p class="search-dialog__status" data-search-status aria-live="polite"></p><ol class="search-results" data-search-results></ol>
+  </dialog>
+
+  <dialog class="diagram-viewer" id="diagram-viewer-dialog" data-diagram-dialog aria-labelledby="diagram-viewer-title">
+    <div class="diagram-viewer__head"><div><strong id="diagram-viewer-title" data-diagram-title>图解沉浸阅读</strong> <span class="diagram-viewer__zoom" data-diagram-zoom>100%</span></div><div class="diagram-viewer__tools"><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-in" aria-label="放大">＋</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-out" aria-label="缩小">−</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="fit">看全图</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="reset">100%</button><button class="sf-button" type="button" data-diagram-action="close">关闭 ×</button></div></div>
+    <div class="diagram-viewer__viewport" data-diagram-viewport><div class="diagram-viewer__canvas mermaid" data-diagram-canvas></div></div>
+  </dialog>
+
+  <script src="visualizations/sglang-course-v2/assets/data/search-index.js" defer></script>
+  <script src="course/assets/vendor/mermaid.min.js" defer></script>
+  <script src="course/assets/js/site-shell.js" defer></script>
+  <script src="course/assets/js/toc-search.js" defer></script>
+  <script src="course/assets/js/diagram-viewer.js" defer></script>
+  <script src="course/assets/js/source-microscope.js" defer></script>
+  <script src="course/assets/js/labs.js" defer></script>
+  <script src="course/assets/js/lesson-components.js" defer></script>
+  
+  <script defer src="course/assets/notes/reading.js"></script>
+</body>
+</html>

@@ -1,0 +1,880 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; style-src 'self' 'unsafe-inline' file:; script-src 'self' file:; img-src 'self' data: file:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'">
+  <title>05 · Target Verify · dSpark V2</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="assets/dspark-visual-system.css">
+  <style>
+    .verify-sequence { min-width: 1440px; }
+    .verify-sequence__heads {
+      display: grid;
+      grid-template-columns: 96px repeat(8, minmax(0, 1fr));
+      border-top: 1px solid var(--line);
+      border-left: 1px solid var(--line);
+    }
+    .verify-sequence__corner,
+    .verify-sequence__head {
+      min-width: 0;
+      min-height: 154px;
+      padding: 12px 10px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      background: var(--surface-2);
+    }
+    .verify-sequence__corner {
+      display: grid;
+      align-content: end;
+      color: var(--faint);
+      font: 800 12px/1.35 var(--mono);
+    }
+    .verify-sequence__head .instance {
+      display: block;
+      color: var(--data);
+      font: 800 12px/1.35 var(--mono);
+      overflow-wrap: anywhere;
+    }
+    .verify-sequence__head .class-name {
+      display: block;
+      margin-top: 7px;
+      color: var(--text);
+      font: 800 12px/1.35 var(--mono);
+      overflow-wrap: anywhere;
+    }
+    .verify-sequence__head .fqcn {
+      display: block;
+      margin-top: 7px;
+      color: var(--muted);
+      font: 12px/1.35 var(--mono);
+      overflow-wrap: anywhere;
+    }
+    .verify-sequence__body {
+      position: relative;
+      width: 1440px;
+      height: 1100px;
+      border-left: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      background:
+        linear-gradient(90deg, transparent 95px, var(--line) 96px, transparent 97px),
+        repeating-linear-gradient(90deg, transparent 0 167px, rgba(42, 64, 94, .72) 168px 169px),
+        repeating-linear-gradient(0deg, rgba(93, 159, 255, .018) 0 79px, rgba(42, 64, 94, .55) 80px 81px);
+    }
+    .verify-sequence__body svg { width: 1440px; height: 1100px; display: block; overflow: visible; }
+    .seq-call, .seq-return, .seq-cuda, .seq-meta, .seq-guard {
+      fill: none;
+      stroke-width: 2.4;
+      vector-effect: non-scaling-stroke;
+    }
+    .seq-call { stroke: var(--main); }
+    .seq-return { stroke: var(--main); stroke-dasharray: 3 6; }
+    .seq-cuda { stroke: var(--cuda); stroke-dasharray: 9 7; }
+    .seq-meta { stroke: var(--data); }
+    .seq-guard { stroke: var(--guard); stroke-dasharray: 7 6; }
+    .seq-activation { fill: rgba(98, 245, 154, .08); stroke: var(--main); }
+    .seq-label-bg { fill: var(--bg); opacity: .96; }
+    .seq-label {
+      fill: var(--text);
+      font: 12px/1.3 var(--mono);
+      paint-order: stroke;
+      stroke: var(--bg);
+      stroke-width: 4px;
+      stroke-linejoin: round;
+    }
+    .seq-label--data { fill: var(--data); }
+    .seq-label--guard { fill: var(--guard); }
+    .seq-label--cuda { fill: var(--cuda); }
+    .seq-note { fill: var(--muted); font: 12px/1.3 var(--mono); }
+    .seq-phase { fill: var(--ui); font: 800 12px/1.3 var(--mono); letter-spacing: .08em; }
+    .route-contract { margin: 0 0 22px; }
+    .route-contract .route-stop { min-height: 54px; }
+    .verify-transform { grid-template-columns: repeat(6, minmax(180px, 1fr)); min-width: 1310px; }
+    .transform-stage { min-height: 276px; }
+    .transform-stage .shape {
+      display: block;
+      margin-top: 8px;
+      color: var(--text);
+      font: 800 12px/1.35 var(--mono);
+    }
+    .mini-grid { display: grid; gap: 4px; margin-top: 12px; }
+    .mini-grid--5 { grid-template-columns: repeat(5, 1fr); }
+    .mini-grid--4 { grid-template-columns: repeat(4, 1fr); }
+    .mini-grid--10 { grid-template-columns: repeat(5, 1fr); }
+    .mini-token {
+      min-height: 34px;
+      display: grid;
+      place-items: center;
+      padding: 4px;
+      border: 1px solid var(--data);
+      color: var(--data);
+      background: rgba(93, 159, 255, .04);
+      font: 12px/1.2 var(--mono);
+      text-align: center;
+    }
+    .mini-token[data-kind="main"] { color: var(--main); border-color: var(--main); }
+    .mini-token[data-kind="cuda"] { color: var(--cuda); border-color: var(--cuda); border-style: dashed; }
+    .mini-token[data-kind="off"] { color: var(--off); border-color: var(--off); border-style: dotted; background: rgba(4, 8, 15, .7); }
+    .route-variant {
+      margin-top: 10px;
+      padding: 8px;
+      border-left: 3px solid var(--guard);
+      color: var(--muted);
+      background: rgba(255, 208, 96, .035);
+      font: 12px/1.4 var(--mono);
+    }
+    .result-pair { display: grid; gap: 8px; margin-top: 13px; }
+    .result-object {
+      padding: 9px;
+      border: 1px solid var(--data);
+      color: var(--data);
+      font: 12px/1.35 var(--mono);
+      overflow-wrap: anywhere;
+    }
+    .result-object[data-kind="main"] { border-color: var(--main); color: var(--main); }
+    .output-rails { margin-top: 24px; }
+    .output-rails .token-rail + .token-rail { border-top: 0; }
+    .next-consumers { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 22px; }
+    .next-consumer {
+      min-width: 0;
+      padding: 15px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      text-decoration: none;
+    }
+    .next-consumer:hover { border-color: var(--ui); }
+    .next-consumer b { display: block; color: var(--main); font: 800 12px/1.35 var(--mono); }
+    .next-consumer span { display: block; margin-top: 7px; color: var(--muted); font-size: 12px; }
+    .boundary-note {
+      margin-top: 18px;
+      padding: 12px 14px;
+      border-left: 4px double var(--fail);
+      background: rgba(255, 94, 127, .035);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .metadata-contract {
+      display: grid;
+      grid-template-columns: minmax(210px, .8fr) minmax(0, 2.2fr);
+      gap: 16px;
+      margin: 18px;
+      padding: 15px;
+      border: 1px solid var(--data);
+      background: rgba(93, 159, 255, .045);
+    }
+    .metadata-contract b, .metadata-contract code { color: var(--data); }
+    .metadata-contract p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+    .metadata-contract__owner { font: 12px/1.45 var(--mono); overflow-wrap: anywhere; }
+    .retained-insights {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
+      gap: 18px;
+      margin-top: 26px;
+    }
+    .teaching-panel {
+      min-width: 0;
+      padding: 18px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .teaching-panel h3 { margin: 0; font-size: 17px; }
+    .teaching-panel > p { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+    .alignment-table,
+    .geometry-table {
+      min-width: 660px;
+      margin-top: 15px;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font: 12px/1.4 var(--mono);
+    }
+    .alignment-table th,
+    .alignment-table td,
+    .geometry-table th,
+    .geometry-table td {
+      padding: 9px 8px;
+      border: 1px solid var(--line);
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
+    .alignment-table th:first-child,
+    .alignment-table td:first-child,
+    .geometry-table th:first-child,
+    .geometry-table td:first-child {
+      width: 144px;
+      color: var(--muted);
+      text-align: left;
+    }
+    .alignment-table thead th,
+    .geometry-table thead th { color: var(--ui); background: var(--surface-2); }
+    .alignment-table .input-cell { color: var(--data); border-color: var(--data); }
+    .alignment-table .prediction-cell { color: var(--main); border-color: var(--main); }
+    .geometry-table code { color: var(--data); }
+    .field-inspector {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(200px, 1fr));
+      gap: 0;
+      min-width: 920px;
+      margin-top: 15px;
+      border: 1px solid var(--line);
+    }
+    .field-snapshot {
+      min-width: 0;
+      padding: 14px;
+      border-right: 1px solid var(--line);
+      background: var(--surface-2);
+    }
+    .field-snapshot:last-child { border-right: 0; }
+    .field-snapshot b { display: block; color: var(--data); font: 800 12px/1.35 var(--mono); }
+    .field-snapshot[data-kind="guard"] b { color: var(--guard); }
+    .field-snapshot[data-kind="main"] b { color: var(--main); }
+    .field-snapshot[data-kind="off"] b { color: var(--off); }
+    .field-snapshot p { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+    .mode-boundary {
+      margin-top: 15px;
+      padding: 12px 14px;
+      border-left: 3px dashed var(--guard);
+      color: var(--muted);
+      background: rgba(255, 208, 96, .035);
+      font-size: 12px;
+    }
+    .code-journey {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .code-journey article { min-width: 0; border: 1px solid var(--line); background: #020711; }
+    .code-journey h3 { margin: 0; padding: 10px 12px; border-bottom: 1px solid var(--line); color: var(--ui); font: 800 12px/1.35 var(--mono); }
+    .code-journey pre { margin: 0; padding: 12px; overflow: auto; color: #dce9f8; font: 12px/1.5 var(--mono); }
+    @media (max-width: 600px) {
+      .next-consumers { grid-template-columns: 1fr; }
+      .metadata-contract { grid-template-columns: 1fr; }
+      .retained-insights { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 980px) { .code-journey { grid-template-columns: 1fr; } }
+  </style>
+  <link rel="stylesheet" href="assets/dspark-source-studio.css">
+  <script src="assets/dspark-site.js" defer></script>
+  <script src="assets/dspark-learning-layer.js" defer></script>
+  <script src="assets/dspark-source-studio.js" defer></script>
+  <script src="assets/dspark-stepper.js" defer></script>
+</head>
+<body data-page="05">
+  <nav data-site-nav aria-label="dSpark 学习页面"></nav>
+
+  <main class="page page--wide">
+    <header class="hero">
+      <p class="eyebrow">05 · Target 验证</p>
+      <h1>Target 只负责前向计算；验证结果先回到 dSpark，再由后继阶段接受与提交</h1>
+      <p class="lead"><code>anchor + draft</code> 被组织为 Target 的验证行；本页停在 <code>TargetVerifyResult + hidden_strided</code>，不提前执行接受判断。</p>
+      <div class="evidence-strip">
+        <span><strong>关键不变量</strong> · 第 i 行的 logits 预测第 i+1 个候选 token</span>
+        <span><strong>后端边界</strong> · CUDA/ROCm 通用 <code>TpModelWorker</code>，PP=1；折叠尾处理器仅支持 NVIDIA CUDA</span>
+        <span><strong>证据范围</strong> · 源码版本 <code>f01a0c7f97ec</code> · 已完成静态源码核验</span>
+      </div>
+      <div class="route-switch" aria-label="选择讲解路线">
+        <button type="button" data-route-choice="static-greedy">STATIC · 贪心</button>
+        <button type="button" data-route-choice="compact-sampling">COMPACT · 随机采样</button>
+        <button type="button" data-route-choice="folded-greedy">FOLDED · 贪心</button>
+      </div>
+      <div data-semantic-legend></div>
+    </header>
+
+    <section class="handoff" aria-label="Target Verify 交接契约">
+      <div class="handoff__item">
+        <b>输入 · 数据</b>
+        <span><code>DraftProposal</code>、<code>verify_ids_2d</code>、<code>VerifyWindow</code>，压紧路线另有 <code>RaggedVerifyLayout</code>。</span>
+      </div>
+      <div class="handoff__item">
+        <b>准备 · 分支条件</b>
+        <span><code>verify_input : DFlashVerifyInput</code> 临时把同一 <code>ScheduleBatch</code> 装配成 <code>TARGET_VERIFY</code>。</span>
+      </div>
+      <div class="handoff__item">
+        <b>输出 · 主链</b>
+        <span><code>TargetVerifyResult(logits_output, can_run_cuda_graph)</code>；压紧路线另返回 <code>hidden_strided</code>。</span>
+      </div>
+      <div class="handoff__item">
+        <b>下一消费者 · 主链</b>
+        <span>06 消费 logits 做接受/修正；07 消费辅助 hidden 并提交 Draft KV。</span>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="call-flow-title">
+      <div class="section__head">
+        <p class="section__kicker">主视图 · 调用泳道</p>
+        <h2 id="call-flow-title">同一次 Target 验证，分轨显示 Python 调用、元数据规划与 CUDA 异步入队</h2>
+        <p class="section__intro">每条泳道写出真实实例与具体类。黄色分支条件只决定执行器；它不会改变候选 token 的语义顺序。</p>
+      </div>
+
+      <div class="route-ribbons route-contract" aria-label="三条路线的物理执行差异">
+        <div class="route-ribbon" data-routes="static-greedy">
+          <div class="route-ribbon__name">STATIC · 贪心</div>
+          <div class="route-ribbon__flow">
+            <span class="route-stop">2×5 候选</span>
+            <span class="route-stop">run_non_compact</span>
+            <span class="route-stop">Target 前向计算 · 10 行</span>
+            <span class="route-stop">已是固定步长 · 无需散射</span>
+          </div>
+        </div>
+        <div class="route-ribbon" data-routes="compact-sampling">
+          <div class="route-ribbon__name">COMPACT · 随机采样</div>
+          <div class="route-ribbon__flow">
+            <span class="route-stop">收集 · 4 个逻辑行</span>
+            <span class="route-stop" data-kind="cuda">填充 · 5 个物理行</span>
+            <span class="route-stop">Target 前向计算 · 5 行</span>
+            <span class="route-stop">散射 · CUDA 图 + 尾处理器；否则显式内核</span>
+          </div>
+        </div>
+        <div class="route-ribbon" data-routes="folded-greedy">
+          <div class="route-ribbon__name">FOLDED · 贪心 · 仅 CUDA</div>
+          <div class="route-ribbon__flow">
+            <span class="route-stop">收集 · 4 个逻辑行</span>
+            <span class="route-stop" data-kind="guard">压紧 + CUDA 图 + is_cuda()</span>
+            <span class="route-stop" data-kind="cuda">DSparkVerifyEpilogue</span>
+            <span class="route-stop">图内散射 · 10 个固定位置</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="visual">
+        <div class="visual__bar">
+          <span><strong>调用时序</strong> · 接收者 → 方法(参数) → 返回值 → 下一接收者</span>
+          <button class="zoom-button" type="button" data-zoom-target="#verify-call-flow">放大主图</button>
+        </div>
+        <div class="visual__body canvas-scroll" id="verify-call-flow">
+          <div class="verify-sequence" role="group" aria-label="Target Verify 调用泳道">
+            <div class="verify-sequence__heads">
+              <div class="verify-sequence__corner">CPU 时间<br>↓</div>
+              <div class="verify-sequence__head">
+                <span class="instance">self</span>
+                <span class="class-name">DSparkWorkerV2</span>
+                <span class="fqcn">sglang.srt.speculative.dspark_components.dspark_worker_v2.DSparkWorkerV2</span>
+              </div>
+              <div class="verify-sequence__head">
+                <span class="instance">self._verify_executor</span>
+                <span class="class-name">TargetVerifyExecutor</span>
+                <span class="fqcn">sglang.srt.speculative.dspark_components.dspark_verify.TargetVerifyExecutor</span>
+              </div>
+              <div class="verify-sequence__head">
+                <span class="instance">verify_input</span>
+                <span class="class-name">DFlashVerifyInput</span>
+                <span class="fqcn">sglang.srt.speculative.dflash_info.DFlashVerifyInput</span>
+              </div>
+              <div class="verify-sequence__head">
+                <span class="instance">verify_forward_batch</span>
+                <span class="class-name">ForwardBatch</span>
+                <span class="fqcn">sglang.srt.model_executor.forward_batch_info.ForwardBatch</span>
+              </div>
+              <div class="verify-sequence__head">
+                <span class="instance">target_worker</span>
+                <span class="class-name">TpModelWorker</span>
+                <span class="fqcn">sglang.srt.managers.tp_worker.TpModelWorker</span>
+              </div>
+              <div class="verify-sequence__head">
+                <span class="instance">target_worker.model_runner</span>
+                <span class="class-name">ModelRunner</span>
+                <span class="fqcn">sglang.srt.model_executor.model_runner.ModelRunner</span>
+              </div>
+              <div class="verify-sequence__head">
+                <span class="instance">decode_cuda_graph_runner（含 .backend）/ eager_runner</span>
+                <span class="class-name">DecodeCudaGraphRunner / CUDA 图后端 / EagerRunner 即时执行器</span>
+                <span class="fqcn">sglang.srt.model_executor.runner.decode_cuda_graph_runner.DecodeCudaGraphRunner<br>sglang.srt.model_executor.runner_backend.full_cuda_graph_backend.FullCudaGraphBackend | runner_backend.breakable_cuda_graph_backend.BreakableCudaGraphBackend<br>sglang.srt.model_executor.runner.eager_runner.EagerRunner</span>
+              </div>
+              <div class="verify-sequence__head">
+                <span class="instance">target_model := target_worker.model_runner.model<br>attn_backend := target_worker.model_runner.attn_backend</span>
+                <span class="class-name">按模型选择的 Target 模型 / 注意力后端</span>
+                <span class="fqcn">模型对应的 torch.nn.Module<br>sglang.srt.layers.attention.base_attn_backend.AttentionBackend</span>
+              </div>
+            </div>
+
+            <div class="verify-sequence__body">
+              <svg viewBox="0 0 1440 1100" role="img" aria-labelledby="verify-seq-title verify-seq-desc">
+                <title id="verify-seq-title">Target 验证从 DSparkWorkerV2 到 Target ModelRunner 的调用序列</title>
+                <desc id="verify-seq-desc">展示非压紧、压紧与折叠路线共享的 ForwardBatch 装配、元数据规划、解码 CUDA 图或即时执行器分派，以及 TargetVerifyResult 返回。</desc>
+                <defs>
+                  <marker id="seq-arrow-main" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#62f59a"/></marker>
+                  <marker id="seq-arrow-data" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#5d9fff"/></marker>
+                  <marker id="seq-arrow-guard" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#ffd060"/></marker>
+                  <marker id="seq-arrow-cuda" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#c36cff"/></marker>
+                </defs>
+
+                <text class="seq-phase" x="18" y="34">装配</text>
+                <rect class="seq-activation" x="172" y="20" width="10" height="1050" rx="4"/>
+                <rect class="seq-activation" x="339" y="72" width="10" height="970" rx="4"/>
+                <rect class="seq-activation" x="506" y="166" width="10" height="250" rx="4"/>
+                <rect class="seq-activation" x="674" y="244" width="10" height="154" rx="4"/>
+                <rect class="seq-activation" x="841" y="454" width="10" height="440" rx="4"/>
+                <rect class="seq-activation" x="1008" y="510" width="10" height="370" rx="4"/>
+                <rect class="seq-activation" x="1175" y="570" width="10" height="300" rx="4"/>
+                <rect x="1342" y="298" width="10" height="438" rx="4" fill="rgba(93,159,255,.08)" stroke="#5d9fff"/>
+
+                <g data-routes="static-greedy">
+                  <line class="seq-call" x1="177" y1="82" x2="344" y2="82" marker-end="url(#seq-arrow-main)"/>
+                  <rect class="seq-label-bg" x="205" y="57" width="276" height="20"/>
+                  <text class="seq-label" x="207" y="72">run_non_compact(batch, verify_ids_2d, VerifyWindow)</text>
+                </g>
+                <g data-routes="compact-sampling folded-greedy">
+                  <line class="seq-call" x1="177" y1="110" x2="344" y2="110" marker-end="url(#seq-arrow-main)"/>
+                  <rect class="seq-label-bg" x="205" y="114" width="314" height="20"/>
+                  <text class="seq-label" x="207" y="129">run_compact(batch, layout, draft_block_ids, draft_tokens)</text>
+                </g>
+
+                <line class="seq-meta" x1="344" y1="176" x2="511" y2="176" marker-end="url(#seq-arrow-data)"/>
+                <rect class="seq-label-bg" x="364" y="151" width="285" height="20"/>
+                <text class="seq-label seq-label--data" x="366" y="166">DFlashVerifyInput(draft_token, positions, FULL)</text>
+
+                <line class="seq-call" x1="344" y1="226" x2="511" y2="226" marker-end="url(#seq-arrow-main)"/>
+                <rect class="seq-label-bg" x="365" y="231" width="332" height="20"/>
+                <text class="seq-label" x="367" y="246">prepare_for_verify(batch, target_worker)</text>
+
+                <line class="seq-meta" x1="511" y1="280" x2="679" y2="280" marker-end="url(#seq-arrow-data)"/>
+                <rect class="seq-label-bg" x="529" y="255" width="342" height="20"/>
+                <text class="seq-label seq-label--data" x="531" y="270">ForwardBatch.init_new(..., capture_hidden_mode=FULL)</text>
+
+                <path class="seq-guard" d="M511 328 H1098 Q1180 328 1180 354" marker-end="url(#seq-arrow-guard)"/>
+                <rect class="seq-label-bg" x="650" y="303" width="440" height="20"/>
+                <text class="seq-label seq-label--guard" x="652" y="318">can_run_graph(verify_forward_batch)? · 解码 CUDA 图可运行条件</text>
+
+                <path class="seq-cuda" d="M511 364 H1180" marker-end="url(#seq-arrow-cuda)"/>
+                <rect class="seq-label-bg" x="618" y="339" width="654" height="20"/>
+                <text class="seq-label seq-label--cuda" x="620" y="354">是 → load_batch() 构造回放 FB 视图 + attn_backend.init_forward_metadata_out_graph()</text>
+
+                <path class="seq-meta" d="M511 402 H1347" marker-end="url(#seq-arrow-data)"/>
+                <rect class="seq-label-bg" x="828" y="377" width="446" height="20"/>
+                <text class="seq-label seq-label--data" x="830" y="392">否 → attn_backend.init_forward_metadata(verify_forward_batch)</text>
+
+                <path class="seq-return" d="M679 434 H344" marker-end="url(#seq-arrow-main)"/>
+                <rect class="seq-label-bg" x="405" y="409" width="374" height="20"/>
+                <text class="seq-label" x="407" y="424">返回 verify_forward_batch, can_run_cuda_graph</text>
+
+                <rect x="355" y="444" width="520" height="28" rx="4" fill="rgba(93,159,255,.06)" stroke="#5d9fff"/>
+                <text class="seq-label seq-label--data" x="368" y="464">恢复 ScheduleBatch.seq_lens_cpu / seq_lens_sum；ForwardBatch 保留 verify 视图</text>
+
+                <text class="seq-phase" x="18" y="482">TARGET 前向计算</text>
+                <line class="seq-call" x1="344" y1="494" x2="846" y2="494" marker-end="url(#seq-arrow-main)"/>
+                <rect class="seq-label-bg" x="471" y="469" width="498" height="20"/>
+                <text class="seq-label" x="473" y="484">forward_batch_generation(batch=None, forward_batch=verify_forward_batch, is_verify=True)</text>
+
+                <line class="seq-call" x1="846" y1="548" x2="1013" y2="548" marker-end="url(#seq-arrow-main)"/>
+                <rect class="seq-label-bg" x="853" y="523" width="340" height="20"/>
+                <text class="seq-label" x="855" y="538">model_runner.forward(verify_forward_batch) → _forward_raw()</text>
+
+                <path class="seq-guard" d="M1013 596 H1100 Q1180 596 1180 616" marker-end="url(#seq-arrow-guard)"/>
+                <rect class="seq-label-bg" x="1008" y="571" width="321" height="20"/>
+                <text class="seq-label seq-label--guard" x="1010" y="586">forward_mode.is_cuda_graph() &amp;&amp; can_run_graph?</text>
+
+                <path class="seq-cuda" d="M1013 640 H1180" marker-end="url(#seq-arrow-cuda)"/>
+                <rect class="seq-label-bg" x="740" y="615" width="590" height="20"/>
+                <text class="seq-label seq-label--cuda" x="742" y="630">是 → execute() → load_batch(刷新 ids/positions + CUDA 图键) → graph.replay()</text>
+
+                <path class="seq-call" d="M1013 680 H1180" marker-end="url(#seq-arrow-main)"/>
+                <rect class="seq-label-bg" x="842" y="685" width="349" height="20"/>
+                <text class="seq-label" x="844" y="700">否 → EagerRunner.execute() 即时执行 → _execute_extend()</text>
+
+                <path class="seq-cuda" d="M1180 720 H1285 Q1305 720 1305 741 H1180" marker-end="url(#seq-arrow-cuda)"/>
+                <rect class="seq-label-bg" x="720" y="695" width="610" height="20"/>
+                <text class="seq-label seq-label--cuda" x="722" y="710">CUDA 图 → decode_cuda_graph_runner.backend.replay()/graph.replay() · CUDA 异步入队；本轮不调用 Python model.forward()</text>
+
+                <path class="seq-call" d="M1180 758 H1347" marker-end="url(#seq-arrow-main)"/>
+                <rect class="seq-label-bg" x="730" y="763" width="676" height="20"/>
+                <text class="seq-label" x="732" y="778">即时执行 → target_worker.model_runner.model.forward(input_ids, positions, forward_batch) · 内核异步入队</text>
+
+                <g data-routes="compact-sampling folded-greedy">
+                  <path class="seq-cuda" d="M1180 800 H1280 Q1300 800 1300 820 H1180" marker-end="url(#seq-arrow-cuda)"/>
+                  <rect class="seq-label-bg" x="746" y="805" width="626" height="20"/>
+                  <text class="seq-label seq-label--cuda" x="748" y="820">NVIDIA CUDA + 尾处理器：图回放写入固定步长缓冲区；折叠路线还可执行接受/提交</text>
+                </g>
+
+                <text class="seq-phase" x="18" y="850">返回</text>
+                <line class="seq-return" x1="1180" y1="854" x2="1013" y2="854" marker-end="url(#seq-arrow-main)"/>
+                <rect class="seq-label-bg" x="1018" y="829" width="304" height="20"/>
+                <text class="seq-label" x="1020" y="844">返回 ret : LogitsProcessorOutput</text>
+
+                <line class="seq-return" x1="1013" y1="888" x2="846" y2="888" marker-end="url(#seq-arrow-main)"/>
+                <rect class="seq-label-bg" x="798" y="863" width="396" height="20"/>
+                <text class="seq-label" x="800" y="878">ModelRunner._forward_raw() 包装为 ModelRunnerOutput</text>
+
+                <line class="seq-return" x1="846" y1="922" x2="344" y2="922" marker-end="url(#seq-arrow-main)"/>
+                <rect class="seq-label-bg" x="435" y="897" width="474" height="20"/>
+                <text class="seq-label" x="437" y="912">TpModelWorker 返回 GenerationBatchResult(logits_output, can_run_cuda_graph)</text>
+
+                <rect x="355" y="936" width="438" height="30" rx="4" fill="rgba(93,159,255,.06)" stroke="#5d9fff"/>
+                <text class="seq-label seq-label--data" x="368" y="956">TargetVerifyExecutor._forward_prepared_verify() 包装为 TargetVerifyResult</text>
+
+                <g data-routes="static-greedy">
+                  <rect x="355" y="978" width="298" height="50" rx="4" fill="rgba(98,245,154,.04)" stroke="#62f59a"/>
+                  <text class="seq-label" x="368" y="998">run_non_compact:</text>
+                  <text class="seq-note" x="368" y="1018">apply_dflash_verify_logits_adjustments()</text>
+                </g>
+                <g data-routes="compact-sampling">
+                  <rect x="665" y="978" width="400" height="50" rx="4" fill="rgba(93,159,255,.04)" stroke="#5d9fff"/>
+                  <text class="seq-label seq-label--data" x="678" y="998">CUDA 图 + 尾处理器；否则显式散射</text>
+                  <text class="seq-note" x="678" y="1018">→ apply_logits_adjustments_strided()</text>
+                </g>
+                <g data-routes="folded-greedy">
+                  <rect x="1077" y="978" width="328" height="50" rx="4" fill="rgba(195,108,255,.04)" stroke="#c36cff" stroke-dasharray="7 6"/>
+                  <text class="seq-label seq-label--cuda" x="1090" y="998">尾处理器的固定步长缓冲区</text>
+                  <text class="seq-note" x="1090" y="1018">只有调整为 noop，才采用折叠路线的接受结果</text>
+                </g>
+
+                <line class="seq-return" x1="344" y1="1054" x2="177" y2="1054" marker-end="url(#seq-arrow-main)"/>
+                <rect class="seq-label-bg" x="195" y="1059" width="650" height="20"/>
+                <text class="seq-label" x="197" y="1074">返回 TargetVerifyResult；压紧路线另带 hidden_strided → 下一步：语法约束 / 06 接受</text>
+              </svg>
+              <div class="metadata-contract" aria-label="按注意力后端选择的 Target Verify 元数据契约">
+                <div class="metadata-contract__owner">
+                  <b>数据契约 · 两类后端入口</b><br>
+                  <code>FlashInfer / AIter / FlashInfer-MLA：<br>DFlashVerifyInput.generate_attn_arg_prefill(...)</code><br>
+                  <code>DeepSeek-V4 CUDA / HIP radix：<br>attn_backend.make_forward_metadata_from_raw_verify(...)</code>
+                </div>
+                <div>
+                  <b><code>TargetVerifyExecutor</code> 先按后端能力选择谁负责补齐验证长度</b>
+                  <p>通用 DFlash 入口构造 <code>qo_indptr</code>，令局部 <code>paged_kernel_lens += verify_lens</code>，并生成 <code>kv_indices / cum_kv_seq_len / mask</code>。暴露 <code>make_forward_metadata_from_raw_verify()</code> 的 DeepSeek-V4 CUDA/HIP radix 后端则接收 raw verify metadata，在后端内部补长度并构造自己的 <code>DSV4Metadata</code>。两路都让 Target query 覆盖“已提交前缀 KV + 本轮验证窗口 KV”，但不能把它们画成同一个方法或同一种 metadata。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="data-flow-title">
+      <div class="section__head">
+        <p class="section__kicker">辅助视图 · 数据逐步展开</p>
+        <h2 id="data-flow-title"><code>B=2, G=4, W=5</code>：STATIC 直接走 10 行；COMPACT 才经历 4 个逻辑行 → 5 个物理行 → 10 个固定步长位置</h2>
+        <p class="section__intro"><code>verify_lens=[2,2]</code> 只约束动态布局：每个请求验证锚点 + 第一个 Draft token。COMPACT 的 <code>4→5</code> 假设非 DP 动态档位，且捕获网格包含 W=5 的档位；没有 CUDA 图网格时，即时执行布局可保持 4 行，DP 固定档位也可能更大。STATIC 不收集、不散射，完整 10 行直接前向计算。播放不包含接受判断。</p>
+      </div>
+
+      <div class="visual stepper" data-stepper data-steps="6">
+        <div class="visual__bar">
+          <span><strong>数据轨</strong> · 悬停或聚焦同名 token，可跨阶段联动</span>
+          <button class="zoom-button" type="button" data-zoom-target="#verify-data-canvas">放大数据轨</button>
+        </div>
+        <div class="visual__body" id="verify-data-flow">
+          <div class="stepper__toolbar">
+            <div class="stepper__buttons" aria-label="数据轨播放控制">
+              <button type="button" data-step-action="prev">上一步</button>
+              <button type="button" data-step-action="next">下一步</button>
+              <button type="button" data-step-action="play">播放</button>
+              <button type="button" data-step-action="reset">重置</button>
+            </div>
+            <div class="stepper__progress" aria-hidden="true"><span data-step-progress></span></div>
+            <div class="stepper__status" data-step-status aria-live="polite"></div>
+          </div>
+
+          <div id="verify-data-canvas">
+          <div class="canvas-scroll">
+            <div class="data-transform verify-transform">
+              <article class="transform-stage" data-step-node="0">
+                <b>01 · 候选矩阵</b>
+                <span class="shape">[B,W] = [2,5]</span>
+                <p>锚点 + G=4 个 Draft token；语义顺序尚未改变。</p>
+                <div class="mini-grid mini-grid--5">
+                  <span class="mini-token" tabindex="0" data-entity="r0-x">X</span><span class="mini-token" tabindex="0" data-entity="r0-a">a</span><span class="mini-token">b</span><span class="mini-token">c</span><span class="mini-token">d</span>
+                  <span class="mini-token" tabindex="0" data-entity="r1-u">U</span><span class="mini-token" tabindex="0" data-entity="r1-p">p</span><span class="mini-token">q</span><span class="mini-token">r</span><span class="mini-token">s</span>
+                </div>
+              </article>
+
+              <article class="transform-stage" data-step-node="1">
+                <b>02 · 输入几何</b>
+                <span class="shape" data-routes="compact-sampling folded-greedy">COMPACT · 4 个逻辑行</span>
+                <span class="shape" data-routes="static-greedy">STATIC · 10 个逻辑行</span>
+                <p data-routes="compact-sampling folded-greedy"><code>verify_lens=[2,2]</code>；按请求收集并压紧有效前缀。</p>
+                <p data-routes="static-greedy">跳过收集；完整 <code>[B,W]=[2,5]</code> 候选矩阵就是 Target 输入。</p>
+                <div class="mini-grid mini-grid--4" data-routes="compact-sampling folded-greedy">
+                  <span class="mini-token" tabindex="0" data-entity="r0-x">X</span><span class="mini-token" tabindex="0" data-entity="r0-a">a</span><span class="mini-token" tabindex="0" data-entity="r1-u">U</span><span class="mini-token" tabindex="0" data-entity="r1-p">p</span>
+                </div>
+                <div class="mini-grid mini-grid--10" data-routes="static-greedy">
+                  <span class="mini-token" tabindex="0" data-entity="r0-x">X</span><span class="mini-token" tabindex="0" data-entity="r0-a">a</span><span class="mini-token">b</span><span class="mini-token">c</span><span class="mini-token">d</span>
+                  <span class="mini-token" tabindex="0" data-entity="r1-u">U</span><span class="mini-token" tabindex="0" data-entity="r1-p">p</span><span class="mini-token">q</span><span class="mini-token">r</span><span class="mini-token">s</span>
+                </div>
+              </article>
+
+              <article class="transform-stage" data-step-node="2" data-kind="cuda">
+                <b>03 · 物理行</b>
+                <span class="shape" data-routes="compact-sampling folded-greedy">COMPACT · 5 个物理行</span>
+                <span class="shape" data-routes="static-greedy">STATIC · 10 个物理行</span>
+                <p data-routes="compact-sampling folded-greedy">4 行属于真实请求；第 5 行只是 CUDA 图档位的填充行。</p>
+                <p data-routes="static-greedy">没有压紧填充；每个候选 token 都拥有一个 Target 物理行。</p>
+                <div class="mini-grid mini-grid--5" data-routes="compact-sampling folded-greedy">
+                  <span class="mini-token" tabindex="0" data-entity="r0-x">X</span><span class="mini-token" tabindex="0" data-entity="r0-a">a</span><span class="mini-token" tabindex="0" data-entity="r1-u">U</span><span class="mini-token" tabindex="0" data-entity="r1-p">p</span><span class="mini-token" data-kind="off">填充</span>
+                </div>
+                <div class="mini-grid mini-grid--10" data-routes="static-greedy">
+                  <span class="mini-token" tabindex="0" data-entity="r0-x">X</span><span class="mini-token" tabindex="0" data-entity="r0-a">a</span><span class="mini-token">b</span><span class="mini-token">c</span><span class="mini-token">d</span>
+                  <span class="mini-token" tabindex="0" data-entity="r1-u">U</span><span class="mini-token" tabindex="0" data-entity="r1-p">p</span><span class="mini-token">q</span><span class="mini-token">r</span><span class="mini-token">s</span>
+                </div>
+              </article>
+
+              <article class="transform-stage" data-step-node="3" data-kind="cuda">
+                <b>04 · Target 前向计算</b>
+                <span class="shape" data-routes="compact-sampling folded-greedy">logits[5,V] + hidden[5,H_aux]</span>
+                <span class="shape" data-routes="static-greedy">logits[10,V] + hidden[10,H_aux]</span>
+                <p data-routes="compact-sampling folded-greedy">Target 对 5 个物理行计算；填充行的输出不会成为可验证候选。</p>
+                <p data-routes="static-greedy">Target 对完整 10 个物理行计算，结果已经按请求的固定步长排列。</p>
+                <div class="mini-grid mini-grid--5" data-routes="compact-sampling folded-greedy">
+                  <span class="mini-token" data-kind="cuda">L₀/H₀</span><span class="mini-token" data-kind="cuda">L₁/H₁</span><span class="mini-token" data-kind="cuda">L₂/H₂</span><span class="mini-token" data-kind="cuda">L₃/H₃</span><span class="mini-token" data-kind="off">填充输出</span>
+                </div>
+                <div class="mini-grid mini-grid--10" data-routes="static-greedy">
+                  <span class="mini-token" data-kind="cuda">L₀/H₀</span><span class="mini-token" data-kind="cuda">L₁/H₁</span><span class="mini-token" data-kind="cuda">L₂/H₂</span><span class="mini-token" data-kind="cuda">L₃/H₃</span><span class="mini-token" data-kind="cuda">L₄/H₄</span>
+                  <span class="mini-token" data-kind="cuda">L₅/H₅</span><span class="mini-token" data-kind="cuda">L₆/H₆</span><span class="mini-token" data-kind="cuda">L₇/H₇</span><span class="mini-token" data-kind="cuda">L₈/H₈</span><span class="mini-token" data-kind="cuda">L₉/H₉</span>
+                </div>
+              </article>
+
+              <article class="transform-stage" data-step-node="4" data-kind="main">
+                <b>05 · 固定步长接口</b>
+                <span class="shape">[B×W,*] = [10,*]</span>
+                <p data-routes="compact-sampling folded-greedy">有效压紧行散射回每个请求的固定步长位置；其余位置使用填充值占位。</p>
+                <p data-routes="static-greedy">Target 输出已经是固定步长布局；本阶段只是接口交接，不执行散射内核。</p>
+                <div class="mini-grid mini-grid--10" data-routes="compact-sampling folded-greedy">
+                  <span class="mini-token" tabindex="0" data-entity="r0-x">0:X</span><span class="mini-token" tabindex="0" data-entity="r0-a">1:a</span><span class="mini-token" data-kind="off">2:未启用</span><span class="mini-token" data-kind="off">3:未启用</span><span class="mini-token" data-kind="off">4:未启用</span>
+                  <span class="mini-token" tabindex="0" data-entity="r1-u">5:U</span><span class="mini-token" tabindex="0" data-entity="r1-p">6:p</span><span class="mini-token" data-kind="off">7:未启用</span><span class="mini-token" data-kind="off">8:未启用</span><span class="mini-token" data-kind="off">9:未启用</span>
+                </div>
+                <div class="mini-grid mini-grid--10" data-routes="static-greedy">
+                  <span class="mini-token" tabindex="0" data-entity="r0-x">0:X</span><span class="mini-token" tabindex="0" data-entity="r0-a">1:a</span><span class="mini-token">2:b</span><span class="mini-token">3:c</span><span class="mini-token">4:d</span>
+                  <span class="mini-token" tabindex="0" data-entity="r1-u">5:U</span><span class="mini-token" tabindex="0" data-entity="r1-p">6:p</span><span class="mini-token">7:q</span><span class="mini-token">8:r</span><span class="mini-token">9:s</span>
+                </div>
+                <div class="route-variant" data-routes="compact-sampling">只有 NVIDIA CUDA、<code>verify_epilogue != None</code> 且 Target CUDA 图命中时，才读取尾处理器的固定步长缓冲区；ROCm CUDA 图命中或即时执行等其余情形都显式调用散射内核。</div>
+                <div class="route-variant" data-routes="folded-greedy">FOLDED 还要求 NVIDIA CUDA；散射操作由 CUDA 图内的 <code>DSparkVerifyEpilogue</code> 接管。</div>
+              </article>
+
+              <article class="transform-stage" data-step-node="5" data-kind="main">
+                <b>06 · 返回契约</b>
+                <span class="shape">TargetVerifyResult + hidden 旁路输出</span>
+                <p>这里结束 Target Verify；尚未产生 <code>AcceptOuts</code>。</p>
+                <div class="result-pair">
+                  <span class="result-object" data-kind="main"><code>TargetVerifyResult(logits_output, can_run_cuda_graph)</code></span>
+                  <span class="result-object"><code>hidden_strided[10,H_aux]</code> · 压紧/折叠路线</span>
+                  <span class="result-object" data-routes="static-greedy"><code>hidden_strided=None</code>；hidden 留在 <code>logits_output.hidden_states</code></span>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <div class="canvas-scroll output-rails" data-step-node="4">
+            <div class="token-rail" data-routes="compact-sampling folded-greedy" aria-label="压紧结果散射后的十个固定步长位置">
+              <div class="token-rail__label">固定步长位置</div>
+              <div class="token" data-kind="main" tabindex="0" data-entity="r0-x">0<br>req0:X</div>
+              <div class="token" data-kind="main" tabindex="0" data-entity="r0-a">1<br>req0:a</div>
+              <div class="token" data-kind="off">2<br>未启用</div>
+              <div class="token" data-kind="off">3<br>未启用</div>
+              <div class="token" data-kind="off">4<br>未启用</div>
+              <div class="token" data-kind="main" tabindex="0" data-entity="r1-u">5<br>req1:U</div>
+              <div class="token" data-kind="main" tabindex="0" data-entity="r1-p">6<br>req1:p</div>
+              <div class="token" data-kind="off">7<br>未启用</div>
+              <div class="token" data-kind="off">8<br>未启用</div>
+              <div class="token" data-kind="off">9<br>未启用</div>
+            </div>
+            <div class="token-rail" data-routes="compact-sampling folded-greedy" aria-label="压紧源行到固定步长位置的映射">
+              <div class="token-rail__label">压紧输入行</div>
+              <div class="token" data-kind="data">第 0 行</div>
+              <div class="token" data-kind="data">第 1 行</div>
+              <div class="token" data-kind="off">填充值 0</div>
+              <div class="token" data-kind="off">填充值 0</div>
+              <div class="token" data-kind="off">填充值 0</div>
+              <div class="token" data-kind="data">第 2 行</div>
+              <div class="token" data-kind="data">第 3 行</div>
+              <div class="token" data-kind="off">填充值 0</div>
+              <div class="token" data-kind="off">填充值 0</div>
+              <div class="token" data-kind="off">填充值 0</div>
+            </div>
+            <div class="token-rail" data-routes="static-greedy" aria-label="STATIC 的十个固定步长位置">
+              <div class="token-rail__label">STATIC 位置</div>
+              <div class="token" data-kind="main" tabindex="0" data-entity="r0-x">0<br>req0:X</div>
+              <div class="token" data-kind="main" tabindex="0" data-entity="r0-a">1<br>req0:a</div>
+              <div class="token" data-kind="data">2<br>req0:b</div>
+              <div class="token" data-kind="data">3<br>req0:c</div>
+              <div class="token" data-kind="data">4<br>req0:d</div>
+              <div class="token" data-kind="main" tabindex="0" data-entity="r1-u">5<br>req1:U</div>
+              <div class="token" data-kind="main" tabindex="0" data-entity="r1-p">6<br>req1:p</div>
+              <div class="token" data-kind="data">7<br>req1:q</div>
+              <div class="token" data-kind="data">8<br>req1:r</div>
+              <div class="token" data-kind="data">9<br>req1:s</div>
+            </div>
+            <div class="token-rail" data-routes="static-greedy" aria-label="STATIC Target 输出行与固定步长位置的直接映射">
+              <div class="token-rail__label">Target 输出行</div>
+              <div class="token" data-kind="data">第 0 行</div><div class="token" data-kind="data">第 1 行</div><div class="token" data-kind="data">第 2 行</div><div class="token" data-kind="data">第 3 行</div><div class="token" data-kind="data">第 4 行</div>
+              <div class="token" data-kind="data">第 5 行</div><div class="token" data-kind="data">第 6 行</div><div class="token" data-kind="data">第 7 行</div><div class="token" data-kind="data">第 8 行</div><div class="token" data-kind="data">第 9 行</div>
+            </div>
+          </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="boundary-note"><strong>边界：</strong>未启用位置中的 0 是压紧结果散射后的统一形状占位，不表示 Target “接受了零 token”，也不会绕过后继的 <code>verify_lens</code>/<code>commit_lens</code> 约束。</div>
+      <div class="boundary-note"><strong>CAP_ACCEPT：</strong>它与 STATIC 共享本页的非压紧 <code>B×W=10</code> Target 几何；即使携带布局，也只在 06 接受阶段用作截断上限，不会把 Target 前向计算压成不等长行。模式分派见 04。</div>
+
+      <div class="retained-insights" aria-label="候选位置与压紧字段解释">
+        <article class="teaching-panel">
+          <h3>逐行对齐：当前输入行的 logits，预测的是下一个候选位置</h3>
+          <p>旧版的矩阵视图比单独看 shape 更容易发现 off-by-one。下面只解释 logits 的位置语义；是否接受、拒绝以及边界 bonus，仍由 06 决定。</p>
+          <div class="canvas-scroll">
+            <table class="alignment-table" aria-label="Target 输入行与下一候选位置的对齐关系">
+              <thead><tr><th>request 0</th><th>col 0</th><th>col 1</th><th>col 2</th><th>col 3</th><th>col 4</th></tr></thead>
+              <tbody>
+                <tr><td>Target 输入行</td><td class="input-cell">X · anchor</td><td class="input-cell">a · draft</td><td class="input-cell">b · draft</td><td class="input-cell">c · draft</td><td class="input-cell">d · draft</td></tr>
+                <tr><td>该行 logits 预测</td><td class="prediction-cell">next after X<br>示例：a</td><td class="prediction-cell">next after a<br>示例：Y</td><td>next after b</td><td>next after c</td><td>next after d</td></tr>
+                <tr><td>06 的对齐对象</td><td>draft a</td><td>draft b</td><td>draft c</td><td>draft d</td><td>仅当 a–d 全部通过时，才是末端 bonus 来源</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="mode-boundary"><strong>不要从示例 <code>Y</code> 提前得出接受结论：</strong>在贪心路线，06 比较 argmax 与对应 Draft token；在随机采样路线，06 使用实际 Target/Draft proposal 分布做拒绝采样修正。05 只交付各位置的分布。</div>
+        </article>
+
+        <article class="teaching-panel">
+          <h3>压紧字段检查器：四个逻辑行如何落到 5 行和 10 槽</h3>
+          <p data-routes="compact-sampling folded-greedy"><code>extend_start_loc</code> 与 <code>qo_indptr</code> 都描述 compact flat buffer 的请求边界；它们不是散射后的固定步长地址。</p>
+          <div class="canvas-scroll" data-routes="compact-sampling folded-greedy">
+            <table class="geometry-table" aria-label="RaggedVerifyLayout 具体字段及其消费者">
+              <thead><tr><th>字段</th><th>本例值</th><th>直接含义</th><th>下一消费者</th></tr></thead>
+              <tbody>
+                <tr><td><code>verify_lens</code></td><td><code>[2,2]</code></td><td>req0/req1 各取 anchor + 1 个 Draft</td><td>gather、attention、scatter</td></tr>
+                <tr><td>逻辑总行数 / <code>total_verify_tokens</code></td><td><code>4</code> / device-fast 时 host 字段可为 <code>None</code></td><td>权威 device 值是 <code>qo_indptr_device[-1]=4</code>；不要把 host mirror 是否物化与逻辑行数混为一谈</td><td>KV index 有效区间与后续散射</td></tr>
+                <tr><td><code>extend_start_loc</code></td><td><code>[0,2]</code></td><td>两个请求在 compact flat buffer 的起点</td><td>ForwardBatch / extend 几何</td></tr>
+                <tr><td><code>qo_indptr_device</code></td><td><code>[0,2,4]</code></td><td>query 分段边界</td><td><code>generate_attn_arg_prefill()</code></td></tr>
+                <tr><td><code>graph_num_tokens</code></td><td><code>5</code></td><td>4 个有效行 + 1 个图档位填充行</td><td>Target CUDA 图或同形即时执行</td></tr>
+                <tr><td>scatter 目标</td><td><code>[0,1,5,6]</code></td><td>恢复两个请求各自 W=5 的固定步长槽</td><td>06 接受与 07 hidden commit</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="mode-boundary" data-routes="static-greedy"><strong>STATIC 没有这组压紧几何：</strong><code>layout=None</code> 时不是跳过 Target，而是 <code>run_non_compact()</code> 直接把完整 <code>[B,W]=[2,5]</code> 展平为 10 行；结果已是固定步长，不需要 gather、graph-tier padding 或 scatter。</div>
+        </article>
+      </div>
+
+      <article class="teaching-panel" aria-labelledby="field-inspector-title" style="margin-top:18px">
+        <h3 id="field-inspector-title">字段快照：临时改写的是同一个 <code>ScheduleBatch</code>，执行中的 Target 读取的是已经装配好的 <code>ForwardBatch</code></h3>
+        <p>这组快照保留旧页“before / prepare / restore”组织形式，并补出两个恢复层次。第一格是 non-overlap 代表例，不把 <code>input_ids=None</code> 误写成所有模式的不变量。</p>
+        <div class="canvas-scroll">
+          <div class="field-inspector">
+            <div class="field-snapshot" data-kind="off">
+              <b>① 调用前 · non-overlap 代表例</b>
+              <p><code>batch.input_ids=None</code><br><code>batch.spec_info=DFlashDraftInputV2</code><br><code>batch.forward_mode=DECODE</code><br><code>batch.out_cache_loc</code> 由 executor 先换成 verify window 槽位。</p>
+            </div>
+            <div class="field-snapshot" data-kind="guard">
+              <b>② prepare_for_verify() · 临时视图</b>
+              <p><code>input_ids=verify_input.draft_token</code><br><code>spec_info=verify_input</code><br><code>forward_mode=TARGET_VERIFY</code>（IDLE 保持 IDLE）<br><code>capture_hidden_mode=FULL</code></p>
+            </div>
+            <div class="field-snapshot" data-kind="main">
+              <b>③ ForwardBatch.init_new() · 捕获执行视图</b>
+              <p><code>verify_forward_batch</code> 已保存当前 input/spec/mode 所需的 tensor 与字段引用。随后 Target 通过 <code>batch=None, forward_batch=verify_forward_batch</code> 执行，不再回读 Scheduler 的输入字段。</p>
+            </div>
+            <div class="field-snapshot" data-kind="off">
+              <b>④ 两层恢复 · 所有权不同</b>
+              <p><code>_forward_prepared_verify()</code> 立即恢复 <code>seq_lens_cpu/seq_lens_sum</code>；整个 worker 返回后，01 的 <code>_forward_isolation</code> 才恢复 <code>input_ids/spec_info/forward_mode</code> 等 Scheduler 持久视图。</p>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <details class="source-details">
+      <summary>源码锚点、设计原因与省略后的具体故障</summary>
+      <div class="source-details__body">
+        <div class="code-journey" aria-label="三段决定性源码旅程">
+          <article>
+            <h3>1 · 选择物理路线</h3>
+            <pre>verify_ids_2d = torch.cat(
+    [draft_block_ids[:, :1], draft_tokens], dim=1
+)
+if run_compact:
+    target_verify, hidden_strided = (
+        self._verify_executor.run_compact(...)
+    )
+else:
+    target_verify =
+        self._verify_executor.run_non_compact(...)</pre>
+          </article>
+          <article>
+            <h3>2 · 固化执行视图，再恢复 CPU 长度</h3>
+            <pre>verify_forward_batch, _ =
+    verify_input.prepare_for_verify(batch, target_worker)
+batch.seq_lens_cpu = seq_lens_cpu_backup
+batch.seq_lens_sum = seq_lens_sum_backup
+target_out = target_worker.forward_batch_generation(
+    batch=None,
+    forward_batch=verify_forward_batch,
+    is_verify=True,
+    skip_attn_backend_init=True,
+)</pre>
+          </article>
+          <article>
+            <h3>3 · 压紧结果恢复固定步长</h3>
+            <pre>strided_logits =
+    ScatterCompactToStrided.execute(
+        compact=compact_logits,
+        layout=layout,
+        fill_value=0.0,
+        verify_num_draft_tokens=stride,
+    )
+logits_output.next_token_logits = strided_logits
+logits_output.hidden_states = hidden_strided</pre>
+          </article>
+        </div>
+        <div class="source-anchor">
+          <code>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:572–612</code>
+          <span>构造 <code>verify_ids_2d</code>，选择 <code>run_compact</code>/<code>run_non_compact</code>，接收 <code>TargetVerifyResult</code> 与 <code>hidden_strided</code>。</span>
+        </div>
+        <div class="source-anchor">
+          <code>python/sglang/srt/speculative/dspark_components/dspark_verify.py:215–285, 320–425</code>
+          <span>构造 <code>DFlashVerifyInput</code>、执行 Target 前向计算、散射压紧结果，并恢复固定步长输出契约。</span>
+        </div>
+        <div class="source-anchor">
+          <code>python/sglang/srt/speculative/dflash_info.py:53–163</code>
+          <span><code>prepare_for_verify()</code> 装配 <code>ForwardBatch</code>；FlashInfer、AIter、FlashInfer-MLA 等后端通过 <code>generate_attn_arg_prefill()</code> 生成验证 query/KV 几何。</span>
+        </div>
+        <div class="source-anchor">
+          <code>python/sglang/srt/speculative/dspark_components/dspark_verify.py:427–433 · deepseek_v4_backend.py:952–1006 · deepseek_v4_backend_hip_radix.py:638–688</code>
+          <span><code>_verify_backend_self_adds_seq_lens()</code> 通过 <code>make_forward_metadata_from_raw_verify</code> 能力区分 raw-verify 后端；DeepSeek-V4 CUDA/HIP radix 在后端内部生成自己的 Target Verify metadata。</span>
+        </div>
+        <div class="source-anchor">
+          <code>python/sglang/srt/managers/tp_worker.py:532–582 · python/sglang/srt/model_executor/model_runner.py:1479–1580</code>
+          <span><code>is_verify=True</code> 跳过普通采样器；<code>_forward_raw()</code> 选择解码 CUDA 图或即时执行器。</span>
+        </div>
+        <div class="source-anchor">
+          <code>python/sglang/srt/model_executor/runner/eager_runner.py:194–338 · prefill_cuda_graph_runner.py:1004–1024</code>
+          <span><code>TARGET_VERIFY ⊂ is_extend()</code>，即时执行进入 <code>_execute_extend()</code>；分段 Prefill CUDA 图的分支条件明确拒绝 Target Verify。</span>
+        </div>
+        <div class="source-anchor">
+          <code>python/sglang/srt/model_executor/runner/decode_cuda_graph_runner.py:1058–1288 · python/sglang/srt/speculative/ragged_verify.py:46–172</code>
+          <span><code>load_batch()/execute()</code> 负责解码 CUDA 图的 replay 视图；<code>RaggedVerifyLayout</code> 持有 <code>extend_start_loc</code>、query indptr、有效行总数与 graph tier。</span>
+        </div>
+        <div class="callouts">
+          <div class="callout" data-kind="data">
+            <b>为什么 · 锚点 + Draft</b>
+            <p>每个 Target 行必须带着正确的候选前缀，才能让 X 所在行的 logits 预测 a、a 所在行的 logits 预测下一个 token；漏掉锚点会让整块 next-token 对齐整体左移。</p>
+          </div>
+          <div class="callout" data-kind="guard">
+            <b>为什么 · 预先规划元数据</b>
+            <p><code>prepare_for_verify()</code> 在真正前向计算前规划好 CUDA 图或即时执行元数据，因为后续调用会显式标记“已经预规划”；延后或重复规划会破坏 CUDA 图静态缓冲区与当前批次的一致性。</p>
+          </div>
+          <div class="callout" data-kind="fail">
+            <b>错误后果 · 省略散射</b>
+            <p>后继要求固定的 <code>[B×W,*]</code> 布局；省略散射会先破坏形状与布局契约。若仍按固定步长索引，压紧后的请求 1 会被误寻址到请求 0 的第 2/3 个位置，接受与 KV 提交随之错位。</p>
+          </div>
+          <div class="callout" data-kind="fail">
+            <b>错误后果 · 在这里提前接受</b>
+            <p><code>TargetVerifyResult</code> 只有 Target logits/hidden 与 CUDA 图标记；若在本阶段提前把某个 argmax 当作已接受 token，就会跳过 06 的贪心/随机采样接受语义与拒绝采样修正。</p>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <div class="next-consumers" aria-label="Target Verify 的下一消费者">
+      <a class="next-consumer" data-nav href="dspark-accept-finalize.html">
+        <b>06 · 接受 / 收尾 →</b>
+        <span><code>logits_output.next_token_logits</code> 进入贪心或随机采样接受逻辑；这里才产生 <code>AcceptOuts</code>。</span>
+      </a>
+      <a class="next-consumer" data-nav href="dspark-target-hidden-kv-explainer.html">
+        <b>07 · 隐藏状态 / Draft KV / 滚动锚点 →</b>
+        <span><code>hidden_strided</code> 或非压紧 hidden 在 <code>commit_lens</code> 约束下写入 Draft KV，并形成滚动锚点。</span>
+      </a>
+    </div>
+
+    <div class="pager">
+      <a data-nav href="dspark-survival-topk-layout.html">← 04B · 当前 Survival / Top-k / Layout</a>
+      <a data-nav href="dspark-accept-finalize.html">06 · 接受 / 收尾 →</a>
+    </div>
+    <footer class="site-footer">证据边界 · 当前源码版本 f01a0c7f97ec · 仅完成静态源码核验 · 不声称完成 GPU/CUDA Graph 运行时验证 · 通用 Target worker 视图覆盖 CUDA/ROCm，但 DsparkVerifyEpilogue/folded 路径仅支持 NVIDIA CUDA · 本图不展开 MLX/NPU/XPU 覆盖路径。</footer>
+  </main>
+</body>
+</html>

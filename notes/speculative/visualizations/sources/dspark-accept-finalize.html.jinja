@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>dSpark V2 · 接受与收尾</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="assets/dspark-visual-system.css">
+  <style>
+    .accept-map{display:grid;grid-template-columns:190px 210px 150px 560px 190px 210px 210px;gap:18px;align-items:center;min-width:1410px;padding:22px 8px 30px}.accept-node{--tone:var(--main);position:relative;min-height:126px;padding:14px;border:1px solid var(--tone);border-left:5px solid var(--tone);background:var(--surface)}.accept-node[data-kind="data"]{--tone:var(--data)}.accept-node[data-kind="guard"]{--tone:var(--guard);border-style:dashed}.accept-node[data-kind="cuda"]{--tone:var(--cuda);border-style:dashed}.accept-node:not(:last-child)::after{content:"→";position:absolute;right:-19px;top:43%;color:var(--main);font:900 18px/1 var(--mono)}.accept-node b{display:block;color:var(--tone);font:800 12px/1.35 var(--mono);overflow-wrap:anywhere}.accept-node span{display:block;margin-top:7px;color:var(--muted);font-size:12px}.accept-guard{width:118px;height:118px;display:grid;place-items:center;margin:auto;border:2px dashed var(--guard);background:var(--surface);color:var(--guard);transform:rotate(45deg);text-align:center}.accept-guard span{max-width:82px;transform:rotate(-45deg);font:800 11px/1.3 var(--mono)}.accept-branches{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.accept-branch{min-height:150px;padding:12px;border:1px solid var(--main);background:var(--surface)}.accept-branch[data-kind="data"]{border-color:var(--data)}.accept-branch[data-kind="guard"]{border-color:var(--guard);border-style:dashed}.accept-branch[data-active="false"]{opacity:.25;filter:saturate(.2)}.accept-branch b{display:block;color:var(--main);font:800 12px/1.3 var(--mono)}.accept-branch[data-kind="data"] b{color:var(--data)}.accept-branch[data-kind="guard"] b{color:var(--guard)}.accept-branch code,.accept-branch span{display:block;margin-top:6px;color:var(--muted);font-size:12px;overflow-wrap:anywhere}.ledger{display:grid;grid-template-columns:175px repeat(5,minmax(105px,1fr));min-width:850px;border-top:1px solid var(--line);border-left:1px solid var(--line)}.ledger>*{min-width:0;min-height:62px;display:grid;align-content:center;padding:9px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:rgba(5,13,24,.82);font:12px/1.3 var(--mono);text-align:center}.ledger__label{justify-content:start;color:var(--ui);font-weight:800;text-align:left}.ledger [data-kind="main"]{color:var(--main)}.ledger [data-kind="data"]{color:var(--data)}.ledger [data-kind="guard"]{color:var(--guard);border-style:dashed}.ledger [data-kind="fail"]{color:var(--fail);border-style:double}.ledger [data-kind="off"]{color:var(--off);border-style:dotted}.accept-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;border:1px solid var(--line);background:var(--line)}.accept-field{padding:13px;background:var(--surface)}.accept-field code{display:block;color:var(--data);font-size:12px}.accept-field b{display:block;margin-top:4px;color:var(--text);font-size:13px}.accept-field span{display:block;margin-top:6px;color:var(--muted);font-size:12px}.topic-link{display:block;margin-top:18px;padding:15px;border:1px solid var(--data);background:rgba(93,159,255,.06);text-decoration:none}.topic-link b{display:block;color:var(--data)}.topic-link span{display:block;margin-top:6px;color:var(--muted);font-size:12px}@media(max-width:900px){.accept-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:600px){.accept-fields{grid-template-columns:1fr}}
+  </style>
+  <link rel="stylesheet" href="assets/dspark-source-studio.css">
+  <script src="assets/dspark-site.js" defer></script>
+  <script src="assets/dspark-learning-layer.js" defer></script>
+  <script src="assets/dspark-source-studio.js" defer></script>
+  <script src="assets/dspark-stepper.js" defer></script>
+</head>
+<body data-page="06">
+  <nav data-site-nav aria-label="dSpark 学习站导航"></nav>
+  <main class="page page--wide">
+    <header class="hero">
+      <p class="eyebrow">06 · 接受 / 收尾</p>
+      <h1>Target 已经算完；现在决定哪些 token 真正生效</h1>
+      <p class="lead"><code>accept_and_finalize()</code> 不再运行 Transformer，也还不写 Draft KV。它把候选、Target logits 与真实 proposal 分布收敛成一个确定的 <code>AcceptOuts</code> 合同。</p>
+      <div class="evidence-strip"><span><strong>源码版本</strong> f01a0c7f97ec</span><span><strong>主例</strong> CUDA dSpark V2 · PP=1 · prefix=20</span><span><strong>证据范围</strong> 当前源码静态核验；未做 GPU 运行时验证</span></div>
+      <div class="route-switch" aria-label="选择讲解路线"><button type="button" data-route-choice="static-greedy">STATIC · 贪心</button><button type="button" data-route-choice="compact-sampling">COMPACT · 随机采样</button><button type="button" data-route-choice="folded-greedy">FOLDED · 贪心</button></div>
+      <div data-semantic-legend></div>
+    </header>
+    <section class="handoff" aria-label="本页边界">
+      <div class="handoff__item"><b>输入</b><span><code>verify_ids_2d</code>、Target logits、<code>draft_block</code>、sampling/layout/prefix 状态</span></div>
+      <div class="handoff__item"><b>本页改变</b><span>计算 <code>correct_len / bonus / cap_trim_lens</code>，再完成长度与输出 backing</span></div>
+      <div class="handoff__item"><b>输出</b><span><code>accept : AcceptOuts</code> 六字段；本页到此停止</span></div>
+      <div class="handoff__item"><b>下一步</b><span>07 依据 <code>commit_lens</code> 提交 hidden/KV，并构造下一轮锚点</span></div>
+    </section>
+    <section class="section" id="accept-flow">
+      <div class="section__head"><p class="section__kicker">主视图 · 调用与返回</p><h2>三种接受分支，最终汇入同一个收尾合同</h2><p class="section__intro">路线切换只改变高亮。mixed 是同批逐请求选择，不是第四种全批模式；folded 路线可能直接读取 08 的图内结果。</p></div>
+      <div class="visual stepper" data-stepper data-steps="6">
+        <div class="visual__bar"><strong>真实接收实例 → 方法 → 返回值 → 下一消费者</strong><button class="zoom-button" type="button" data-zoom-target="#accept-map">放大主图</button></div>
+        <div class="stepper__toolbar"><div class="stepper__buttons"><button type="button" data-step-action="prev">上一步</button><button type="button" data-step-action="next">下一步</button><button type="button" data-step-action="play">播放</button><button type="button" data-step-action="reset">重置</button></div><div class="stepper__progress"><span data-step-progress></span></div><div class="stepper__status" data-step-status></div></div>
+        <div class="visual__body canvas-scroll"><div class="accept-map" id="accept-map" aria-label="dSpark 接受与收尾调用图">
+          <article class="accept-node" data-step-node="0"><b>self : DSparkWorkerV2</b><span><code>_forward_decode()</code></span><span>Target Verify 已返回；调用 <code>self._verify_executor.accept_and_finalize(...)</code>。</span></article>
+          <article class="accept-node" data-kind="guard" data-step-node="1"><b>self._verify_executor : TargetVerifyExecutor</b><span><code>accept_and_finalize()</code></span><span><code>folded_accept=True</code> 时读取 epilogue；否则进入普通分派。</span></article>
+          <div class="accept-guard" data-step-node="1"><span>普通接受还是已可信的 folded 结果？</span></div>
+          <div class="accept-branches" data-step-node="2">
+            <article class="accept-branch" data-kind="guard" style="grid-column:1/-1;min-height:auto"><b>accept_draft_tokens()</b><code>内部按 sampling_info / greedy_mask 分派</code><span>这个 wrapper 调用下面的 Greedy、Sampling 或 Mixed 实现，再返回三字段。</span></article>
+            <article class="accept-branch" data-routes="static-greedy folded-greedy"><b>AcceptGreedy</b><code>target argmax</code><span>连续 equality；首个 mismatch 停止。</span></article>
+            <article class="accept-branch" data-kind="data" data-routes="compact-sampling"><b>AcceptSampling</b><code>chain rejection sampling</code><span>使用真实 p/q；拒绝后从 residual 随机抽一个 bonus。</span></article>
+            <article class="accept-branch" data-kind="guard"><b>SelectMixedAccept</b><code>greedy_mask[req]</code><span>两套结果都算，再逐请求选择。</span></article>
+          </div>
+          <article class="accept-node" data-kind="data" data-step-node="3"><b>分派结果返回 wrapper</b><span><code>(correct_len, bonus, cap_trim_lens)</code></span><span>cutoff 后必须按新边界重新选择 bonus。</span></article>
+          <article class="accept-node" data-step-node="4"><b>FinalizeAcceptLens</b><span><code>commit_lens=correct_len+1</code></span><span><code>new_seq_lens=prefix_lens+commit_lens</code></span></article>
+          <article class="accept-node" data-kind="data" data-step-node="5"><b>BuildOutTokens → AcceptOuts</b><span>固定 stride backing + 六字段</span><span>返回 <code>DSparkWorkerV2</code>；下一页才写 Draft KV。</span></article>
+        </div></div>
+        <div class="visual__bar"><strong>同步 token 账本 · 同一个例子跟随调用步骤变化</strong></div>
+        <div class="visual__body canvas-scroll"><div class="ledger" aria-label="Target 输入、预测、接受与输出 backing 账本">
+          <div class="ledger__label">位置 / 槽位</div><div>0</div><div>1</div><div>2</div><div>3</div><div>4</div>
+          <div class="ledger__label">Target 输入 candidates</div><div data-kind="data" data-step-node="0">X</div><div data-kind="data" data-step-node="0">a</div><div data-kind="data" data-step-node="0">b</div><div data-kind="data" data-step-node="0">c</div><div data-kind="data" data-step-node="0">d</div>
+          <div class="ledger__label">每行 next prediction</div><div data-kind="main" data-step-node="2">a</div><div data-kind="guard" data-step-node="2">Y</div><div data-kind="off" data-step-node="2">…</div><div data-kind="off" data-step-node="2">…</div><div data-kind="off" data-step-node="2">…</div>
+          <div class="ledger__label">接受判断</div><div data-kind="main" data-step-node="3">draft a ✓</div><div data-kind="fail" data-step-node="3">draft b 停止</div><div data-kind="off" data-step-node="3">不再提交</div><div data-kind="off" data-step-node="3">不再提交</div><div data-kind="off" data-step-node="3">—</div>
+          <div class="ledger__label">BuildOutTokens backing</div><div data-kind="main" data-step-node="5">a</div><div data-kind="guard" data-step-node="5">Y</div><div data-kind="off" data-step-node="5">c</div><div data-kind="off" data-step-node="5">d</div><div data-kind="off" data-step-node="5">0</div>
+          <div class="ledger__label">有效输出边界</div><div data-kind="main" data-step-node="5">有效</div><div data-kind="main" data-step-node="5">有效</div><div data-kind="off" data-step-node="5">不可见</div><div data-kind="off" data-step-node="5">不可见</div><div data-kind="off" data-step-node="5">不可见</div>
+        </div></div>
+      </div>
+    </section>
+    <section class="section" id="accept-outs">
+      <div class="section__head"><p class="section__kicker">辅助视图 · 输出字段</p><h2><code>AcceptOuts</code> 六个字段分别控制什么</h2><p class="section__intro">主例得到 <code>correct_len=1</code>、<code>bonus=Y</code>、<code>commit_lens=2</code>、<code>new_seq_lens=22</code>。<code>correct_len</code> 不包含 bonus。</p></div>
+      <div class="accept-fields">
+        <div class="accept-field"><code>correct_len</code><b>[1]</b><span>被接受的 Draft token 数；不同实现分支的 dtype 不应被写死成同一种。</span></div>
+        <div class="accept-field"><code>bonus</code><b>[Y]</b><span>greedy 为停止边界的 Target argmax；sampling 为拒绝/残差或全接受后的随机样本。</span></div>
+        <div class="accept-field"><code>cap_trim_lens</code><b>[0]</b><span>raw correct_len 被 layout cutoff 裁掉的数量；CAP_ACCEPT 与 COMPACT 都可能非零。</span></div>
+        <div class="accept-field"><code>commit_lens</code><b>[2]</b><span><code>correct_len+1</code>；对外有效输出长度与要提交的输入 hidden 长度数值相同，但 token 集不同。</span></div>
+        <div class="accept-field"><code>new_seq_lens</code><b>[22]</b><span><code>prefix_lens[20]+commit_lens[2]</code>，作为下一轮 position 边界。</span></div>
+        <div class="accept-field"><code>out_tokens</code><b>[a,Y,c,d,0]</b><span>固定 stride backing；消费者只按 <code>accept_lens=commit_lens</code> 读取 <code>[a,Y]</code>。</span></div>
+      </div>
+      <a class="topic-link" data-nav href="dspark-sampling-rejection-lab.html"><b>06A · 为什么 sampling bonus 不一定是 Target argmax？</b><span>用 q、p、接受率与 residual CDF 手算一个拒绝后抽到 C 的例子。</span></a>
+      <details class="source-details"><summary>为什么 / 如果省略 / 易错边界 / 源码锚点</summary><div class="source-details__body">
+        <div class="callouts">
+          <div class="callout" data-kind="guard"><b>为什么必须在这里收尾</b><p>只有接受完成后，系统才同时知道接受了几个 Draft 和边界 bonus；更早无法确定 <code>commit_lens</code>。</p></div>
+          <div class="callout" data-kind="fail"><b>如果把 backing 全部当有效输出</b><p>会把已拒绝的 <code>c/d</code> 泄漏给用户并错误推进长度。后缀不是被全部清零，而是由长度保持不可见。</p></div>
+          <div class="callout" data-kind="guard"><b>cutoff 之后必须重取 bonus</b><p><code>correct_len=min(raw,verify_len-1)</code> 后，bonus 必须来自新的停止边界；沿用 raw 边界会使用不可验证上下文。</p></div>
+          <div class="callout" data-kind="data"><b>grammar 与 folded 边界</b><p>live grammar mask 在 Target forward 后、accept 前应用；存在 grammar 时不能信任图内预先计算的 folded accept。</p></div>
+        </div>
+        <div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_verify.py:91–149, 658–722</code><span><code>accept_and_finalize()</code>、greedy/sampling/mixed 分派与 <code>AcceptOuts</code> 装配。</span></div>
+        <div class="source-anchor"><code>python/sglang/kernels/ops/speculative/dspark/dspark_accept.py:80–174, 558–730, 816–824</code><span>sampling、greedy、长度收尾与 cutoff；裁剪后按新 correct_len 选择边界结果。</span></div>
+        <div class="source-anchor"><code>python/sglang/kernels/ops/speculative/dspark/dspark_verify_window.py:766–827</code><span><code>BuildOutTokens</code> 的真实顺序是复制 drafts、最后槽置 0、在 <code>correct_len</code> 位置 scatter bonus。</span></div>
+      </div></details>
+    </section>
+    <nav class="pager" aria-label="相邻章节"><a data-nav href="dspark-verify-step-through.html">← 05 · Target 验证</a><a data-nav href="dspark-sampling-rejection-lab.html">06A · 拒绝采样修正实验室 →</a></nav>
+    <footer class="site-footer">证据边界 · 当前源码静态核验 · 本页不声称完成 CUDA/Triton 运行时验证 · 07 接手 hidden/KV 与 rolling anchor。</footer>
+  </main>
+</body>
+</html>

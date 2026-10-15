@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>04 · dSpark Confidence Budget Layout</title>
+  <style>
+    :root{color-scheme:dark;--bg:#02050b;--panel:#07101f;--panel2:#0a1528;--ink:#eff7ff;--muted:#9aabc4;--line:#263957;--main:#62f59a;--data:#5d9fff;--guard:#ffd060;--fail:#ff5e7f;--cuda:#c36cff;--off:#71809a;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;--sans:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    *{box-sizing:border-box;min-width:0}html,body{margin:0;max-width:100%;overflow-x:hidden;background:var(--bg);color:var(--ink)}html{scroll-behavior:smooth}body{font-family:var(--sans);line-height:1.55;background:radial-gradient(circle at 7% 0,rgba(255,200,90,.13),transparent 26rem),radial-gradient(circle at 92% 4%,rgba(72,184,255,.13),transparent 29rem),linear-gradient(rgba(86,133,173,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(86,133,173,.045) 1px,transparent 1px),var(--bg);background-size:auto,auto,26px 26px,26px 26px,auto}a{color:inherit;text-underline-offset:3px}a:focus-visible{outline:2px solid var(--data);outline-offset:3px}code,pre,.mono{font-family:var(--mono);overflow-wrap:anywhere;word-break:break-word}.shell{width:min(1480px,100%);margin:auto;padding:18px clamp(10px,2vw,28px) 48px}.crumb{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 10px;color:var(--muted);font:12px/1.4 var(--mono)}.crumb a{color:var(--data)}
+    .hero{padding:clamp(20px,3vw,38px);border:1px solid #315778;border-radius:22px;background:linear-gradient(135deg,rgba(32,25,7,.92),rgba(5,10,18,.98));box-shadow:0 0 45px rgba(255,200,90,.07),inset 0 0 55px rgba(72,184,255,.04)}.kicker{margin:0 0 8px;color:var(--main);font:700 12px/1.3 var(--mono);letter-spacing:.14em;text-transform:uppercase}.hero h1{margin:0;font-size:clamp(30px,5vw,60px);line-height:1.02;letter-spacing:-.045em}.grad{background:linear-gradient(90deg,var(--guard),#fff2c8 42%,var(--data));background-clip:text;-webkit-background-clip:text;color:transparent}.lead{max-width:1150px;margin:15px 0 0;color:#bfd1e1;font-size:clamp(14px,1.6vw,18px)}
+    .routes,.legend{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:17px}.route{padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#06101c;color:var(--muted);text-decoration:none;font:11px/1.3 var(--mono)}.route[aria-current=true]{border-color:var(--data);color:var(--ink);box-shadow:inset 0 -2px var(--data),0 0 16px rgba(72,184,255,.12)}.route-status{color:var(--guard);font:11px/1.4 var(--mono)}.tag{display:inline-flex;align-items:center;gap:6px;color:var(--tone);font:700 10px/1.2 var(--mono);letter-spacing:.08em}.tag:before{content:"";width:18px;border-top:3px solid var(--tone)}.tag.guard:before{border-top-style:dashed}.tag.fail:before{border-top-style:double}.tag.off:before{border-top-style:dotted}.main{--tone:var(--main)}.data{--tone:var(--data)}.guard{--tone:var(--guard)}.fail{--tone:var(--fail)}.cuda{--tone:var(--cuda)}.off{--tone:var(--off)}
+    .atlas{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:6px;margin:14px 0}.atlas a{min-height:58px;padding:8px;border:1px solid var(--line);background:#06101b;color:var(--muted);text-decoration:none;font-size:11px}.atlas b{display:block;color:var(--data);font:700 10px/1.2 var(--mono)}.atlas span{display:block;margin-top:4px}.atlas a[aria-current=page]{border-color:var(--main);color:var(--ink);box-shadow:inset 0 -2px var(--main)}
+    .section{margin-top:14px;padding:clamp(14px,2vw,22px);border:1px solid var(--line);border-radius:16px;background:linear-gradient(145deg,rgba(8,20,34,.96),rgba(4,10,18,.98))}.section h2{margin:0;font-size:clamp(20px,2.5vw,30px);line-height:1.18}.sub{margin:6px 0 0;color:var(--muted);font-size:13px}.contract{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:14px}.contract article,.fact,.state,.mode,.time,.number{padding:12px;border:1px solid var(--line);background:var(--panel)}.contract strong,.fact strong,.mode strong,.number strong{display:block;color:var(--tone);font:700 10px/1.3 var(--mono);letter-spacing:.08em}.contract p,.fact p,.mode p,.number p{margin:7px 0 0;color:#c0d1df;font-size:12px}
+    .flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px 10px;margin-top:15px}.node{position:relative;padding:12px;border:1px solid var(--line);border-left:4px solid var(--tone);background:var(--panel);overflow-wrap:anywhere}.node.guard{border-style:dashed;border-left-style:dashed}.node.off{border-style:dotted}.node:not(:last-child):after{content:"→";position:absolute;right:-14px;top:50%;color:var(--data);font:700 18px/1 var(--mono)}.node .tag{margin-bottom:7px}.fqcn{display:block;color:#eef8ff;font:700 11px/1.42 var(--mono)}.instance{display:block;margin-top:5px;color:var(--data);font:11px/1.4 var(--mono)}.action{display:block;margin-top:7px;color:#b7cadb;font-size:12px}.return{display:block;margin-top:7px;padding-top:7px;border-top:1px solid var(--line);color:var(--main);font:10px/1.45 var(--mono)}
+    .timeline{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:14px}.time{position:relative;border-top:3px solid var(--tone)}.time:not(:last-child):after{content:"→";position:absolute;right:-14px;top:42%;z-index:2;color:var(--data);font:700 16px/1 var(--mono)}.time b{display:block;color:var(--tone);font:700 10px/1.3 var(--mono)}.time span{display:block;margin-top:6px;color:#c2d3e0;font-size:11px}.time code{display:block;margin-top:7px;color:var(--ink);font-size:10px}
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:14px}.state label{display:block;color:var(--data);font:700 10px/1.3 var(--mono);letter-spacing:.1em}.state pre{margin:8px 0 0;white-space:pre-wrap;color:#eaf5ff;font-size:12px}.numbers{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}.number{text-align:center}.number strong{font-size:11px}.number output{display:block;margin-top:7px;color:var(--main);font:700 18px/1.2 var(--mono)}
+    .modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}.mode{border-top:3px solid var(--tone)}.mode dl{margin:10px 0 0;display:grid;grid-template-columns:auto 1fr;gap:5px 8px;font-size:11px}.mode dt{color:var(--muted)}.mode dd{margin:0;color:#e5f1fa;font-family:var(--mono);overflow-wrap:anywhere}.mini-note{margin-top:10px;padding:10px;border-left:3px solid var(--tone);background:rgba(255,255,255,.025);color:#c6d5e2;font-size:12px}.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:13px}
+    .source-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:11px;margin-top:13px}.codebox{margin:0;padding:14px;border:1px solid var(--line);background:#02070d;color:#d8eaff;font:11px/1.6 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}.sources{display:grid;gap:8px}.source{padding:10px;border-left:3px solid var(--data);background:#06111e;color:#c7d7e5;font:11px/1.5 var(--mono);overflow-wrap:anywhere}.source b{display:block;color:var(--data)}.boundary{margin-top:14px;padding:12px;border:1px dashed var(--guard);color:#dfd0a4;background:rgba(255,200,90,.045);font-size:12px}.page-nav{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.page-nav a{padding:12px;border:1px solid var(--line);background:#06101b;text-decoration:none}.page-nav a:last-child{text-align:right}.page-nav small{display:block;color:var(--muted);font:10px/1.3 var(--mono)}.page-nav strong{display:block;margin-top:4px;color:var(--data);font-size:13px}
+    /* CUDA is device execution: purple plus dashed stroke; DATA remains blue plus solid stroke. */
+    .tag.cuda:before{border-top-style:dashed}.node.cuda{border-style:dashed;border-left-style:dashed}
+    @media(max-width:1120px){.atlas{grid-template-columns:repeat(3,minmax(0,1fr))}.flow{grid-template-columns:repeat(2,minmax(0,1fr))}.node:nth-child(2n):after{display:none}.contract{grid-template-columns:repeat(2,minmax(0,1fr))}.source-grid{grid-template-columns:1fr}.timeline{grid-template-columns:repeat(3,minmax(0,1fr))}.time:nth-child(3):after{display:none}.numbers{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:736px){.shell{padding:10px 9px 34px}.hero{border-radius:15px;padding:18px 14px}.atlas{grid-template-columns:repeat(3,minmax(0,1fr))}.atlas a{min-height:52px;padding:7px 6px}.flow,.contract,.facts,.modes,.timeline,.split{grid-template-columns:1fr}.node:after,.time:after{content:"↓"!important;display:block!important;right:50%!important;top:auto!important;bottom:-17px!important}.node:last-child:after,.time:last-child:after{display:none!important}.numbers{grid-template-columns:repeat(2,minmax(0,1fr))}.page-nav{grid-template-columns:1fr}.page-nav a:last-child{text-align:left}}
+    @media(max-width:420px){.atlas{grid-template-columns:repeat(2,minmax(0,1fr))}.hero h1{font-size:31px}.route{width:100%}.tag{font-size:9px}.section{padding:13px 10px}.numbers{grid-template-columns:1fr 1fr}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  </style>
+</head>
+<body>
+<main class="shell">
+  <nav class="crumb" aria-label="面包屑"><a class="route-propagate" href="dspark-complete-execution-flow.html">dSpark V2 学习地图</a><span>/</span><span>04 Confidence / budget / layout</span></nav>
+  <header class="hero">
+    <p class="kicker">04 · Owner page · Planner only</p>
+    <h1><span class="grad">历史 survival 决定“多少”</span><br>当前 survival 决定“分给谁”</h1>
+    <p class="lead">本页从 <code>DraftProposal</code> 返回后开始：缺 confidence 才现场计算；当 adaptive mode 启用 budget scheduling 且沿用默认 confidence lag=2 时，总 verify budget 由两轮前的历史 survival 与 SPS cost 共同选择；当前 proposal 的 confidence 再经 <code>cumprod + top-k</code> 变成每请求 <code>verify_lens</code>。终点是 <code>layout</code> 与 <code>run_compact</code>，物理 compact flat buffer 留给 05。</p>
+    <div class="routes" aria-label="执行路线">
+      <a class="route route-choice" data-route="static-greedy" href="?route=static-greedy">STATIC · greedy</a>
+      <a class="route route-choice" data-route="compact-sampling" href="?route=compact-sampling">COMPACT · sampling</a>
+      <a class="route route-choice" data-route="folded-greedy" href="?route=folded-greedy">Folded · greedy</a>
+      <span class="route-status" id="routeStatus">当前路线：COMPACT sampling 计算 layout；sampling 不改变 planner 的长度分配公式。</span>
+    </div>
+    <div class="legend" aria-label="固定语义图例">
+      <span class="tag main">MAIN 主路径</span><span class="tag data">DATA 数据</span><span class="tag guard">GUARD 分支</span><span class="tag fail">FAIL 失败</span><span class="tag cuda">CUDA 设备执行</span><span class="tag off">OFF 本页不展开</span>
+    </div>
+  </header>
+
+  <nav class="atlas" aria-label="00 至 08 学习导航">
+    <a class="route-propagate" href="dspark-complete-execution-flow.html"><b>00</b><span>总览</span></a>
+    <a class="route-propagate" href="dspark-forward-isolation.html"><b>01</b><span>隔离</span></a>
+    <a class="route-propagate" href="dspark-prefill-bootstrap.html"><b>02</b><span>Prefill</span></a>
+    <a class="route-propagate" href="dspark-draft-proposal.html"><b>03</b><span>Draft</span></a>
+    <a class="route-propagate" href="dspark-confidence-budget-layout.html" aria-current="page"><b>04</b><span>Budget</span></a>
+    <a class="route-propagate" href="dspark-verify-step-through.html"><b>05</b><span>Verify</span></a>
+    <a class="route-propagate" href="dspark-accept-finalize.html"><b>06</b><span>Accept</span></a>
+    <a class="route-propagate" href="dspark-target-hidden-kv-explainer.html"><b>07</b><span>Hidden/KV</span></a>
+    <a class="route-propagate" href="dspark-folded-fast-path.html"><b>08</b><span>Folded</span></a>
+  </nav>
+
+  <section class="section">
+    <p class="kicker">method contract</p>
+    <h2>Planner 接收什么、改什么、返回什么</h2>
+    <div class="contract">
+      <article class="data"><strong>RECEIVES</strong><p><code>proposal: DraftProposal</code>、<code>draft_input: DFlashDraftInputV2</code>、当前 <code>prefix_lens</code>/<code>req_pool_indices</code>；proposal 可能已带 folded confidence。</p></article>
+      <article class="guard"><strong>MUTATES</strong><p>Host budget planner 的历史/carry 与 last decision 会推进；overlap 路径更早由 <code>prepare_verify_budget()</code> 写 <code>draft_input.verify_token_budget</code>。</p></article>
+      <article class="main"><strong>RETURNS</strong><p><code>confidence: Optional[Tensor]</code>、<code>verify_token_budget: Optional[int]</code>、<code>layout: Optional[RaggedVerifyLayout]</code>、<code>run_compact: bool</code>。</p></article>
+      <article class="data"><strong>NEXT CONSUMER</strong><p><code>DSparkWorkerV2._forward_decode()</code> 依据 <code>run_compact</code> 调 <code>TargetVerifyExecutor.run_compact()</code> 或 <code>run_non_compact()</code>；见 05。</p></article>
+    </div>
+  </section>
+
+  <section class="section">
+    <p class="kicker">caller → callee → return → next</p>
+    <h2>两条统计时间轴在 <code>schedule_layout()</code> 汇合</h2>
+    <div class="flow">
+      <article class="node main"><span class="tag main">MAIN</span><span class="fqcn">sglang.srt.speculative.dspark_components.dspark_worker_v2.DSparkWorkerV2._forward_decode</span><span class="instance">实例：self；proposal 刚从 self._proposer 返回</span><span class="action"><code>confidence = proposal.confidence</code>；只有为 <code>None</code> 才调用 planner 计算。</span><span class="return">→ current confidence[B,G] or None</span></article>
+      <article class="node data"><span class="tag data">DATA</span><span class="fqcn">sglang.srt.speculative.dspark_components.dspark_planner.DSparkVerifyPlanner.compute_confidence_tensor</span><span class="instance">实例：self._verify_planner</span><span class="action">普通 draft 用 hidden + Markov context；DSv4 hook 用 <code>confidence_tap</code>；head 不存在返回 None。</span><span class="return">→ confidence for current proposal</span></article>
+      <article class="node guard"><span class="tag guard">GUARD</span><span class="fqcn">sglang.srt.speculative.dspark_components.dspark_planner.DSparkVerifyPlanner.resolve_verify_token_budget</span><span class="instance">实例：self._verify_planner</span><span class="action">overlap 读取预计算的 <code>draft_input.verify_token_budget</code>；non-overlap 同步进入 <code>compute_budget_sync()</code>。</span><span class="return">→ budget: Optional[int]</span></article>
+      <article class="node main"><span class="tag main">MAIN</span><span class="fqcn">sglang.srt.speculative.dspark_components.dspark_planner.HostConfidenceBudgetPlanner.compute_budget</span><span class="instance">实例：self._verify_planner._budget_planner</span><span class="action">把历史 confidence 变 survival，结合 SPS/step-time 选使预测吞吐最大的 budget。</span><span class="return">→ VerifyBudgetDecision.budget</span></article>
+      <article class="node main"><span class="tag main">MAIN</span><span class="fqcn">sglang.srt.speculative.dspark_components.dspark_planner.DSparkVerifyPlanner.schedule_layout</span><span class="instance">实例：self._verify_planner</span><span class="action">先处理 STATIC/verify-all/cache/grid guard，再把当前 confidence 与 budget 交给长度调度。</span><span class="return">→ layout or None</span></article>
+      <article class="node cuda"><span class="tag cuda">CUDA</span><span class="fqcn">sglang.kernels.ops.speculative.dspark.dspark_schedule.ScheduleVerifyLensTopk.execute</span><span class="instance">类方法；CUDA 输入→Triton，其他→torch</span><span class="action"><code>survival=cumprod(current confidence)</code>，全 batch top-k 选 budget 个 extra slots。</span><span class="return">→ verify_lens[int32, B]</span></article>
+      <article class="node data"><span class="tag data">DATA</span><span class="fqcn">sglang.srt.speculative.ragged_verify.RaggedVerifyLayout</span><span class="instance">实例：layout</span><span class="action">封装 <code>verify_lens</code>、graph tier、indptr/start locations；本页不展开物理 flat rows。</span><span class="return">→ DSparkWorkerV2</span></article>
+      <article class="node guard"><span class="tag guard">GUARD</span><span class="fqcn">sglang.srt.speculative.dspark_components.dspark_planner.DSparkVerifyPlanner.should_run_compact</span><span class="instance">实例：self._verify_planner；结果：run_compact</span><span class="action">仅 <code>mode is COMPACT and layout is not None</code> 为 true。</span><span class="return">→ 05 Target verify branch</span></article>
+    </div>
+  </section>
+
+  <section class="section">
+    <p class="kicker">two-round history</p>
+    <h2>启用 budget scheduling + 默认 lag=2：overlap 与 non-overlap 都让 budget 看两轮前</h2>
+    <p class="sub">它们只是“延迟放在哪里”不同。当前 confidence 仍立即用于本轮 top-k 分配，所以同一轮同时存在历史轴与当前轴。</p>
+    <div class="timeline">
+      <article class="time data"><b>t−2 · confidence</b><span>请求 R0/R1 的 confidence 产生，并携带 req generation。</span><code>C[t−2]</code></article>
+      <article class="time guard"><b>OVERLAP RELAY</b><span><code>ConfidenceRelay</code> 的 CUDA host ring 固定 lag=2；FutureMap 在 t 解析。</span><code>relay_ring_lag = 2</code></article>
+      <article class="time guard"><b>NON-OVERLAP CARRY</b><span>没有 FutureMap relay；Host planner 的本地 carry_steps=2 将当前输入移成历史。</span><code>lag_steps=2 − relay_lag=0</code></article>
+      <article class="time main"><b>t · BUDGET</b><span>两条路径汇合为历史 survival，与 SPS cost 计算“总共多验证多少”。</span><code>budget = argmax θ(k)</code></article>
+      <article class="time data"><b>t · ASSIGN</b><span>同一轮刚生成的 C[t] 做 cumprod/top-k，决定 extra token 分给哪个请求。</span><code>verify_lens = 1 + selected_extra</code></article>
+    </div>
+    <div class="mini-note guard"><strong>GUARD · request identity：</strong><code>req_generation</code> 必须与当前 pool slot generation 匹配；不匹配时 history survival 退回全 1，避免复用 req_pool slot 后把上一请求的 confidence 泄漏给新请求。</div>
+    <div class="mini-note off"><strong>OFF · boundary：</strong>relay 尚未初始化/事件未 ready 时可能解析为 <code>None</code>，planner 会走无 budget 的退化路径；这不证明每个启动阶段都有可用的两轮历史。</div>
+  </section>
+
+  <section class="section">
+    <p class="kicker">B=2 · G=4 example</p>
+    <h2>当前 survival 怎样把 budget=2 分成 <code>verify_lens=[2,2]</code></h2>
+    <div class="split">
+      <article class="state"><label>CURRENT CONFIDENCE C[t]</label><pre>R0 = [.95, .90, .70, .20]
+R1 = [.99, .95, .92, .85]
+
+cumprod:
+R0 = [.9500, .8550, .5985, .1197]
+R1 = [.9900, .9405, .8653, .7355]</pre></article>
+      <article class="state"><label>GLOBAL TOP-K EXTRA SLOTS</label><pre>budget = 2
+#1  R1 · position 0 = .9900
+#2  R0 · position 0 = .9500
+
+min_verify_len = 1  # 每请求至少 anchor
+selected_extra = [1,1]
+verify_lens = [2,2]</pre></article>
+    </div>
+    <div class="numbers">
+      <article class="number data"><strong>LOGICAL ROWS</strong><output>4</output><p><code>sum([2,2])</code></p></article>
+      <article class="number guard"><strong>GRAPH TIER*</strong><output>5</output><p>若 capture grid 把 4 对齐到 5</p></article>
+      <article class="number main"><strong>LAYOUT</strong><output>✓</output><p><code>RaggedVerifyLayout</code></p></article>
+      <article class="number guard"><strong>RUN COMPACT</strong><output>true</output><p>仅 COMPACT + layout</p></article>
+    </div>
+    <div class="mini-note data"><strong>为什么最终是 prefix length：</strong>每行 survival 是 confidence 的前缀积，随位置不增；选择某请求的后置位置时，它的前置位置具有不低的值，top-k 计数因此可还原为连续 <code>verify_len</code>。星号 tier=5 是本例捕获网格的对齐结果，不是所有配置的常数。</div>
+    <div class="mini-note guard"><strong>可选 graph-tier 对齐：</strong><code>--speculative-dspark-align-verify-tokens-to-graph-tier</code> 开启时，planner 可先把 budget 上调到 padded graph tier 容量，让原本的 padding 槽变成更多真实验证 token；仍受每请求最大长度/捕获 grid 限制。</div>
+  </section>
+
+  <section class="section">
+    <p class="kicker">three layout modes · all visible</p>
+    <h2><code>layout=None</code> 只决定不 compact，绝不代表跳过 Target</h2>
+    <div class="modes">
+      <article class="mode off"><strong>STATIC</strong><p><code>schedule_layout()</code> 第一分支直接返回 None；构造阶段没有 budget planner/SPS 调度。</p><dl><dt>budget</dt><dd>None</dd><dt>layout</dt><dd>None</dd><dt>run_compact</dt><dd>false</dd><dt>05 Target</dt><dd>完整 B×W rows</dd></dl></article>
+      <article class="mode guard"><strong>CAP_ACCEPT</strong><p>计算 <code>verify_lens/layout</code>，但 <code>should_run_compact()</code> 仍为 false；layout 用于限制 acceptance，而非缩短 Target forward。</p><dl><dt>budget</dt><dd>0…B·G</dd><dt>layout</dt><dd>可能非 None</dd><dt>run_compact</dt><dd>false</dd><dt>05 Target</dt><dd>完整 B×W rows</dd></dl></article>
+      <article class="mode main"><strong>COMPACT</strong><p>layout 非 None 才进入 compact Target；超出 captured grid 可返回 None 并回退 full。未初始化/flat SPS 时返回缓存的 uniform verify-all layout。</p><dl><dt>budget</dt><dd>profiled / verify-all</dd><dt>layout</dt><dd>ragged / uniform / None</dd><dt>run_compact</dt><dd>layout != None</dd><dt>05 Target</dt><dd>compact 或 fallback full</dd></dl></article>
+    </div>
+    <div class="mini-note guard"><strong><code>budget=0</code> ≠ <code>budget=None</code>：</strong>0 是有效调度决策，top-k 不选 extra，每请求仍得到最小 <code>verify_len=1</code>；None 表示这轮没有 budget 控制信息，<code>_schedule_verify_lens()</code> 返回 None，随后由 mode 的 fallback 规则决定 layout。</div>
+    <div class="mini-note data"><strong>为什么没有 profiled SPS 仍返回 uniform COMPACT layout：</strong><code>_is_verify_all</code> 让 <code>schedule_layout()</code> 从 cache 返回固定 uniform layout，跳过每轮 schedule/host-device round-trip；它保留 COMPACT 的 graph/metadata 形态，但验证全部 token，所以没有调度收益。</div>
+  </section>
+
+  <section class="section">
+    <p class="kicker">why here / omitted failure</p>
+    <h2>Planner 的正确性边界与性能边界</h2>
+    <div class="facts">
+      <article class="fact main"><strong>WHY HERE</strong><p>DraftProposal 返回后才有本轮真实 token 与 hidden/confidence；在 Target launch 前算 layout，才能让 05 选择物理 rows。更早没有当前 proposal，更晚已经无法减少 Target 计算。</p></article>
+      <article class="fact fail"><strong>FAIL · STALE IDENTITY</strong><p>若历史 confidence 不校验 <code>req_generation</code>，pool slot 被新请求复用后会继承旧请求 survival，budget 发生跨请求污染；这是调度状态正确性问题。</p></article>
+      <article class="fact off"><strong>PERF · NO SCHEDULE</strong><p>缺 budget/confidence 时主要退化为 full/uniform verify，Target 分布仍由 06 的 acceptance 保证；损失通常是验证成本/吞吐收益，不等同于跳过 Target 或直接产生错误 token。</p></article>
+    </div>
+  </section>
+
+  <section class="section">
+    <p class="kicker">decisive source</p>
+    <h2>Worker 汇合点与 planner 的三个决定</h2>
+    <div class="source-grid">
+      <pre class="codebox"># DSparkWorkerV2._forward_decode
+confidence = proposal.confidence
+if confidence is None:
+    confidence = self._verify_planner.compute_confidence_tensor(
+        draft_hidden=proposal.draft_hidden,
+        anchor_tokens=draft_block_ids[:, 0],
+        draft_tokens=draft_tokens,
+        confidence_tap=proposal.confidence_tap,
+    )
+budget = self._verify_planner.resolve_verify_token_budget(
+    draft_input=draft_input, confidence=confidence,
+    prefix_lens=prefix_lens, req_pool_indices=batch.req_pool_indices,
+)
+layout = self._verify_planner.schedule_layout(
+    req_pool_indices=batch.req_pool_indices,
+    prefix_lens=prefix_lens, device=device,
+    confidence=confidence, budget=budget, ...
+)
+run_compact = self._verify_planner.should_run_compact(layout=layout)
+
+# resolve budget
+if not self.schedules_verify_budget or confidence is None:
+    return None
+if not self.server_args.disable_overlap_schedule:
+    return draft_input.verify_token_budget
+return self.compute_budget_sync(...)
+
+# schedule
+if self._ragged_verify_mode is RaggedVerifyMode.STATIC:
+    return None
+verify_lens = self._schedule_verify_lens(
+    confidence=confidence, budget=aligned_budget, ...
+)
+# ScheduleVerifyLensTopk:
+# survival = cumprod(confidence); verify_lens = min_len + selected_extra
+
+# branch into 05
+run_compact = (
+    mode is RaggedVerifyMode.COMPACT and layout is not None
+)</pre>
+      <div class="sources">
+        <div class="source"><b>Worker junction</b>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:538–570</div>
+        <div class="source"><b>Confidence + budget + layout</b>python/sglang/srt/speculative/dspark_components/dspark_planner.py:254–293, 351–522, 577–618</div>
+        <div class="source"><b>Historical SPS decision</b>python/sglang/srt/speculative/dspark_components/dspark_planner.py:948–991, 1023–1118</div>
+        <div class="source"><b>Current survival top-k</b>python/sglang/kernels/ops/speculative/dspark/dspark_schedule.py:19–115</div>
+        <div class="source"><b>Modes + layout type</b>python/sglang/srt/speculative/ragged_verify.py:13–16, 46–78</div>
+        <div class="source"><b>Default two-step lag</b>python/sglang/srt/environ.py:785–790 · python/sglang/srt/managers/overlap_utils.py:118–229</div>
+      </div>
+    </div>
+    <div class="boundary"><strong>Evidence boundary：</strong>当前 checkout <code>f01a0c7f97ec</code>；假设 CUDA dSpark V2、PP=1。默认环境值为 STATIC 与 confidence lag=2；COMPACT/CAP_ACCEPT 是显式 mode 边界。Python 调度、历史 generation guard、torch/Triton dispatch 已静态核验；本机未执行 GPU top-k、CUDA Graph capture 或真实 SPS profile。示例 B=2、G=4 的数值用于具体化已核验的公式。</div>
+  </section>
+
+  <nav class="page-nav" aria-label="上一页与下一页">
+    <a class="route-propagate" href="dspark-draft-proposal.html"><small>← PREV · 03</small><strong>Draft proposal</strong></a>
+    <a class="route-propagate" href="dspark-verify-step-through.html"><small>NEXT · 05 →</small><strong>Target verify · full / compact</strong></a>
+  </nav>
+</main>
+<script>
+(() => {
+  const allowed = new Set(['static-greedy','compact-sampling','folded-greedy']);
+  const query = new URLSearchParams(location.search);
+  const route = allowed.has(query.get('route')) ? query.get('route') : 'compact-sampling';
+  document.documentElement.dataset.route = route;
+  document.querySelectorAll('.route-choice').forEach((a) => {
+    a.setAttribute('aria-current', String(a.dataset.route === route));
+    a.href = '?route=' + encodeURIComponent(a.dataset.route);
+  });
+  const labels = {
+    'static-greedy':'STATIC · greedy：budget/layout 调度关闭；layout=None，05 仍跑完整 Target。',
+    'compact-sampling':'COMPACT · sampling：历史决定 budget，当前 survival 分配 verify_lens；sampling 公式不改变。',
+    'folded-greedy':'Folded · greedy：folded proposal 可自带 confidence；仍需 COMPACT layout 才可能命中 08 快路。'
+  };
+  document.getElementById('routeStatus').textContent = labels[route];
+  document.querySelectorAll('a.route-propagate').forEach((a) => {
+    const u = new URL(a.getAttribute('href'), location.href);
+    u.searchParams.set('route', route);
+    a.href = u.href;
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,589 @@
+{
+  "status": "pass",
+  "verified_at": "2026-09-09T18:15:12.566958+00:00",
+  "browser": "Chromium via Playwright CLI, new session sglang-desktop-accepted",
+  "transport": "HTTP localhost at http://127.0.0.1:8771/",
+  "viewports": [
+    {
+      "width": 1280,
+      "height": 1000
+    },
+    {
+      "width": 1600,
+      "height": 1000
+    }
+  ],
+  "inventory_context": {
+    "full_course_chapters": 75,
+    "full_course_checked_html_documents": 18,
+    "mirror_chapters": 8,
+    "mirror_checked_html_documents": 2,
+    "rendered_notes_total": 35,
+    "rendered_notes_checked": 6,
+    "standalone_labs_total": 15,
+    "standalone_labs_checked": 2
+  },
+  "artifact_hash_root": "notes/speculative/visualizations/sglang-course-v2",
+  "assertions": {
+    "page_horizontal_overflow_px_max": 0,
+    "page_errors": 0,
+    "diagram_or_math_error_markers": 0,
+    "ordinary_reading_links_to_raw_markdown": 0,
+    "shared_navigation_present": true,
+    "ops_review_date_badges": true,
+    "hicache_updated_labels_rendered_at_both_widths": true,
+    "navigation_pin_theme_persistence": true,
+    "mirror_search_internal_and_external_actual_clicks": true,
+    "hidden_h3_anchor_revealed": true,
+    "cross_note_anchor_visible_after_smooth_scroll": true,
+    "diagram_viewer_open_zoom_close": true,
+    "experiment_step_and_reset_to_first": true,
+    "source_download_bytes_match": true,
+    "lab_residual_rows_steady_opacity_one": true
+  },
+  "interaction_results": [
+    {
+      "label": "home navigation, pin and theme",
+      "width": 1280,
+      "status": "pass",
+      "pin": {
+        "pinned": "true",
+        "overflowPx": 0,
+        "links": 87
+      },
+      "beforeThemeMode": "dark",
+      "afterThemeMode": "light",
+      "landed": "http://127.0.0.1:8771/notes/course/site/00-foundations/first-server.html"
+    },
+    {
+      "label": "mirror search internal boundary matrix and external first server",
+      "width": 1280,
+      "status": "pass",
+      "internal": "http://127.0.0.1:8771/notes/speculative/visualizations/sglang-course-v2/boundary-matrix.html",
+      "external": "http://127.0.0.1:8771/notes/course/site/00-foundations/first-server.html"
+    },
+    {
+      "label": "quantization hidden H3 direct deep link and teaching step",
+      "width": 1280,
+      "status": "pass",
+      "target": {
+        "id": "动手-复现-scale-误差与容量账本",
+        "text": "动手：复现 scale 误差与容量账本",
+        "panel": "teach-walk-1-panel-2"
+      },
+      "landed": {
+        "id": "动手-复现-scale-误差与容量账本",
+        "hidden": false,
+        "top": 853.3046875,
+        "panel": "teach-walk-1-panel-2",
+        "hash": "#%E5%8A%A8%E6%89%8B-%E5%A4%8D%E7%8E%B0-scale-%E8%AF%AF%E5%B7%AE%E4%B8%8E%E5%AE%B9%E9%87%8F%E8%B4%A6%E6%9C%AC"
+      },
+      "stepSelected": "true"
+    },
+    {
+      "label": "operations diagram viewer zoom and screenshot",
+      "width": 1280,
+      "status": "pass",
+      "zoomBefore": "100%",
+      "zoomAfter": "103%"
+    },
+    {
+      "label": "notes home to rendered article, anchor, source download and theme",
+      "width": 1280,
+      "status": "pass",
+      "download": "sglang-scheduler-event-loop.md",
+      "anchor": {
+        "url": "http://127.0.0.1:8771/notes/scheduler/sglang-scheduler-batch-assembly.html#admission-budget",
+        "exists": true,
+        "top": 864.6640625,
+        "theme": "light",
+        "overflowPx": 0
+      }
+    },
+    {
+      "label": "course and lab related links to rendered Markdown",
+      "width": 1280,
+      "status": "pass",
+      "fromCourse": "http://127.0.0.1:8771/notes/scheduler/sglang-scheduler-event-loop.html",
+      "fromLab": "http://127.0.0.1:8771/notes/speculative/sglang-dspark-single-round-decode.html"
+    },
+    {
+      "label": "experiment next reset and navigation shell",
+      "width": 1280,
+      "status": "pass",
+      "before": "0",
+      "next": "1",
+      "reset": "0",
+      "hasSharedNav": 1
+    },
+    {
+      "label": "home navigation, pin and theme",
+      "width": 1600,
+      "status": "pass",
+      "pin": {
+        "pinned": "true",
+        "overflowPx": 0,
+        "links": 87
+      },
+      "beforeThemeMode": "light",
+      "afterThemeMode": "system",
+      "landed": "http://127.0.0.1:8771/notes/course/site/00-foundations/first-server.html"
+    },
+    {
+      "label": "mirror search internal boundary matrix and external first server",
+      "width": 1600,
+      "status": "pass",
+      "internal": "http://127.0.0.1:8771/notes/speculative/visualizations/sglang-course-v2/boundary-matrix.html",
+      "external": "http://127.0.0.1:8771/notes/course/site/00-foundations/first-server.html"
+    },
+    {
+      "label": "quantization hidden H3 direct deep link and teaching step",
+      "width": 1600,
+      "status": "pass",
+      "target": {
+        "id": "动手-复现-scale-误差与容量账本",
+        "text": "动手：复现 scale 误差与容量账本",
+        "panel": "teach-walk-1-panel-2"
+      },
+      "landed": {
+        "id": "动手-复现-scale-误差与容量账本",
+        "hidden": false,
+        "top": 898.9765625,
+        "panel": "teach-walk-1-panel-2",
+        "hash": "#%E5%8A%A8%E6%89%8B-%E5%A4%8D%E7%8E%B0-scale-%E8%AF%AF%E5%B7%AE%E4%B8%8E%E5%AE%B9%E9%87%8F%E8%B4%A6%E6%9C%AC"
+      },
+      "stepSelected": "true"
+    },
+    {
+      "label": "operations diagram viewer zoom and screenshot",
+      "width": 1600,
+      "status": "pass",
+      "zoomBefore": "100%",
+      "zoomAfter": "103%"
+    },
+    {
+      "label": "notes home to rendered article, anchor, source download and theme",
+      "width": 1600,
+      "status": "pass",
+      "download": "sglang-scheduler-event-loop.md",
+      "anchor": {
+        "url": "http://127.0.0.1:8771/notes/scheduler/sglang-scheduler-batch-assembly.html#admission-budget",
+        "exists": true,
+        "top": 852.921875,
+        "theme": "system",
+        "overflowPx": 0
+      }
+    },
+    {
+      "label": "course and lab related links to rendered Markdown",
+      "width": 1600,
+      "status": "pass",
+      "fromCourse": "http://127.0.0.1:8771/notes/scheduler/sglang-scheduler-event-loop.html",
+      "fromLab": "http://127.0.0.1:8771/notes/speculative/sglang-dspark-single-round-decode.html"
+    },
+    {
+      "label": "experiment next reset and navigation shell",
+      "width": 1600,
+      "status": "pass",
+      "before": "0",
+      "next": "1",
+      "reset": "0",
+      "hasSharedNav": 1
+    }
+  ],
+  "download_verification": [
+    {
+      "width": 1280,
+      "artifact": "output/playwright/course-desktop-source-1280.md",
+      "source": "notes/scheduler/sglang-scheduler-event-loop.md",
+      "sha256": "deadc02344e86e300383f1b1ee57d26b6d1de3a2eed80c5ba77f61710469be95",
+      "identical": true
+    },
+    {
+      "width": 1600,
+      "artifact": "output/playwright/course-desktop-source-1600.md",
+      "source": "notes/scheduler/sglang-scheduler-event-loop.md",
+      "sha256": "deadc02344e86e300383f1b1ee57d26b6d1de3a2eed80c5ba77f61710469be95",
+      "identical": true
+    }
+  ],
+  "screenshots": [
+    "output/playwright/course-desktop-home-1280.png",
+    "output/playwright/course-desktop-operations-1280.png",
+    "output/playwright/course-desktop-note-1280.png",
+    "output/playwright/course-desktop-lab-1280.png",
+    "output/playwright/course-desktop-home-1600.png",
+    "output/playwright/course-desktop-operations-1600.png",
+    "output/playwright/course-desktop-note-1600.png",
+    "output/playwright/course-desktop-lab-1600.png"
+  ],
+  "visual_review": "Representative homepage, operations, note and lab screenshots were inspected. Content and navigation are readable at desktop widths; long diagrams use local diagram viewports.",
+  "limitations": [
+    "This report validates a desktop subset, not all 75 course chapters, all 8 mirror chapters, all rendered notes or all 15 labs.",
+    "No mobile viewport, file:// navigation, GPU/server execution or performance measurement was performed in this browser acceptance.",
+    "Full-site Mermaid syntax validation is recorded separately by the root verifier."
+  ],
+  "evidence_reports": [
+    "output/playwright/desktop-accepted-scan.json",
+    "output/playwright/desktop-accepted-interactions.json",
+    "output/playwright/lab-steady-acceptance.json"
+  ],
+  "resolved_findings": [
+    {
+      "issue": "Mirror filename/id search omitted boundary-matrix",
+      "resolution": "Search index includes id and URL stem; actual boundary-matrix and first-server navigation passed at both widths."
+    },
+    {
+      "issue": "Initial anchor measurements happened before smooth scrolling completed",
+      "resolution": "Test now waits for target visibility; panels reveal and anchor navigation passes. No product change was needed."
+    },
+    {
+      "issue": "Initial lab selector targeted an archived hidden stepper",
+      "resolution": "Acceptance now operates the visible source-studio step controls."
+    },
+    {
+      "issue": "Residual bars and values looked pale in initial screenshots during scene-write delay",
+      "resolution": "Both desktop widths waited for natural finite animation completion. Four visible residual rows have opacity=1, numeric text rgb(50,56,63), and zero running finite animations. Final screenshots refreshed; no CSS change needed."
+    }
+  ],
+  "scope": "Desktop subset: speculative mirror index.html and boundary-matrix.html at 1280/1600, including layout/render checks. Actual search for boundary-matrix navigates within the mirror; first-server search navigates to the full course. Includes that external destination hash. No claim of checking all 8 mirror chapters.",
+  "checked_pages": [
+    "notes/speculative/visualizations/sglang-course-v2/boundary-matrix.html",
+    "notes/speculative/visualizations/sglang-course-v2/index.html",
+    "notes/course/site/00-foundations/first-server.html"
+  ],
+  "scanned_pages": [
+    "notes/course/site/00-foundations/first-server.html",
+    "notes/speculative/visualizations/sglang-course-v2/boundary-matrix.html",
+    "notes/speculative/visualizations/sglang-course-v2/index.html"
+  ],
+  "page_scan": [
+    {
+      "page": "notes/course/site/00-foundations/first-server.html",
+      "width": 1280,
+      "httpStatus": 200,
+      "title": "从空环境到第一个可验证的请求 · SGLang 学习手册",
+      "overflowPx": 0,
+      "navButtons": 1,
+      "searchButtons": 2,
+      "h1": "从空环境到第一个可验证的请求",
+      "mainWidth": 1228,
+      "diagrams": 1,
+      "diagramErrors": [],
+      "rawMdReadingLinks": [],
+      "reviewBadge": true,
+      "hicacheDiagramText": null,
+      "theme": "dark",
+      "readingReady": null
+    },
+    {
+      "page": "notes/speculative/visualizations/sglang-course-v2/index.html",
+      "width": 1280,
+      "httpStatus": 200,
+      "title": "Speculative Decoding 全家族 · SGLang 学习手册",
+      "overflowPx": 0,
+      "navButtons": 1,
+      "searchButtons": 3,
+      "h1": "Speculative Decoding 全家族",
+      "mainWidth": 1228,
+      "diagrams": 3,
+      "diagramErrors": [],
+      "rawMdReadingLinks": [],
+      "reviewBadge": false,
+      "hicacheDiagramText": null,
+      "theme": "dark",
+      "readingReady": null
+    },
+    {
+      "page": "notes/speculative/visualizations/sglang-course-v2/boundary-matrix.html",
+      "width": 1280,
+      "httpStatus": 200,
+      "title": "Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec · SGLang 学习手册",
+      "overflowPx": 0,
+      "navButtons": 1,
+      "searchButtons": 2,
+      "h1": "Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec",
+      "mainWidth": 1228,
+      "diagrams": 3,
+      "diagramErrors": [],
+      "rawMdReadingLinks": [],
+      "reviewBadge": false,
+      "hicacheDiagramText": null,
+      "theme": "dark",
+      "readingReady": null
+    },
+    {
+      "page": "notes/course/site/00-foundations/first-server.html",
+      "width": 1600,
+      "httpStatus": 200,
+      "title": "从空环境到第一个可验证的请求 · SGLang 学习手册",
+      "overflowPx": 0,
+      "navButtons": 1,
+      "searchButtons": 2,
+      "h1": "从空环境到第一个可验证的请求",
+      "mainWidth": 1548,
+      "diagrams": 1,
+      "diagramErrors": [],
+      "rawMdReadingLinks": [],
+      "reviewBadge": true,
+      "hicacheDiagramText": null,
+      "theme": "dark",
+      "readingReady": null
+    },
+    {
+      "page": "notes/speculative/visualizations/sglang-course-v2/index.html",
+      "width": 1600,
+      "httpStatus": 200,
+      "title": "Speculative Decoding 全家族 · SGLang 学习手册",
+      "overflowPx": 0,
+      "navButtons": 1,
+      "searchButtons": 3,
+      "h1": "Speculative Decoding 全家族",
+      "mainWidth": 1548,
+      "diagrams": 3,
+      "diagramErrors": [],
+      "rawMdReadingLinks": [],
+      "reviewBadge": false,
+      "hicacheDiagramText": null,
+      "theme": "dark",
+      "readingReady": null
+    },
+    {
+      "page": "notes/speculative/visualizations/sglang-course-v2/boundary-matrix.html",
+      "width": 1600,
+      "httpStatus": 200,
+      "title": "Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec · SGLang 学习手册",
+      "overflowPx": 0,
+      "navButtons": 1,
+      "searchButtons": 2,
+      "h1": "Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec",
+      "mainWidth": 1548,
+      "diagrams": 3,
+      "diagramErrors": [],
+      "rawMdReadingLinks": [],
+      "reviewBadge": false,
+      "hicacheDiagramText": null,
+      "theme": "dark",
+      "readingReady": null
+    }
+  ],
+  "artifact_hashes": {
+    "../../../course/assets/css/labs.css": "0770b7e013a63e23a5091b6e600650f1d5a11867e17e7d55a7c60ea4ad0ce2d2",
+    "../../../course/assets/css/print.css": "460079b7b3cc74f9e0bb46936f6d7888b07d929912998fb5072e7ec1322cdc70",
+    "../../../course/assets/css/specforge-course.css": "493a541c74dc7a43349297c04ed8990f740ebab352fd6132c9c89605c10db6a9",
+    "../../../course/assets/js/diagram-viewer.js": "c3e804c7d7b78076a08246d50c855be35aa40b7aed6aaa4fda075096a4968baf",
+    "../../../course/assets/js/labs.js": "0759f566f070b57d99faf73e6917137c1579f61e3f2679c5729d252b5ff26b8a",
+    "../../../course/assets/js/lesson-components.js": "1cf3e54578ec93977540b88cfb4c956a0d68e03e1eb335f15e24ffe58b3c1916",
+    "../../../course/assets/js/site-shell.js": "6d01706e841c4076aee99f252731504581647a6be447a0fd21af1dd1ffaa9412",
+    "../../../course/assets/js/source-microscope.js": "c6e8aff69df3f1ebd35431749bcfb150aaa3a67b3e30ff80ba4014cf4a0a51a1",
+    "../../../course/assets/js/toc-search.js": "5876c4091002bc393a13b59dfd05a21fa54031237e65d6be0086452dfe7c14a5",
+    "../../../course/assets/vendor/mermaid.min.js": "18327bef70d96fb505fe7287d9f6a7362ebf07ff6576ddfaffb1a06f3e1a2954",
+    "../../../course/site/00-foundations/first-server.html": "93d1d5e6882786e5c5a03b446edcf6b08b2778dfcb1d54c60f9d305f7748df45",
+    "../../../course/site/assets/css/labs.css": "0770b7e013a63e23a5091b6e600650f1d5a11867e17e7d55a7c60ea4ad0ce2d2",
+    "../../../course/site/assets/css/print.css": "460079b7b3cc74f9e0bb46936f6d7888b07d929912998fb5072e7ec1322cdc70",
+    "../../../course/site/assets/css/specforge-course.css": "493a541c74dc7a43349297c04ed8990f740ebab352fd6132c9c89605c10db6a9",
+    "../../../course/site/assets/data/search-index.js": "c19c3b662ff48eba337de241459a7fc71b6780bac9b89228accbe53dc354efed",
+    "../../../course/site/assets/js/diagram-viewer.js": "c3e804c7d7b78076a08246d50c855be35aa40b7aed6aaa4fda075096a4968baf",
+    "../../../course/site/assets/js/labs.js": "0759f566f070b57d99faf73e6917137c1579f61e3f2679c5729d252b5ff26b8a",
+    "../../../course/site/assets/js/lesson-components.js": "1cf3e54578ec93977540b88cfb4c956a0d68e03e1eb335f15e24ffe58b3c1916",
+    "../../../course/site/assets/js/site-shell.js": "6d01706e841c4076aee99f252731504581647a6be447a0fd21af1dd1ffaa9412",
+    "../../../course/site/assets/js/source-microscope.js": "c6e8aff69df3f1ebd35431749bcfb150aaa3a67b3e30ff80ba4014cf4a0a51a1",
+    "../../../course/site/assets/js/toc-search.js": "5876c4091002bc393a13b59dfd05a21fa54031237e65d6be0086452dfe7c14a5",
+    "../../../course/site/assets/vendor/mermaid.min.js": "18327bef70d96fb505fe7287d9f6a7362ebf07ff6576ddfaffb1a06f3e1a2954",
+    "../../../maintenance/navigation.css": "012def6d8ea58bb304f1874090fe5439c21dad3f9342e1e13bcea6fe8365e482",
+    "../../../maintenance/reading.js": "16b044cad55c480305445d43fa3d107abf26917e4126a04270b6b1e46df90bd2",
+    "../../../maintenance/syntax.css": "9f98c9b3f4bb0558bfaae4fc946fd29c0f6bf9cf8481fdd141df0d8e85105fe6",
+    "../../../maintenance/vendor/katex/fonts/KaTeX_AMS-Regular.woff2": "0cdd387c9590a1a9f9794560022dbb59654a7d86f187aa0c81495ad42d3a7308",
+    "../../../maintenance/vendor/katex/fonts/KaTeX_Main-Regular.woff2": "c2342cd8b869e01752a9321dc17213fc40d4d04c79688c1d43f2cf316abd7866",
+    "../../../maintenance/vendor/katex/fonts/KaTeX_Math-Italic.woff2": "7af58c5ec8f132a2ddde9027c6d7814decce4d3b822a11192a42a20e2e973264",
+    "../../../maintenance/vendor/katex/fonts/KaTeX_Size2-Regular.woff2": "d04c54219f9eaec6d4d4fd42dfb28785975a4794d6b2fc71e566b9cd6db842dd",
+    "../../../maintenance/vendor/katex/katex.min.css": "19095127357ed6d29fe0a63a6b000c913a89f7f1963b765dd3715e97c9852e75",
+    "../../../maintenance/vendor/katex/katex.min.js": "e8d885505949f3a5f4abdd5dd0d53696bd1371ad26ffbf4f310dcd77c8cdae89",
+    "../assets/dspark-course-shell.css": "619ad0cebda1333cd97c4784327a68c9211581eb3368bb48f364628206e68af8",
+    "../assets/dspark-learning-layer.js": "9d83d793b7a5fda2d508ab8faed11cf6998d9f6b67f49ebcc898bcd183987662",
+    "../assets/dspark-site.js": "27e19be54964840511cf66b52d43484c6192ab74e85b8d360f4f0e4fb6609ada",
+    "../assets/dspark-source-studio.css": "840349a059b70bfdc74b8c4ba72e10731c5e707753c7e10f8693f8e9bdc2a890",
+    "../assets/dspark-source-studio.js": "59f68364dc43e512509ca53ba59d5d095e6ebaae13fe3be22a96cd434d9b1b46",
+    "../assets/dspark-stepper.js": "cafacd83779b3182e729ae38e1fceed482f48bd2f55dbe2437316def51f5e011",
+    "../assets/dspark-visual-system.css": "20b4bcb614c72514c6cde1c7d398da0346dd827885aa9a2abf3c0d966f6b313d",
+    "assets/css/labs.css": "0770b7e013a63e23a5091b6e600650f1d5a11867e17e7d55a7c60ea4ad0ce2d2",
+    "assets/css/print.css": "460079b7b3cc74f9e0bb46936f6d7888b07d929912998fb5072e7ec1322cdc70",
+    "assets/css/specforge-course.css": "493a541c74dc7a43349297c04ed8990f740ebab352fd6132c9c89605c10db6a9",
+    "assets/data/search-index.js": "caf2beaf496860b1d058a8ddc1cf12895f06508c311e17dd61567f8272888bb1",
+    "assets/js/diagram-viewer.js": "c3e804c7d7b78076a08246d50c855be35aa40b7aed6aaa4fda075096a4968baf",
+    "assets/js/labs.js": "0759f566f070b57d99faf73e6917137c1579f61e3f2679c5729d252b5ff26b8a",
+    "assets/js/lesson-components.js": "1cf3e54578ec93977540b88cfb4c956a0d68e03e1eb335f15e24ffe58b3c1916",
+    "assets/js/site-shell.js": "6d01706e841c4076aee99f252731504581647a6be447a0fd21af1dd1ffaa9412",
+    "assets/js/source-microscope.js": "c6e8aff69df3f1ebd35431749bcfb150aaa3a67b3e30ff80ba4014cf4a0a51a1",
+    "assets/js/toc-search.js": "5876c4091002bc393a13b59dfd05a21fa54031237e65d6be0086452dfe7c14a5",
+    "assets/vendor/mermaid.min.js": "18327bef70d96fb505fe7287d9f6a7362ebf07ff6576ddfaffb1a06f3e1a2954",
+    "boundary-matrix.html": "e1bc9ab1930f2e40bdbe5e4ed8b8b5e5478b6a80a4df8eeb2e9acba738f05ac6",
+    "index.html": "be4e8ba2b7a65977e77a0edfe839df8267243d76cd5a4ee4cfb95d8d13be2816"
+  },
+  "lab_steady_validation": {
+    "status": "pass",
+    "scope": "Natural finite animation completion before contrast/layout inspection and final lab screenshots at both desktop widths",
+    "results": [
+      {
+        "width": 1280,
+        "rows": [
+          {
+            "text": "r0",
+            "opacity": "1",
+            "animation": "scene-write",
+            "values": [
+              {
+                "text": "r",
+                "color": "rgb(50, 56, 63)",
+                "opacity": "1"
+              },
+              {
+                "text": "0",
+                "color": "rgb(50, 56, 63)",
+                "opacity": "1"
+              }
+            ]
+          },
+          {
+            "text": "r0.8333",
+            "opacity": "1",
+            "animation": "scene-write",
+            "values": [
+              {
+                "text": "r",
+                "color": "rgb(50, 56, 63)",
+                "opacity": "1"
+              },
+              {
+                "text": "0.8333",
+                "color": "rgb(50, 56, 63)",
+                "opacity": "1"
+              }
+            ]
+          },
+          {
+            "text": "r0.1667",
+            "opacity": "1",
+            "animation": "scene-write",
+            "values": [
+              {
+                "text": "r",
+                "color": "rgb(50, 56, 63)",
+                "opacity": "1"
+              },
+              {
+                "text": "0.1667",
+                "color": "rgb(50, 56, 63)",
+                "opacity": "1"
+              }
+            ]
+          },
+          {
+            "text": "r0",
+            "opacity": "1",
+            "animation": "scene-write",
+            "values": [
+              {
+                "text": "r",
+                "color": "rgb(50, 56, 63)",
+                "opacity": "1"
+              },
+              {
+                "text": "0",
+                "color": "rgb(50, 56, 63)",
+                "opacity": "1"
+              }
+            ]
+          }
+        ],
+        "runningFiniteAnimations": 0,
+        "overflowPx": 0
+      },
+      {
+        "width": 1600,
+        "rows": [
+          {
+            "text": "r0",
+            "opacity": "1",
+            "animation": "scene-write",
+            "values": [
+              {
+                "text": "r",
+                "color": "rgb(50, 56, 63)",
+                "opacity": "1"
+              },
+              {
+                "text": "0",
+                "color": "rgb(50, 56, 63)",
+                "opacity": "1"
+              }
+            ]
+          },
+          {
+            "text": "r0.8333",
+            "opacity": "1",
+            "animation": "scene-write",
+            "values": [
+              {
+                "text": "r",
+                "color": "rgb(50, 56, 63)",
+                "opacity": "1"
+              },
+              {
+                "text": "0.8333",
+                "color": "rgb(50, 56, 63)",
+                "opacity": "1"
+              }
+            ]
+          },
+          {
+            "text": "r0.1667",
+            "opacity": "1",
+            "animation": "scene-write",
+            "values": [
+              {
+                "text": "r",
+                "color": "rgb(50, 56, 63)",
+                "opacity": "1"
+              },
+              {
+                "text": "0.1667",
+                "color": "rgb(50, 56, 63)",
+                "opacity": "1"
+              }
+            ]
+          },
+          {
+            "text": "r0",
+            "opacity": "1",
+            "animation": "scene-write",
+            "values": [
+              {
+                "text": "r",
+                "color": "rgb(50, 56, 63)",
+                "opacity": "1"
+              },
+              {
+                "text": "0",
+                "color": "rgb(50, 56, 63)",
+                "opacity": "1"
+              }
+            ]
+          }
+        ],
+        "runningFiniteAnimations": 0,
+        "overflowPx": 0
+      }
+    ]
+  },
+  "screenshot_hashes": {
+    "output/playwright/course-desktop-home-1280.png": "bca5e52223eb09732d710a4286303cae613105b32b958b97f441c5d1f6018819",
+    "output/playwright/course-desktop-operations-1280.png": "5dd877813b8f35ff028b1ca7890c7c688d44b281ad66cac8cc11167137bfa715",
+    "output/playwright/course-desktop-note-1280.png": "283c5b4dc2724859c1c24526ce85b9972432519004d7b5d1ac4a3ca1479c0d3b",
+    "output/playwright/course-desktop-lab-1280.png": "73a5103a2f854b35fbdf5959d9555a53ce3fc0a10169a7802c26bf7fbbdaa2ed",
+    "output/playwright/course-desktop-home-1600.png": "c1b280705c3c469becc0d5d29c5d5ce330d17422524e23c62af4bb92d02b813a",
+    "output/playwright/course-desktop-operations-1600.png": "cee2594c09f588986d0440f89cebb8e01b1da954eb8b961d69a72c8e946ba1db",
+    "output/playwright/course-desktop-note-1600.png": "68fa40a92f82826127756ab1a2883d7a498347bb8016113a34e859f00c45cbef",
+    "output/playwright/course-desktop-lab-1600.png": "45921a50fb87f65d769f2401609b5b0eab28f83e7418eeaa38b7afde80643622"
+  }
+}

@@ -68,18 +68,18 @@ class CudaGraphsCapture(msgspec.Struct, frozen=True, kw_only=True):
     eager_runner: EagerRunner
     prefill_runner: Optional[BaseRunner]
     decode: DecodeGraphCapture
-
-
+#    | 路径 | 档位主要表示什么 | 捕获时的请求数 | 普通 attention |
+#| Prefill BCG | 总 token 数 `B` | dummy `bs=1` | 在图段之间 eager 执行，使用真实请求边界 |
 def capture_cuda_graphs(
     *, model_runner: ModelRunner, capture_decode_cuda_graph: bool = True
 ) -> CudaGraphsCapture:
     """Capture cuda graphs. Requires init_attention_backends() to have run.
-
+#| Prefill Full | 总 token 数 `B` | 固定请求容量 `R` | 捕获进图，真实请求数必须 `≤R` |
     Spec draft runners pass capture_decode_cuda_graph=False
     because they capture their own decode-style graphs separately.
-
+#| **Decode Full** | **请求数档位 `C`** | **`bs=C`** | 捕获进图 |
     """
-
+#| **Decode BCG** | **同样是请求数档位 `C`** | **同样是 `bs=C`** | **不会因为选择 BCG 就自动移到图外** |
     model_runner.graph_shared_output = GraphSharedOutput.create_for_model_runner(
         model_runner
     )
@@ -126,10 +126,10 @@ def capture_cuda_graphs(
         device=model_runner.device,
         forward_stream=model_runner.forward_stream,
     )
-
+# Canary 是可选的 KV 正确性检查机制；默认 kv_canary="none" 时 manager 为 None，跳过此分支。
     if model_runner.canary_manager is not None and not model_runner.is_draft_worker:
-        model_runner.canary_manager.mark_init_finished()
-
+        model_runner.canary_manager.mark_init_finished() # 这里只标记非 Draft；EAGLE Draft 等专用路径会在自身捕获结束后另行调用 mark_init_finished()。
+# 此处启用 Target Canary 的调用阶段断言和 KV 链 position 断言，不是直到这里才创建全部检查逻辑。
     return CudaGraphsCapture(
         eager_runner=eager_runner, prefill_runner=prefill_runner, decode=decode
     )
@@ -310,10 +310,10 @@ def capture_decode_graph(*, model_runner: ModelRunner) -> DecodeGraphCapture:
             "xpu": "XPU graph",
         },
     )
-    role = "draft" if model_runner.is_draft_worker else "target"
-    if model_runner.spec_algorithm.is_speculative():
-        capture_name = f"{role} verify"
-        num_tokens_per_req = model_runner.decode_num_tokens_per_req()
+    role = "draft" if model_runner.is_draft_worker else "target" # 非 Draft 的主模型统一记作 target，包括非投机的普通模型；身份来自 ModelRunner.is_draft_worker。
+    if model_runner.spec_algorithm.is_speculative(): # 这是通用 decode 图的投机分支；dSpark 的 Target 和 Draft 都会进入。
+        capture_name = f"{role} verify"              # draft verify 是这里的日志名；dSpark Draft 复用 TARGET_VERIFY 执行模式生成 proposal，并非替 Target 验收。
+        num_tokens_per_req = model_runner.decode_num_tokens_per_req() # dSpark：令 N=speculative_num_draft_tokens，则 Target 宽度为 N，Draft 为 N-1（即 gamma）；见 spec_info.py 的角色分支。
     else:
         capture_name = f"{role} decode"
         num_tokens_per_req = 1
@@ -334,7 +334,7 @@ def capture_decode_graph(*, model_runner: ModelRunner) -> DecodeGraphCapture:
         )
 
         graph_runners = defaultdict(
-            lambda: DecodeCudaGraphRunner,
+            lambda: DecodeCudaGraphRunner, # 非 OOT 分支中，设备名未命中显式映射时返回此类，再在下方实例化；常规 CUDA/ROCm 走这里。
             {
                 "cpu": CPUGraphRunner,
                 "npu": NPUGraphRunner,

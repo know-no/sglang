@@ -1,0 +1,599 @@
+
+
+
+
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。">
+  <link rel="icon" href="data:,">
+  <title>DSpark Target verify、accept/finalize 与 KV commit/reclaim · 投机解码专题</title>
+  <link rel="stylesheet" href="assets/css/specforge-course.css">
+  <link rel="stylesheet" href="assets/css/labs.css">
+  <link rel="stylesheet" href="assets/css/print.css">
+</head>
+<body class="sf-course-page" data-root-url="index.html"
+      data-nav-open="false" data-nav-pinned="false"
+data-page-id="dspark-verify-accept-kv" data-chapter-id="dspark-verify-accept-kv"data-section-id="speculative"      style="--page-accent: var(--domain-speculative, var(--domain-entry))">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+
+  <div class="sf-shell">
+    <div class="sf-navigation">
+      <nav class="sf-rail" aria-label="课程工具">
+        <button class="sf-rail__button sf-rail__menu" type="button" data-nav-toggle aria-controls="course-navigation" aria-expanded="false">
+          <span aria-hidden="true">☰</span><span class="sr-only">打开课程目录</span>
+        </button>
+        <a class="sf-rail__brand" href="index.html" aria-label="回到 SGLang 课程地图">S</a>
+        <div class="sf-rail__spacer"></div>
+        <button class="sf-rail__button" type="button" data-search-open aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span class="sr-only">搜索课程</span></button>
+        <button class="sf-rail__button" type="button" data-theme-toggle><span aria-hidden="true">◐</span><span class="sr-only" data-theme-label>深色</span></button>
+      </nav>
+
+      <aside class="sf-drawer" id="course-navigation" aria-label="全部课程目录">
+        <header class="sf-drawer__head">
+          <div><p class="sf-drawer__eyebrow">SGLang source course</p><a href="index.html">投机解码专题</a></div>
+          <button class="sf-icon-button" type="button" data-nav-close aria-label="关闭课程目录">×</button>
+        </header>
+        <div class="sf-drawer__tools">
+          <button class="sf-button sf-button--quiet" type="button" data-search-open><span aria-hidden="true">⌕</span> 搜索</button>
+          <button class="sf-button sf-button--quiet" type="button" data-theme-toggle><span aria-hidden="true">◐</span> <span data-theme-label>深色</span></button>
+          <button class="sf-button sf-button--quiet sf-drawer__pin" type="button" data-nav-pin aria-pressed="false"><span aria-hidden="true">⌖</span> <span data-nav-pin-label>固定目录</span></button>
+        </div>
+        <p class="sf-drawer__context"><b>Speculative Decoding 全家族</b><span>DSpark Target verify、accept/finalize 与 KV commit/reclaim</span></p>
+        <nav class="sf-drawer__tree" aria-label="全部章节"><div class="sf-course-tree">
+      <details class="sf-course-tree__section" open>
+        <summary><span class="sf-course-tree__number">01</span><span>Speculative Decoding 全家族</span></summary>
+        <ul class="sf-course-tree__children sf-course-tree__children--section">
+<li class="sf-course-tree__overview"><a href="index.html" data-course-link data-chapter-id="speculative"
+     data-search-title="Speculative Decoding 全家族" data-search-section="Speculative Decoding 全家族"
+aria-current="page">Speculative Decoding 全家族</a></li><li><a href="common-contract.html" data-course-link data-chapter-id="spec-common-contract"
+     data-search-title="Draft 只提案：共同 worker 合同与四个长度" data-search-section="Speculative Decoding 全家族"
+data-search-summary="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。">Draft 只提案：共同 worker 合同与四个长度</a></li><li><a href="eagle-tree.html" data-course-link data-chapter-id="eagle-tree"
+     data-search-title="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask" data-search-section="Speculative Decoding 全家族"
+data-search-summary="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。">EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a></li><li><a href="dflash-block.html" data-course-link data-chapter-id="dflash-block"
+     data-search-title="DFlash fixed-block draft、hidden injection 与 compact cache" data-search-section="Speculative Decoding 全家族"
+data-search-summary="追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。">DFlash fixed-block draft、hidden injection 与 compact cache</a></li><li><a href="dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"
+     data-search-title="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer" data-search-section="Speculative Decoding 全家族"
+data-search-summary="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。">DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a></li><li><a href="dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"
+     data-search-title="DSpark confidence、history、per-step budget 与 ragged layout" data-search-section="Speculative Decoding 全家族"
+data-search-summary="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。">DSpark confidence、history、per-step budget 与 ragged layout</a></li><li><a href="dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"
+     data-search-title="DSpark Target verify、accept/finalize 与 KV commit/reclaim" data-search-section="Speculative Decoding 全家族"
+data-search-summary="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。"aria-current="page">DSpark Target verify、accept/finalize 与 KV commit/reclaim</a></li><li><a href="dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"
+     data-search-title="DSpark folded fast path、capture/replay 与 overlap" data-search-section="Speculative Decoding 全家族"
+data-search-summary="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。">DSpark folded fast path、capture/replay 与 overlap</a></li><li><a href="boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"
+     data-search-title="Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec" data-search-section="Speculative Decoding 全家族"
+data-search-summary="用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。">Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a></li>        </ul>
+      </details>
+  </div></nav>
+      </aside>
+    </div>
+
+    <button class="sf-nav-backdrop" type="button" data-nav-backdrop aria-label="关闭课程目录"></button>
+
+    <div class="sf-main-frame">
+      <main class="sf-main" id="main-content" tabindex="-1">
+        <div class="sf-page-grid">
+          <div class="sf-content-column">
+              <nav aria-label="面包屑"><ol class="sf-breadcrumbs">
+<li><a href="index.html">Speculative Decoding 专题</a></li><li><span aria-current="page">DSpark Target verify、accept/finalize 与 KV commit/reclaim</span></li>              </ol></nav>
+
+              <header class="sf-hero">
+                <h1>DSpark Target verify、accept/finalize 与 KV commit/reclaim</h1>
+<p class="sf-hero__lead">追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。</p>                <div class="sf-evidence-strip">
+<span><strong>源码版本</strong> f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</span>                </div>
+                <div class="sf-hero__actions"></div>
+              </header>
+
+
+            <nav class="sf-hero__actions" aria-label="关联阅读入口" data-repository-companion><a href="../index.html">投机可视化总入口</a></nav>
+<details class="sf-source-details"><summary>版本与验证范围</summary><p>保留原投机解码资料与核对日期。页面重建与链接检查不增加 GPU 或端到端验证证据。</p></details>
+              <aside class="sf-contract" aria-label="深入源码笔记" data-related-notes data-repository-companion>
+                <div><b>深入源码笔记</b><span>课程负责连贯导览；逐段源码推导与补充讨论在以下主文维护。</span></div>
+<div><a href="../../sglang-dspark-verify-visual-guide.html">Verify 固定案例与坐标变换图解</a></div>              </aside>
+
+              <nav class="sf-stage-map" aria-label="本章学习路径">
+                <div class="sf-stage-map__head"><span>Stage roadmap</span><b>沿同一组对象，从结论走到源码与边界</b></div>
+                <ol><li><a href="#直接结论"><span>01</span>先钉住结论</a></li><li><a href="#当前路径假设"><span>02</span>前置直觉与运行坐标</a></li><li><a href="#对象与状态"><span>05</span>对象与所有权地图</a></li><li><a href="#当前源码调用链"><span>06</span>当前源码主链</a></li><li><a href="#连续例子"><span>07</span>固定样例 · 连续过程</a></li><li><a href="#边界矩阵"><span>09</span>分支与结论边界</a></li><li><a href="#自测"><span>11</span>自测与复盘</a></li></ol>
+              </nav>
+<details class="sf-mobile-toc"><summary>本页目录</summary><ol><li><a href="#直接结论">直接结论</a></li><li><a href="#当前路径假设">当前路径假设</a></li><li><a href="#输入-本页职责与输出">输入、本页职责与输出</a></li><li><a href="#为什么存在">为什么存在</a></li><li><a href="#对象与状态">对象与状态</a></li><li><a href="#当前源码调用链">当前源码调用链</a></li><li><a href="#连续例子">连续例子</a></li><li><a href="#为什么必须在这里">为什么必须在这里</a></li><li><a href="#边界矩阵">边界矩阵</a></li><li><a href="#source-action-changed-state-why">source action / changed state / why</a></li><li><a href="#自测">自测</a></li><li><a href="#source-evidence">源码引用与上下文</a></li></ol></details>
+<article class="sf-deep-lesson" data-toc-source data-lesson>
+<section class="sf-topic sf-topic--verdict" data-topic-kind="verdict" aria-labelledby="直接结论">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="直接结论"><span class="sf-sec-number" aria-hidden="true">01</span>直接结论</h2>
+    </header>
+
+      <div class="sf-note sf-note--key"><p>DSpark verify的一次target forward会在候选窗口的slot中写target KV并返回每行logits/aux hidden，但“写过”不等于“提交”。accept只允许从anchor后的draft链连续向前：<code>correct_len=k</code>表示前k个draft被target接受；target在下一位置产生<code>bonus</code>；<code>commit_lens=k+1</code>同时是本轮输出数与KV逻辑推进数。用户输出是 <code>[d1…dk, bonus]</code>，target KV应保留的输入链是 <code>[old_anchor,d1…dk]</code>，两者长度相同、内容右移一位。</p>
+<p>compact只计算每请求 <code>verify_lens</code> 指定的真实rows，随后把logits、hidden和候选散回固定 <code>[B,verify_width]</code> stride；缺失列明确填0，再由cutoff阻止这些padding进入提交。full-forward cap-accept则仍计算完整width，只在accept阶段把可提交深度截到 <code>verify_lens-1</code>。因此只有full-forward的trim可以表达“target确实算过、但因cap没有提交”的正确draft数；compact的0填充不能提供未计算列的反事实正确性。接受后<code>commit_hidden()</code>仅把accepted prefix的target hidden物化到draft KV。Scheduler稍后根据<code>accept_lens</code>、grammar、retract/finish状态推进 <code>Req.kv_committed_len</code> 和 <code>output_ids</code>；未提交候选slot可以被后续轮次覆盖，最终finish/retract由<code>release_kv_cache()</code>回收allocated尾部。</p>
+</div>
+  </section><section class="sf-topic sf-topic--prereq" data-topic-kind="prereq" aria-labelledby="当前路径假设">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="当前路径假设"><span class="sf-sec-number" aria-hidden="true">02</span>当前路径假设</h2>
+    </header>
+
+      <div class="sf-note sf-note--scope"><p>主线为CUDA dense DSpark、R0/R1普通decode、gamma=4、verify width=5、greedy、无grammar、无simulate accept、非folded eager accept；先给compact <code>verify_lens=[4,2]</code>示例，再指出non-compact差异。target attention backend支持对应ragged metadata，worker已通过PP/DP/CP启动守卫。public <code>return_logprob</code>仍被拒绝，aux hidden只作内部KV注入。</p>
+<p>sampling请求会构造draft probs并走<code>AcceptSampling</code>，混合batch按greedy mask选择两组结果；grammar会先对所有strided target logits应用mask且禁用folded accept。Mamba/ReplaySSM有额外state commit helper，DP idle rank有dummy target-verify参与。本页说明分支边界但不宣称这些后端在当前环境已运行，也不把Python kernel调用当设备同步完成。</p>
+</div>
+  </section><section class="sf-topic sf-topic--contract" data-topic-kind="contract" aria-labelledby="输入-本页职责与输出">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="输入-本页职责与输出"><span class="sf-sec-number" aria-hidden="true">03</span>输入、本页职责与输出</h2>
+    </header>
+
+      <div class="sf-contract-body"><p>输入是proposal <code>[old_anchor,d1…d4]</code>、完整verify window、可选ragged layout、sampling info和prefix lengths。<code>DSparkWorkerV2._forward_decode()</code>是编排receiver；<code>TargetVerifyExecutor</code>不是一次完成全部工作的黑盒，而是由worker分三次调用：先 <code>run_compact()/run_non_compact()</code>，再 <code>accept_and_finalize()</code>，最后在未folded时 <code>commit_hidden()</code>。grammar mask和<code>FutureMap</code>发布都发生在这些调用之间。输出<code>AcceptOuts</code>包含correct drafts、bonus、cap trim、commit lengths、新序列长度与固定stride padded tokens；外层再打包为<code>GenerationBatchResult</code>。</p>
+<div class="table-scroll teaching-table"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th style="text-align:right">R0 示例</th>
+<th>是否控制写入</th>
+<th>语义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>verify_lens</code></td>
+<td style="text-align:right">4</td>
+<td>控制target物理/accept可见窗口</td>
+<td>anchor + 最多3个draft位置</td>
+</tr>
+<tr>
+<td><code>correct_len</code></td>
+<td style="text-align:right">2</td>
+<td>是，决定accepted drafts</td>
+<td>target连续认可<code>d1,d2</code></td>
+</tr>
+<tr>
+<td><code>bonus</code></td>
+<td style="text-align:right"><code>B</code></td>
+<td>是，作为输出和next anchor</td>
+<td>第一个未由draft正确覆盖的target token</td>
+</tr>
+<tr>
+<td><code>cap_trim_lens</code></td>
+<td style="text-align:right">compact例为0</td>
+<td>否，只进入block metrics</td>
+<td>compact padding不代表未计算列；full-forward时才可解释为已计算后被cap截掉的正确draft数</td>
+</tr>
+<tr>
+<td><code>commit_lens</code></td>
+<td style="text-align:right">3</td>
+<td>是</td>
+<td><code>correct_len+1</code>，含bonus计数</td>
+</tr>
+<tr>
+<td><code>out_tokens</code></td>
+<td style="text-align:right"><code>[d1,d2,B,0,0]</code></td>
+<td>前3项有效</td>
+<td>固定stride结果buffer</td>
+</tr>
+<tr>
+<td><code>kv_allocated_len</code></td>
+<td style="text-align:right">例如110</td>
+<td>否</td>
+<td>地址预留水位，不是逻辑prefix</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+  </section><section class="sf-topic sf-topic--why" data-topic-kind="why" aria-labelledby="为什么存在">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="为什么存在"><span class="sf-sec-number" aria-hidden="true">04</span>为什么存在</h2>
+    </header>
+
+      <div class="sf-topic__body"><p>target必须并行计算候选后才能知道连续正确长度，因此verify slots要先分配，KV写入也会覆盖所有实际forward rows。若accept kernel直接删除rejected KV或修改allocator，它会与graph/eager、DP padding、overlap result延迟纠缠，并让下一轮地址不稳定。当前设计让地址和内容可超前写，逻辑提交由<code>commit_lens</code>及Req frontier限定；拒绝尾部不是可见prefix，之后相同逻辑位置可以被新proposal覆盖。</p>
+<p>固定stride输出让Scheduler无需理解每请求ragged长度。<code>next_token_ids</code>仍按<code>verify_num_draft_tokens</code>分块，<code>accept_lens</code>告诉CPU每块取多少；如果用ragged总数作为stride，第二个请求的起点会随第一个请求accept数变化，overlap buffer与graph static storage都难以复用。padding 0不进入Req，因为processor只切有效前缀。</p>
+<p>draft KV commit必须读取target hidden而非draft hidden。draft hidden描述proposal模型对mask block的表征，不能证明target接受后的上下文；target verify hidden对应target已计算的真实输入行，再经draft模型投影写入draft KV。只写<code>commit_lens</code>前缀保证下轮draft不会关注已拒绝的<code>d_(k+1)</code>。</p>
+</div>
+  </section><section class="sf-topic sf-topic--objects" data-topic-kind="objects" aria-labelledby="对象与状态">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="对象与状态"><span class="sf-sec-number" aria-hidden="true">05</span>对象与状态</h2>
+    </header>
+
+      <div class="sf-topic__body sf-object-body"><p><code>VerifyWindow</code>先为每请求建立<code>positions_2d=prefix+offsets</code>与完整 <code>[B,width]</code> target cache loc。compact时 <code>BuildRaggedVerifyWindow</code>按<code>verify_lens</code>压紧token、position、cache loc到<code>graph_num_tokens</code>；target结果仍是compact rows。executor随后通过<code>ScatterCompactToStrided</code>恢复 <code>[B*width,*]</code>，logits与hidden未验证列用 <code>0.0</code> 填充，graph epilogue也把候选缺列填0，使logit adjustment与accept共享一个逻辑几何。这里的0只是静态布局占位符：cutoff保证它不能增加commit，但若某个metric读取padding产生的<code>cap_trim_lens</code>，也不能把它解释为target在这些位置“本来会预测正确”。当前 <code>maybe_observe()</code>在compact模式直接warning并跳过debug confidence metrics，正是因为padding会污染per-position prefix label。</p>
+<p><code>accept_draft_tokens()</code>从<code>DraftBlockResult.greedy_mask</code>分派。全greedy直接调用<code>AcceptGreedy</code>；全sampling由corrected logits/temperature生成draft probs并调用<code>AcceptSampling</code>；混合batch两边都算后用<code>SelectMixedAccept</code>逐请求选。<code>FinalizeAcceptLens</code>计算<code>commit_lens=correct_len+1</code>与<code>new_seq_lens=prefix+commit</code>，<code>BuildOutTokens</code>把accepted drafts与bonus放在前部。</p>
+<p>KV要区分target与draft。target verify按<code>batch.out_cache_loc</code>写target pool；非compact <code>commit_hidden()</code>从<code>logits_output.hidden_states.view(B,width,H)</code>取全部物理行，却把<code>cache_loc_2d</code>和<code>commit_lens</code>交给prefix-valid injector。compact先将hidden散回strided，再由<code>inject_ragged()</code>构造commit布局。这里完成draft KV内容对齐，但并不在CPU Req上推进committed字段。</p>
+<p>等待D2H不是 <code>_resolve_spec_v2_tokens()</code> 的内部职责。真正receiver是外层 <code>BatchResultProcessor.process_batch_result_decode()</code>：它先对 <code>result.copy_done.synchronize()</code>，然后才进入spec-v2解析；此时 <code>_resolve_spec_v2_tokens()</code>只断言CPU tensor、读取accept lens、处理grammar retained prefix，并对仍有效R0增加实际保留token数。随后decode loop追加output并更新finish；finish时<code>release_kv_cache()</code>让prefix cache只处理<code>effective_kv_committed_len</code>，再释放到<code>kv_allocated_len</code>的尾段。这才是allocator意义的reclaim，不应在accept kernel旁虚构“立即free每个reject slot”。</p>
+<p>先看组件所有权：target executor 同时调用 target model、accept kernels 与 hidden injector，但它不持久更新 <code>Req</code>；<code>FutureMap</code> 只保存下轮调度需要的 device frontier；唯一会将最终 retained tokens 写入 <code>Req.output_ids/kv_committed_len</code> 的是 CPU result processor。</p>
+<figure class="diagram-frame" data-diagram-frame data-diagram-kind="component"><div class="diagram-toolbar"><span class="diagram-toolbar__identity"><b>组件 / 所有权图</b><span>DSpark Target verify、accept/finalize 与 KV commit/reclaim · 先看组件所有权：target executor 同时调用 target model、accept kernels 与 hidden inje…</span></span><span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span><button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button></div><div class="diagram-legend" aria-label="图内语义色图例"><span class="diagram-legend__item" data-tone="blue">入口 / 接口</span><span class="diagram-legend__item" data-tone="orange">owner / 调度</span><span class="diagram-legend__item" data-tone="green">持久状态</span><span class="diagram-legend__item" data-tone="purple">执行组件</span></div><div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="图形阅读区，可横向滚动"><div class="diagram-frame__canvas"><pre class="mermaid" aria-label="DSpark Target verify、accept/finalize 与 KV commit/reclaim · 先看组件所有权：target executor 同时调用 target model、accept kernels 与 hidden inje…">flowchart LR
+    subgraph GPU[DSpark worker / device execution]
+        W[DSparkWorkerV2]
+        X[TargetVerifyExecutor]
+        T[target ModelRunner + attention]
+        K[target KV reserved rows]
+        A[accept / finalize kernels]
+        I[TargetHiddenKvInjector]
+        DK[draft KV content]
+        FM[FutureMap device frontier]
+    end
+    subgraph CPU[Scheduler persistent state]
+        C[result copy + copy_done]
+        P[BatchResultProcessor]
+        R[Req R0\noutput_ids / kv_committed_len]
+        PC[prefix cache + allocator release]
+    end
+    W --&gt; X --&gt; T --&gt; K
+    T --&gt;|target logits| A
+    T --&gt;|target auxiliary hidden| I
+    A --&gt;|commit_lens prefix mask| I --&gt; DK
+    A --&gt;|new_seq_lens only| FM
+    A --&gt;|padded token rows + accept_lens| C --&gt; P --&gt; R
+    R --&gt; PC
+    K -. physical rows may exist beyond commit .-&gt; PC
+</pre></div></div><figcaption><b>读图方法：</b>先认实例与持久状态的 owner，再沿组合、复用和下一消费者读边。</figcaption></figure>
+</div>
+  </section><section class="sf-topic sf-topic--source-flow" data-topic-kind="source-flow" aria-labelledby="当前源码调用链">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="当前源码调用链"><span class="sf-sec-number" aria-hidden="true">06</span>当前源码调用链</h2>
+    </header>
+
+      <div class="sf-topic__body"><figure class="diagram-frame" data-diagram-frame data-diagram-kind="sequence"><div class="diagram-toolbar"><span class="diagram-toolbar__identity"><b>时序 / 泳道图</b><span>DSpark Target verify、accept/finalize 与 KV commit/reclaim · 当前源码调用链</span></span><span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span><button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button></div><div class="diagram-legend" aria-label="图内语义色图例"><span class="diagram-legend__item" data-tone="blue">caller</span><span class="diagram-legend__item" data-tone="orange">scheduler</span><span class="diagram-legend__item" data-tone="purple">device work</span><span class="diagram-legend__item" data-tone="cyan">IPC / collective</span></div><div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="图形阅读区，可横向滚动"><div class="diagram-frame__canvas"><pre class="mermaid" aria-label="DSpark Target verify、accept/finalize 与 KV commit/reclaim · 当前源码调用链">sequenceDiagram
+    participant W as DSparkWorkerV2
+    participant X as TargetVerifyExecutor
+    participant T as target ModelRunner
+    participant G as grammar mask
+    participant A as accept/finalize kernels
+    participant F as FutureMap
+    participant I as TargetHiddenKvInjector
+    participant P as BatchResultProcessor
+    W-&gt;&gt;X: ① run_compact(...) or run_non_compact(...)
+    X-&gt;&gt;T: TARGET_VERIFY with selected physical rows
+    T--&gt;&gt;X: logits + target hidden, target KV writes enqueued
+    X--&gt;&gt;W: TargetVerifyResult + optional hidden_strided
+    opt R0 has grammar
+        W-&gt;&gt;G: build/apply mask to strided target logits
+        G--&gt;&gt;W: constrained logits
+    end
+    W-&gt;&gt;X: ② accept_and_finalize(...)
+    X-&gt;&gt;A: greedy/sampling accept with cutoff
+    A--&gt;&gt;X: correct_len, bonus, cap_trim, commit_lens
+    X--&gt;&gt;W: AcceptOuts
+    W-&gt;&gt;F: publish(new_seq_lens[, confidence])
+    Note over W,F: publish transfers a dependency-bearing frontier, not full result completion
+    alt target graph epilogue already folded commit
+        Note over T,I: accepted hidden was injected inside graph before publish
+    else explicit fallback
+        W-&gt;&gt;X: ③ commit_hidden(commit_lens)
+        X-&gt;&gt;I: prefix-valid target hidden -&gt; draft KV
+        I--&gt;&gt;X: commit work enqueued/ordered on stream
+    end
+    W--&gt;&gt;P: GenerationBatchResult
+    P-&gt;&gt;P: copy_done.synchronize()
+    P-&gt;&gt;P: resolve spec tokens, grammar/retract, commit Req, emit
+</pre></div></div><figcaption><b>读图方法：</b>从上到下区分 Python 调用、CPU 状态写入、异步 device enqueue、wait 与 return。</figcaption></figure>
+<p>worker先根据mode第一次调用executor的<code>run_compact()</code>或<code>run_non_compact()</code>。non-compact构造完整<code>DFlashVerifyInput</code>，调整host seq lens上界后调用target <code>forward_batch_generation(is_verify=True)</code>；compact先build ragged window、设置epilogue buffers，再执行ragged target，最后scatter回strided并应用logit adjustments。第一次调用返回后，若有grammar，worker在第二次executor调用之前构造linear tree mask并作用于每行logits。</p>
+<p>worker第二次调用<code>accept_and_finalize()</code>；folded fast path只读取graph epilogue buffers，本页eager主线则调用<code>accept_draft_tokens()</code>、可选simulate override、finalize和out-token builder。worker随后调用 <code>on_publish</code>，其具体receiver是overlap Scheduler绑定的 <code>FutureMap.publish(future_indices, ...)</code>。只有当target graph epilogue已经融合commit时才跳过第三次调用；否则worker第三次调用<code>commit_hidden()</code>。返回结果时<code>accept_lens=commit_lens</code>，<code>block_accept_lens=commit_lens+cap_trim_lens</code>只供metrics，<code>cap_lens=verify_lens</code>记录窗口。CPU result processor以固定width stride切片，才持久提交；其中 <code>copy_done.synchronize()</code>在<code>process_batch_result_decode()</code>外层，不在<code>_resolve_spec_v2_tokens()</code>内。</p>
+<p>下图用 <code>R0/R1, width=5, verify_lens=[4,2]</code> 把一个 compact batch 拆成六类结果。特别注意：<code>raw acceptance</code> 是 device kernel 输出，<code>padded result</code> 是跨 device/CPU 的固定 stride 合同，<code>user-visible output</code> 还要经过 grammar/finish/retract；三者不能用一个“accepted tokens”箱子取代。</p>
+<figure class="diagram-frame" data-diagram-frame data-diagram-kind="data"><div class="diagram-toolbar"><span class="diagram-toolbar__identity"><b>数据 / Tensor 流</b><span>DSpark Target verify、accept/finalize 与 KV commit/reclaim · 下图用 R0/R1, width=5, verifylens=4,2 把一个 compact batch 拆成六类结果</span></span><span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span><button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button></div><div class="diagram-legend" aria-label="图内语义色图例"><span class="diagram-legend__item" data-tone="blue">输入对象</span><span class="diagram-legend__item" data-tone="green">KV / tensor</span><span class="diagram-legend__item" data-tone="purple">计算</span><span class="diagram-legend__item" data-tone="cyan">传输</span></div><div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="图形阅读区，可横向滚动"><div class="diagram-frame__canvas"><pre class="mermaid" aria-label="DSpark Target verify、accept/finalize 与 KV commit/reclaim · 下图用 R0/R1, width=5, verifylens=4,2 把一个 compact batch 拆成六类结果">flowchart TD
+    LAYOUT[RaggedVerifyLayout\nverify_lens R0=4, R1=2\ngraph_num_tokens=8]
+    PACK[compact target inputs\nR0: A0,a,b,c; R1: A1,x\nplus 2 graph padding rows]
+    TARGET[target output compact logits / hidden\nand target KV physical writes]
+    STRIDE[scatter to logical width=5\nR0 five columns; R1 five columns\nmissing columns filled with zero]
+    RAW[raw kernel outcomes\nR0 correct=2 bonus=B0 commit=3\nR1 correct=1 bonus=B1 commit=2]
+    PAD[padded GenerationBatchResult\nR0 a,b,B0,0,0\nR1 x,B1,0,0,0]
+    TK[target committed input KV\nR0 A0,a,b; R1 A1,x]
+    DK[draft KV injection\nonly commit_lens prefixes]
+    FM[FutureMap next frontier\n103 and 52; anchors B0 and B1]
+    CPU[CPU retained per request\na,b,B0 and x,B1\npossibly grammar-shortened]
+    REQ[Req commit + user output\nR0 100 to 103; R1 50 to 52]
+    LAYOUT --&gt; PACK --&gt; TARGET --&gt; STRIDE --&gt; RAW
+    RAW --&gt; PAD --&gt; CPU --&gt; REQ
+    RAW --&gt; TK
+    TARGET --&gt;|hidden strided| DK
+    RAW --&gt;|commit_lens| DK
+    RAW --&gt; FM
+    TK --&gt; FM
+    DK --&gt; FM
+</pre></div></div><figcaption><b>读图方法：</b>沿对象或 tensor 身份、shape/索引和存储位置读，不把控制流误当数据复制。</figcaption></figure>
+</div>
+  </section><section class="sf-topic sf-topic--example" data-topic-kind="example" aria-labelledby="连续例子">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="连续例子"><span class="sf-sec-number" aria-hidden="true">07</span>连续例子</h2>
+    </header>
+
+      <div class="sf-topic__body"><p>t0，R0 prefix=100，R1 prefix=50，width=5；完整地址窗口已映射。layout给<code>verify_lens=[4,2]</code>：R0 target真实输入 <code>[A0,a,b,c]</code>，R1 <code>[A1,x]</code>，compact总有效6行，graph bucket可能8。R0的<code>d</code>和R1的<code>y,z,w</code>本轮不进入target真实verify；bucket多出的2行只是padding。</p>
+<p>t1，compact target对R0确认<code>a,b</code>，下一预测<code>B0</code>，所以correct_len=2、commit=3、输出<code>[a,b,B0]</code>、<code>cap_trim=0</code>。对R1仅真实计算 <code>[A1,x]</code> 两行，确认<code>x</code>后由已计算的第二行logit产生<code>B1</code>，所以correct_len=1、commit=2、输出<code>[x,B1]</code>、本例<code>cap_trim=0</code>。R1的<code>y,z,w</code>对应候选、logits和hidden列都只是0 padding；源码无法据此回答“若继续全宽，y是否正确”，因此课程也不做这种反事实推断。</p>
+<p>t1b，另取full-forward cap-accept请求R2：width=5全部真实计算，<code>verify_lens=3</code>只允许anchor后最多2个draft。若target在完整结果上连续确认<code>u,v,w</code>，accept先得到raw correct=3，再由 <code>capped=min(3,3-1)=2</code> 得到correct_len=2、<code>cap_trim=1</code>、commit=3。这里trim有意义，因为<code>w</code>所在行确实由target计算过；这与compact缺失行填0是两种不同证据。</p>
+<p>t2，target KV逻辑保留R0 <code>[A0,a,b]</code>三行、R1 <code>[A1,x]</code>两行；draft hidden injector也只写这些prefix。输出却分别以<code>B0/B1</code>结尾，它们进入下一轮anchor。结果buffer按width=5放 <code>R0:[a,b,B0,0,0]</code>、<code>R1:[x,B1,0,0,0]</code>；R1切片起点仍是5，不是R0 commit数3。</p>
+<p>t3，CPU processor若无grammar/retract，将R0 committed <code>100→103</code>、R1 <code>50→52</code>，再扩output。若R1在延迟结果处理前已retract，则不推进其Req；其allocated尾部由retract/release路径回收。t4，下一轮R0以prefix103、anchorB0覆盖位置103之后的新verify窗口；旧rejected rows不是可访问committed prefix。</p>
+<div class="step-lab" data-step-lab data-lab-id="dspark-verify-accept-kv" data-default-step="layout">
+  <div class="step-lab__head">
+    <h3>过程实验：一轮 DSpark 中哪条前沿真正前进</h3>
+    <p>固定 R0/R1 的 compact verify 样例，分开观察 target 行、accepted token、target KV、draft KV、FutureMap 与 CPU Req；它们不会在同一时刻完成。</p>
+  </div>
+  <div class="step-lab__tabs" data-lab-tabs>
+    <button class="button" data-lab-step="layout">1 layout / reserve</button>
+    <button class="button" data-lab-step="target">2 target verify</button>
+    <button class="button" data-lab-step="accept">3 accept / finalize</button>
+    <button class="button" data-lab-step="publish">4 publish relay</button>
+    <button class="button" data-lab-step="hidden">5 draft hidden commit</button>
+    <button class="button" data-lab-step="cpu">6 CPU commit / reclaim</button>
+  </div>
+  <div class="step-lab__stage">
+    <section class="step-lab__panel" data-lab-panel="layout">
+      <div class="state-grid" style="--columns:4"><div class="state-cell" data-kind="main"><b>R0</b><br>prefix=100<br>width=5</div><div class="state-cell" data-kind="main"><b>R1</b><br>prefix=50<br>width=5</div><div class="state-cell" data-kind="guard">verify_lens=[4,2]</div><div class="state-cell" data-kind="async">compact rows=6<br>graph bucket可为8</div></div>
+      <p>allocator/mapping 已给固定宽度窗口留地址，但 target 本轮只接收 6 个真实 ragged 行；bucket 的 2 个 padding 行和 R1 的 y/z/w 都不是“被验证但拒绝”。</p>
+    </section>
+    <section class="step-lab__panel" data-lab-panel="target">
+      <div class="state-grid" style="--columns:3"><div class="state-cell" data-kind="main"><b>R0 rows</b><br>[A0,a,b,c]</div><div class="state-cell" data-kind="main"><b>R1 rows</b><br>[A1,x]</div><div class="state-cell" data-kind="async"><b>target device work</b><br>logits + hidden + 对应行 KV</div></div>
+      <p>compact target 只对真实行排队计算，再 scatter 回固定 width 结果布局。此刻 CPU Req 的 committed 仍是 100/50；“KV writer 已排队”也不是 host 已经同步完成。</p>
+    </section>
+    <section class="step-lab__panel" data-lab-panel="accept">
+      <div class="state-grid" style="--columns:4"><div class="state-cell" data-kind="main">R0 correct=2<br>commit=3</div><div class="state-cell" data-kind="main">R0 out=[a,b,B0]</div><div class="state-cell" data-kind="main">R1 correct=1<br>commit=2</div><div class="state-cell" data-kind="main">R1 out=[x,B1]</div></div>
+      <p><code>accept_and_finalize()</code> 在 grammar/logit adjustment 之后形成 <code>commit_lens=[3,2]</code>。bonus B0/B1 是输出尾 token；本轮 target KV 对应的是输入行 A0/a/b 与 A1/x，不能把 bonus token 误读成已经拥有自己的 KV。</p>
+    </section>
+    <section class="step-lab__panel" data-lab-panel="publish">
+      <div class="state-transition"><div class="state-transition__state"><b>AcceptOuts</b><br>padded output + commit_lens</div><div class="state-transition__arrow">on_publish →</div><div class="state-transition__state"><b>FutureMap</b><br>future_indices 对应的 relay 已发布</div></div>
+      <p>publish 让 overlap 下一轮能解析 future 输入；它不是 target/draft 所有 device 写都完成的总 completion event，也没有在这里修改 <code>Req.output_ids</code>。</p>
+    </section>
+    <section class="step-lab__panel" data-lab-panel="hidden">
+      <div class="state-grid" style="--columns:3"><div class="state-cell" data-kind="main">target prefix KV<br>R0: A0/a/b<br>R1: A1/x</div><div class="state-cell" data-kind="async">commit_hidden(commit_lens)<br>按 stream 次序注入</div><div class="state-cell" data-kind="main">draft KV frontier<br>只追到 accepted prefix</div></div>
+      <p>只有 fused graph epilogue 已完成等价提交时才跳过显式第三次调用；否则 hidden injector 修补 draft KV。被拒绝尾列不会进入 draft 的可读前沿。</p>
+    </section>
+    <section class="step-lab__panel" data-lab-panel="cpu">
+      <div class="state-transition"><div class="state-transition__state"><b>GenerationBatchResult</b><br>copy_done + width-strided rows</div><div class="state-transition__arrow">synchronize / resolve / current Req guard →</div><div class="state-transition__state"><b>Scheduler Req</b><br>R0 100→103；R1 50→52<br>output_ids 追加 accepted rows</div></div>
+      <p><code>process_batch_result_decode()</code> 外层先同步必要 copy，再按固定 width 切片并检查 grammar、finish、retract。rejected/overallocated tail 由 release/retract 的所有权路径回收，不在 accept 瞬间逐 slot free。</p>
+    </section>
+  </div>
+  <div class="step-lab__toolbar"><span class="step-lab__status" data-lab-status aria-live="polite"></span><div class="step-lab__actions"><button class="button button--quiet" data-lab-action="prev">上一步</button><button class="button" data-lab-action="next">下一步</button><button class="button button--quiet" data-lab-action="reset">复位</button></div></div>
+</div>
+</div>
+  </section><section class="sf-topic sf-topic--why-here" data-topic-kind="why-here" aria-labelledby="为什么必须在这里">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="为什么必须在这里"><span class="sf-sec-number" aria-hidden="true">08</span>为什么必须在这里</h2>
+    </header>
+
+      <div class="sf-topic__body"><p>ragged pack必须在target forward前，scatter必须在统一accept前。若直接在compact buffer上用固定stride accept，R1行起点会按R0 lens变化；若不scatter又复用现有sampling/logit adjustment kernel，索引会错误。accept必须在grammar/logit adjustment之后，否则target裁决的分布与API约束不一致。</p>
+<p>hidden commit必须在accept之后才能得到commit_lens，但要在下一轮draft读取这些slot之前完成。Req committed推进更晚，在CPU result processor，因为只有它能处理grammar retained run、finish与retract。finish释放又必须使用committed frontier，而不是本轮verify width，才能既保留可缓存prefix又释放over-allocation。</p>
+</div>
+  </section><section class="sf-topic sf-topic--boundary" data-topic-kind="boundary" aria-labelledby="边界矩阵">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="边界矩阵"><span class="sf-sec-number" aria-hidden="true">09</span>边界矩阵</h2>
+    </header>
+
+      <div class="sf-topic__body"><div class="table-scroll teaching-table"><table>
+<thead>
+<tr>
+<th>边界</th>
+<th>当前行为</th>
+<th>状态影响</th>
+<th>不能误读</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>full verify</td>
+<td>每请求width行</td>
+<td>target写完整候选slot</td>
+<td>写入不等于commit</td>
+</tr>
+<tr>
+<td>compact</td>
+<td>只pack <code>verify_lens</code>有效rows，缺列填0</td>
+<td>scatter回固定stride，cutoff限制commit</td>
+<td>graph bucket不等于真实rows；padding不提供反事实正确性</td>
+</tr>
+<tr>
+<td>full-forward cap-accept</td>
+<td>target仍full width，所有候选行真实计算</td>
+<td><code>capped=min(raw, verify_lens-1)</code>，trim=<code>raw-capped</code></td>
+<td>trim只在已计算行上有“cap截掉”含义；不节省forward rows</td>
+</tr>
+<tr>
+<td>greedy/sampling</td>
+<td>不同accept kernel，混合逐req选择</td>
+<td>都输出同一AcceptOuts</td>
+<td>greedy规则不可套sampling</td>
+</tr>
+<tr>
+<td>grammar</td>
+<td>mask logits并禁folded accept</td>
+<td>可进一步截断CPU retained run</td>
+<td>worker原始accept不一定最终emit</td>
+</tr>
+<tr>
+<td>target KV</td>
+<td>verify forward写候选内容</td>
+<td>committed prefix由Req长度界定</td>
+<td>reject未必立即free</td>
+</tr>
+<tr>
+<td>draft KV</td>
+<td>只注入committed target hidden</td>
+<td>下轮proposal上下文修复</td>
+<td>不是target KV字节复制</td>
+</tr>
+<tr>
+<td>logprob/hidden API</td>
+<td>logprob拒绝；hidden内部后清空</td>
+<td>不进入公开返回</td>
+<td>内部aux不能当用户hidden</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+  </section><section class="sf-topic sf-topic--recap" data-topic-kind="recap" aria-labelledby="source-action-changed-state-why">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="source-action-changed-state-why"><span class="sf-sec-number" aria-hidden="true">10</span>source action / changed state / why</h2>
+    </header>
+
+      <div class="sf-state-flow-source" data-state-flow><div class="table-scroll teaching-table"><table>
+<thead>
+<tr>
+<th>source action</th>
+<th>changed state</th>
+<th>why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>allocate verify window</td>
+<td>committed prefix后映射完整candidate slots</td>
+<td>target forward前获得稳定写地址</td>
+</tr>
+<tr>
+<td>target verify</td>
+<td>slots写target KV，返回logits/hidden</td>
+<td>计算候选的真实target分布</td>
+</tr>
+<tr>
+<td>compact scatter</td>
+<td>packed rows → fixed request stride</td>
+<td>复用统一adjustment/accept/result合同</td>
+</tr>
+<tr>
+<td>accept/finalize</td>
+<td>logits+draft → correct/bonus/commit/out tokens</td>
+<td>只提交连续前缀并保证至少bonus</td>
+</tr>
+<tr>
+<td>hidden commit</td>
+<td>accepted target hidden → draft KV</td>
+<td>让下一轮draft上下文对齐</td>
+</tr>
+<tr>
+<td>result/release</td>
+<td>Req frontier/output推进；尾部最终回收</td>
+<td>持久状态结合grammar/finish裁决</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+  </section><section class="sf-topic sf-topic--self-check" data-topic-kind="self-check" aria-labelledby="自测">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="自测"><span class="sf-sec-number" aria-hidden="true">11</span>自测</h2>
+    </header>
+
+      <div class="sf-self-test" data-self-test>
+        <ol>
+<li>correct_len=2时commit_lens为何是3？输出token与target KV输入token分别是哪三项？</li>
+<li>compact <code>verify_lens=[4,2]</code>、graph bucket=8时target有几个真实rows？padding为何既不能进入commit，也不能证明未计算候选“本来正确”？</li>
+<li>full-forward width=5、<code>verify_lens=3</code>、raw correct=3时，correct、trim、commit各是多少？为何这个trim和compact padding不同？</li>
+<li>target已经对reject候选写KV，为何它们不会进入下一轮有效prefix？</li>
+<li>请按receiver说明 <code>run target → grammar → accept → FutureMap publish → hidden commit → copy_done wait → Req提交</code>，并区分“draft KV内容commit”“Req.kv_committed_len推进”“allocator尾部free”。</li>
+</ol>
+
+      </div>
+  </section><section class="sf-topic sf-topic--evidence" data-topic-kind="evidence" aria-labelledby="source-evidence">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="source-evidence"><span class="sf-sec-number" aria-hidden="true">12</span>源码引用与上下文</h2>
+    </header>
+
+      <details class="sf-source-details"><summary>展开本章源码片段与定位工具</summary><div class="source-microscope" data-source-microscope data-source-key="source" data-default-step="source-1"><div class="source-microscope__head"><h3>源码显微镜：receiver、状态写入与下一消费者</h3><p>左侧按本章论证顺序定位决定性源码；每一跳必须回到正文判断它是 call、write、return 还是 next-consumer。相邻卡片本身不冒充直接调用边。</p></div><div class="source-microscope__tabs" data-source-tabs><button class="button button--quiet" data-source-step="source-1">01 · TargetVerifyExecutor</button><button class="button button--quiet" data-source-step="source-2">02 · _forward_decode</button><button class="button button--quiet" data-source-step="source-3">03 · accept_and_finalize</button><button class="button button--quiet" data-source-step="source-4">04 · commit_hidden</button><button class="button button--quiet" data-source-step="source-5">05 · accept_draft_tokens</button><button class="button button--quiet" data-source-step="source-6">06 · alloc_verify_window</button><button class="button button--quiet" data-source-step="source-7">07 · maybe_observe</button><button class="button button--quiet" data-source-step="source-8">08 · _resolve_spec_v2_tokens</button><button class="button button--quiet" data-source-step="source-9">09 · process_batch_result_decode</button><button class="button button--quiet" data-source-step="source-10">10 · release_kv_cache</button></div><div class="source-microscope__stage"><section class="source-microscope__panel" data-source-panel="source-1"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>TargetVerifyExecutor</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>分别提供 target forward、accept/finalize 与 hidden commit 三个调用边界</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>_forward_decode</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_verify.py:69</span><span>步骤 1 / 10</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_verify.py:69 附近源码"><code>     65 |     logits_output: object
+     66 |     can_run_cuda_graph: bool
+     67 | 
+     68 | 
+&gt;    69 | class TargetVerifyExecutor:
+     70 |     def __init__(
+     71 |         self,
+     72 |         *,
+     73 |         target_worker,</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-2"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>_forward_decode</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>DSparkWorkerV2 依次编排 target、grammar、accept、publish 与 commit</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>accept_and_finalize</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:482</span><span>步骤 2 / 10</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:482 附近源码"><code>    478 |             speculative_num_draft_tokens=int(self.verify_num_draft_tokens),
+    479 |             new_seq_lens=next_draft_input.new_seq_lens,
+    480 |         )
+    481 | 
+&gt;   482 |     def _forward_decode(
+    483 |         self, batch: ScheduleBatch, on_publish, grammar_barrier=None
+    484 |     ) -&gt; GenerationBatchResult:
+    485 |         if batch.spec_info is None:
+    486 |             batch.spec_info = DFlashDraftInputV2.create_idle_input(device=self.device)</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-3"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>accept_and_finalize</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>folded/eager accept 统一为 AcceptOuts 的边界</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>commit_hidden</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_verify.py:91</span><span>步骤 3 / 10</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_verify.py:91 附近源码"><code>     87 |         self._verify_backend_self_adds_seq_lens_cache: Optional[bool] = None
+     88 |         self._simulate_acc_len = float(simulate_acc_len)
+     89 |         self._simulated_correct_drafts_buf: Optional[torch.Tensor] = None
+     90 | 
+&gt;    91 |     def accept_and_finalize(
+     92 |         self,
+     93 |         *,
+     94 |         folded_accept: bool,
+     95 |         bs: int,</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-4"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>commit_hidden</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>按 commit_lens 将 target hidden 写入 draft KV</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>accept_draft_tokens</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_verify.py:287</span><span>步骤 4 / 10</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_verify.py:287 附近源码"><code>    283 |             logits_output=target_out.logits_output,
+    284 |             can_run_cuda_graph=target_out.can_run_cuda_graph,
+    285 |         )
+    286 | 
+&gt;   287 |     def commit_hidden(
+    288 |         self,
+    289 |         *,
+    290 |         batch: ScheduleBatch,
+    291 |         layout: Optional[RaggedVerifyLayout],</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-5"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>accept_draft_tokens</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>greedy、sampling 与混合请求的连续接受分派</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>alloc_verify_window</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_verify.py:658</span><span>步骤 5 / 10</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_verify.py:658 附近源码"><code>    654 |                 pool=pool,
+    655 |             )
+    656 | 
+    657 | 
+&gt;   658 | def accept_draft_tokens(
+    659 |     *,
+    660 |     candidates: torch.Tensor,  # [bs, verify_w=gamma+1]  col0=anchor, col1~gamma=草稿token
+    661 |     target_logits: torch.Tensor,  # [bs*verify_w, vocab]  target forward输出的logits(展平)
+    662 |     draft_block: DraftBlockResult,</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-6"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>alloc_verify_window</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>从共享 req-to-token 映射建立完整 verify positions 与 slots</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>maybe_observe</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_planner.py:844</span><span>步骤 6 / 10</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_planner.py:844 附近源码"><code>    840 |     )
+    841 |     return tier_tokens &gt; capture_num_tokens[-1]
+    842 | 
+    843 | 
+&gt;   844 | def alloc_verify_window(
+    845 |     *,
+    846 |     batch: ScheduleBatch,
+    847 |     bs: int,
+    848 |     device: str,</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-7"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>maybe_observe</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>compact下因padding污染prefix label而跳过debug confidence metrics</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>_resolve_spec_v2_tokens</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_observability.py:675</span><span>步骤 7 / 10</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_observability.py:675 附近源码"><code>    671 |         self._metrics: Optional[PerPositionConfidenceMetrics] = None
+    672 |         self._step_ct: int = 0
+    673 |         self._compact_warned: bool = False
+    674 | 
+&gt;   675 |     def maybe_observe(
+    676 |         self,
+    677 |         *,
+    678 |         carries_confidence: bool,
+    679 |         is_compact_mode: bool,</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-8"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>_resolve_spec_v2_tokens</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>copy 已完成后把固定 stride 结果解析为每请求 token 列表</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>process_batch_result_decode</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/managers/scheduler_components/batch_result_processor.py:546</span><span>步骤 8 / 10</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/managers/scheduler_components/batch_result_processor.py:546 附近源码"><code>    542 |                 )
+    543 |             logprob_pt += num_input_logprobs
+    544 |         return logprob_pt
+    545 | 
+&gt;   546 |     def _resolve_spec_v2_tokens(
+    547 |         self,
+    548 |         result: GenerationBatchResult,
+    549 |         batch: ScheduleBatch,
+    550 |     ) -&gt; List[List[int]]:</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-9"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>process_batch_result_decode</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>外层先等待 copy_done 再进入 spec-v2 token 解析和 Req 提交</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>release_kv_cache</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/managers/scheduler_components/batch_result_processor.py:724</span><span>步骤 9 / 10</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/managers/scheduler_components/batch_result_processor.py:724 附近源码"><code>    720 |         self.output_streamer._stream_output_generation(
+    721 |             batch.reqs, batch.return_logprob, is_idle_batch=True
+    722 |         )
+    723 | 
+&gt;   724 |     def process_batch_result_decode(
+    725 |         self,
+    726 |         batch: ScheduleBatch,
+    727 |         result: GenerationBatchResult,
+    728 |     ):</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-10"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>release_kv_cache</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>finish时缓存committed前缀并释放overallocated尾部</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>回到本章结论</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/mem_cache/common.py:132</span><span>步骤 10 / 10</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/mem_cache/common.py:132 附近源码"><code>    128 |         if available_size &lt; num_tokens:
+    129 |             tree_cache.evict(EvictParams(num_tokens=num_tokens - available_size))
+    130 | 
+    131 | 
+&gt;   132 | def release_kv_cache(req: Req, tree_cache: BasePrefixCache, is_insert: bool = True):
+    133 |     # the two resources currently have the same lifecycle, thus simplify logic below
+    134 |     assert (req.req_pool_idx is None) == (req.kv is None)
+    135 |     # MambaRadixCache may alloc mamba state before alloc KV cache
+    136 |     if req.req_pool_idx is None:</code></pre></div></section></div><div class="source-microscope__toolbar"><span class="source-microscope__status" data-source-status aria-live="polite"></span><div class="source-microscope__actions"><button class="button button--quiet" data-source-action="prev">上一跳</button><button class="button" data-source-action="next">下一跳</button><button class="button button--quiet" data-source-action="reset">回到入口</button></div></div></div></details>
+  </section>  </article>
+              <nav class="sf-pager" aria-label="相邻章节">
+<a href="dspark-confidence-layout.html"><span>← 上一章</span><b>DSpark confidence、history、per-step budget 与 ragged layout</b></a><a href="dspark-folded-overlap.html"><span>下一章 →</span><b>DSpark folded fast path、capture/replay 与 overlap</b></a>              </nav>
+
+            <footer class="sf-footer"><span>投机解码源码专题</span><span>源码快照 f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</span><span>纯静态 · 本地依赖 · 可离线分享</span></footer>
+            <p class="print-only">投机解码源码专题 · DSpark Target verify、accept/finalize 与 KV commit/reclaim · f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</p>
+          </div>
+
+          <aside class="sf-page-toc" aria-label="本页目录">
+            <p class="sf-page-toc__title">On this page</p>
+            <ol data-page-toc-list><li><a href="#直接结论" data-level="2">直接结论</a></li><li><a href="#当前路径假设" data-level="2">当前路径假设</a></li><li><a href="#输入-本页职责与输出" data-level="2">输入、本页职责与输出</a></li><li><a href="#为什么存在" data-level="2">为什么存在</a></li><li><a href="#对象与状态" data-level="2">对象与状态</a></li><li><a href="#当前源码调用链" data-level="2">当前源码调用链</a></li><li><a href="#连续例子" data-level="2">连续例子</a></li><li><a href="#为什么必须在这里" data-level="2">为什么必须在这里</a></li><li><a href="#边界矩阵" data-level="2">边界矩阵</a></li><li><a href="#source-action-changed-state-why" data-level="2">source action / changed state / why</a></li><li><a href="#自测" data-level="2">自测</a></li><li><a href="#source-evidence" data-level="2">源码引用与上下文</a></li></ol>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="search-dialog" id="course-search-dialog" data-search-dialog aria-labelledby="course-search-title">
+    <div class="search-dialog__head"><strong id="course-search-title">搜索课程</strong><button class="sf-icon-button" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+    <form class="search-dialog__form" data-search-form role="search"><label class="sr-only" for="course-search-input">搜索对象、方法、状态或章节</label><input id="course-search-input" type="search" data-search-input autocomplete="off" placeholder="例如：running_batch、ForwardBatch、TARGET_VERIFY"><button class="sf-button" type="submit">搜索</button></form>
+    <p class="search-dialog__status" data-search-status aria-live="polite"></p><ol class="search-results" data-search-results></ol>
+  </dialog>
+
+  <dialog class="diagram-viewer" id="diagram-viewer-dialog" data-diagram-dialog aria-labelledby="diagram-viewer-title">
+    <div class="diagram-viewer__head"><div><strong id="diagram-viewer-title" data-diagram-title>图解沉浸阅读</strong> <span class="diagram-viewer__zoom" data-diagram-zoom>100%</span></div><div class="diagram-viewer__tools"><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-in" aria-label="放大">＋</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-out" aria-label="缩小">−</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="fit">看全图</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="reset">100%</button><button class="sf-button" type="button" data-diagram-action="close">关闭 ×</button></div></div>
+    <div class="diagram-viewer__viewport" data-diagram-viewport><div class="diagram-viewer__canvas mermaid" data-diagram-canvas></div></div>
+  </dialog>
+
+<script src="assets/data/search-index.js" defer></script><script src="assets/vendor/mermaid.min.js" defer></script>  <script src="assets/js/site-shell.js" defer></script>
+  <script src="assets/js/toc-search.js" defer></script>
+  <script src="assets/js/diagram-viewer.js" defer></script>
+  <script src="assets/js/source-microscope.js" defer></script>
+  <script src="assets/js/labs.js" defer></script>
+  <script src="assets/js/lesson-components.js" defer></script>
+</body>
+</html>

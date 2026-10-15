@@ -1,0 +1,556 @@
+
+
+
+
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。">
+  <link rel="icon" href="data:,">
+  <title>EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask · 投机解码专题</title>
+  <link rel="stylesheet" href="assets/css/specforge-course.css">
+  <link rel="stylesheet" href="assets/css/labs.css">
+  <link rel="stylesheet" href="assets/css/print.css">
+</head>
+<body class="sf-course-page" data-root-url="index.html"
+      data-nav-open="false" data-nav-pinned="false"
+data-page-id="eagle-tree" data-chapter-id="eagle-tree"data-section-id="speculative"      style="--page-accent: var(--domain-speculative, var(--domain-entry))">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+
+  <div class="sf-shell">
+    <div class="sf-navigation">
+      <nav class="sf-rail" aria-label="课程工具">
+        <button class="sf-rail__button sf-rail__menu" type="button" data-nav-toggle aria-controls="course-navigation" aria-expanded="false">
+          <span aria-hidden="true">☰</span><span class="sr-only">打开课程目录</span>
+        </button>
+        <a class="sf-rail__brand" href="index.html" aria-label="回到 SGLang 课程地图">S</a>
+        <div class="sf-rail__spacer"></div>
+        <button class="sf-rail__button" type="button" data-search-open aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span class="sr-only">搜索课程</span></button>
+        <button class="sf-rail__button" type="button" data-theme-toggle><span aria-hidden="true">◐</span><span class="sr-only" data-theme-label>深色</span></button>
+      </nav>
+
+      <aside class="sf-drawer" id="course-navigation" aria-label="全部课程目录">
+        <header class="sf-drawer__head">
+          <div><p class="sf-drawer__eyebrow">SGLang source course</p><a href="index.html">投机解码专题</a></div>
+          <button class="sf-icon-button" type="button" data-nav-close aria-label="关闭课程目录">×</button>
+        </header>
+        <div class="sf-drawer__tools">
+          <button class="sf-button sf-button--quiet" type="button" data-search-open><span aria-hidden="true">⌕</span> 搜索</button>
+          <button class="sf-button sf-button--quiet" type="button" data-theme-toggle><span aria-hidden="true">◐</span> <span data-theme-label>深色</span></button>
+          <button class="sf-button sf-button--quiet sf-drawer__pin" type="button" data-nav-pin aria-pressed="false"><span aria-hidden="true">⌖</span> <span data-nav-pin-label>固定目录</span></button>
+        </div>
+        <p class="sf-drawer__context"><b>Speculative Decoding 全家族</b><span>EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</span></p>
+        <nav class="sf-drawer__tree" aria-label="全部章节"><div class="sf-course-tree">
+      <details class="sf-course-tree__section" open>
+        <summary><span class="sf-course-tree__number">01</span><span>Speculative Decoding 全家族</span></summary>
+        <ul class="sf-course-tree__children sf-course-tree__children--section">
+<li class="sf-course-tree__overview"><a href="index.html" data-course-link data-chapter-id="speculative"
+     data-search-title="Speculative Decoding 全家族" data-search-section="Speculative Decoding 全家族"
+aria-current="page">Speculative Decoding 全家族</a></li><li><a href="common-contract.html" data-course-link data-chapter-id="spec-common-contract"
+     data-search-title="Draft 只提案：共同 worker 合同与四个长度" data-search-section="Speculative Decoding 全家族"
+data-search-summary="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。">Draft 只提案：共同 worker 合同与四个长度</a></li><li><a href="eagle-tree.html" data-course-link data-chapter-id="eagle-tree"
+     data-search-title="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask" data-search-section="Speculative Decoding 全家族"
+data-search-summary="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。"aria-current="page">EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a></li><li><a href="dflash-block.html" data-course-link data-chapter-id="dflash-block"
+     data-search-title="DFlash fixed-block draft、hidden injection 与 compact cache" data-search-section="Speculative Decoding 全家族"
+data-search-summary="追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。">DFlash fixed-block draft、hidden injection 与 compact cache</a></li><li><a href="dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"
+     data-search-title="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer" data-search-section="Speculative Decoding 全家族"
+data-search-summary="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。">DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a></li><li><a href="dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"
+     data-search-title="DSpark confidence、history、per-step budget 与 ragged layout" data-search-section="Speculative Decoding 全家族"
+data-search-summary="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。">DSpark confidence、history、per-step budget 与 ragged layout</a></li><li><a href="dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"
+     data-search-title="DSpark Target verify、accept/finalize 与 KV commit/reclaim" data-search-section="Speculative Decoding 全家族"
+data-search-summary="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。">DSpark Target verify、accept/finalize 与 KV commit/reclaim</a></li><li><a href="dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"
+     data-search-title="DSpark folded fast path、capture/replay 与 overlap" data-search-section="Speculative Decoding 全家族"
+data-search-summary="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。">DSpark folded fast path、capture/replay 与 overlap</a></li><li><a href="boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"
+     data-search-title="Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec" data-search-section="Speculative Decoding 全家族"
+data-search-summary="用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。">Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a></li>        </ul>
+      </details>
+  </div></nav>
+      </aside>
+    </div>
+
+    <button class="sf-nav-backdrop" type="button" data-nav-backdrop aria-label="关闭课程目录"></button>
+
+    <div class="sf-main-frame">
+      <main class="sf-main" id="main-content" tabindex="-1">
+        <div class="sf-page-grid">
+          <div class="sf-content-column">
+              <nav aria-label="面包屑"><ol class="sf-breadcrumbs">
+<li><a href="index.html">Speculative Decoding 专题</a></li><li><span aria-current="page">EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</span></li>              </ol></nav>
+
+              <header class="sf-hero">
+                <h1>EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</h1>
+<p class="sf-hero__lead">展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。</p>                <div class="sf-evidence-strip">
+<span><strong>源码版本</strong> f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</span>                </div>
+                <div class="sf-hero__actions"></div>
+              </header>
+
+
+            <nav class="sf-hero__actions" aria-label="关联阅读入口" data-repository-companion><a href="../index.html">投机可视化总入口</a></nav>
+<details class="sf-source-details"><summary>版本与验证范围</summary><p>保留原投机解码资料与核对日期。页面重建与链接检查不增加 GPU 或端到端验证证据。</p></details>
+              <aside class="sf-contract" aria-label="深入源码笔记" data-related-notes data-repository-companion>
+                <div><b>深入源码笔记</b><span>课程负责连贯导览；逐段源码推导与补充讨论在以下主文维护。</span></div>
+<div><a href="../../sglang-draft-target-verify-lifecycle.html#73-eagle">EAGLE 协调器入口与执行边界</a></div>              </aside>
+
+              <nav class="sf-stage-map" aria-label="本章学习路径">
+                <div class="sf-stage-map__head"><span>Stage roadmap</span><b>沿同一组对象，从结论走到源码与边界</b></div>
+                <ol><li><a href="#直接结论"><span>01</span>先钉住结论</a></li><li><a href="#当前路径假设"><span>02</span>前置直觉与运行坐标</a></li><li><a href="#对象与状态"><span>05</span>对象与所有权地图</a></li><li><a href="#当前源码调用链"><span>06</span>当前源码主链</a></li><li><a href="#连续例子"><span>07</span>固定样例 · 连续过程</a></li><li><a href="#边界矩阵"><span>09</span>分支与结论边界</a></li><li><a href="#自测"><span>11</span>自测与复盘</a></li></ol>
+              </nav>
+<details class="sf-mobile-toc"><summary>本页目录</summary><ol><li><a href="#直接结论">直接结论</a></li><li><a href="#当前路径假设">当前路径假设</a></li><li><a href="#输入-本页职责与输出">输入、本页职责与输出</a></li><li><a href="#为什么存在">为什么存在</a></li><li><a href="#对象与状态">对象与状态</a></li><li><a href="#当前源码调用链">当前源码调用链</a></li><li><a href="#连续例子">连续例子</a></li><li><a href="#为什么必须在这里">为什么必须在这里</a></li><li><a href="#边界矩阵">边界矩阵</a></li><li><a href="#source-action-changed-state-why">source action / changed state / why</a></li><li><a href="#自测">自测</a></li><li><a href="#source-evidence">源码引用与上下文</a></li></ol></details>
+<article class="sf-deep-lesson" data-toc-source data-lesson>
+<section class="sf-topic sf-topic--verdict" data-topic-kind="verdict" aria-labelledby="直接结论">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="直接结论"><span class="sf-sec-number" aria-hidden="true">01</span>直接结论</h2>
+    </header>
+
+      <div class="sf-note sf-note--key"><p>EAGLE/EAGLE3 的核心不是“同时猜 top-k 个 token”，而是把多步 top-k 选择组织成一棵有父子关系的候选树，然后让 target 在一次 <code>TARGET_VERIFY</code> 中利用 <code>custom_mask</code> 只看各节点自己的祖先路径。<code>retrieve_index</code> 不是候选排序表，而是把每条根到叶的验证路径映射回扁平 tree node；<code>retrieve_next_token</code> 与 <code>retrieve_next_sibling</code> 又把树变成 grammar/accept 可遍历的链接。target accept 的是一条连续路径，不会把不同兄弟分支拼成输出。</p>
+<p>EAGLE 还多出一个常被忽略的闭环：prefill 或 verify 得到 target hidden 后，<code>draft_extend</code> 必须用已接受 token 与这些 hidden 重放/修复 draft 模型状态，产出下一轮 <code>EagleDraftInput(topk_p, topk_index, hidden_states, bonus_tokens)</code>。因此默认worker一轮不是 <code>draft→verify</code> 就结束，而是 <code>draft→verify→draft_extend</code>；这也解释了为什么 EAGLE 的 overlap 写后读屏障由 draft runner 的最后共享缓冲读取阶段承担，而不是 target verify 一返回就认为所有设备工作结束。唯一需要单列的当前边界是adaptive把steps降到0时，可通过非默认环境开关 <code>SGLANG_SPEC_SKIP_ZERO_STEP_DRAFT_EXTEND=true</code>跳过repair；默认值是false，跳过后只保留shape-valid stub，draft KV会变冷/陈旧，不能把这个实验分支写成一般合同。</p>
+</div>
+  </section><section class="sf-topic sf-topic--prereq" data-topic-kind="prereq" aria-labelledby="当前路径假设">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="当前路径假设"><span class="sf-sec-number" aria-hidden="true">02</span>当前路径假设</h2>
+    </header>
+
+      <div class="sf-note sf-note--scope"><p>本页主线为当前 CUDA/ROCm 通用 <code>TpModelWorker</code> 上的单层 <code>EAGLEWorkerV2</code>，文本生成 R0，<code>topk=2</code>、<code>speculative_num_steps=2</code>，开启 greedy tree verify，不含 rejection sampling、multi-layer EAGLE、DSA index-share、Mamba或 grammar。连续例子的steps=0段是另起的合法adaptive边界R0a，并把topk切为1；它不与前面的topk=2 tree示例混为同一个runtime。R0a假设环境开关默认 <code>SGLANG_SPEC_SKIP_ZERO_STEP_DRAFT_EXTEND=false</code>，只有专门设置true才走跳过分支。EAGLE3 在worker骨架与tree contract上共享此主线，但draft模型结构、hidden来源和DP attention配置可不同；这里不把EAGLE的模型数学外推成所有EAGLE3 checkpoint的内部层实现。</p>
+<p>需要保留的 backend 边界包括 CPU/NPU/XPU 的 verify kernel/graph实现、page size大于1时的分支页预留、DP attention下 EAGLE3 的 draft TP context、decode/prefill CUDA Graph 与 eager fallback。源码证明这些 dispatch 与状态转换存在，未证明当前机器已跑通某个 checkpoint，也未测量 tree width 带来的接受率或加速比。</p>
+</div>
+  </section><section class="sf-topic sf-topic--contract" data-topic-kind="contract" aria-labelledby="输入-本页职责与输出">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="输入-本页职责与输出"><span class="sf-sec-number" aria-hidden="true">03</span>输入、本页职责与输出</h2>
+    </header>
+
+      <div class="sf-contract-body"><p>R0 在 prefill 后的输入是 target 采样得到的 bonus token <code>A</code>、draft_extend 产生的一组初始 <code>topk_p/topk_index</code>、每请求一个 recurrent hidden，以及 committed prefix长度。<code>EagleDraftWorker.draft()</code>消费这些 seed，执行若干 draft step，输出 parent列表、选中节点索引和 tree tokens；<code>build_eagle_verify_input()</code>把它们变成 target attention和accept所需几何。本页输出是 <code>GenerationBatchResult</code> 及下一轮 <code>EagleDraftInput</code>，并明确 target KV 与 draft KV 在 accepted path 上如何恢复一致。</p>
+<div class="table-scroll teaching-table"><table>
+<thead>
+<tr>
+<th>对象/字段</th>
+<th>形状直觉</th>
+<th>写入者</th>
+<th>读取者</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EagleDraftInput.topk_p/topk_index</code></td>
+<td><code>[B,topk]</code> 的下一层 seed</td>
+<td>draft_extend</td>
+<td>下一轮 draft step 0</td>
+</tr>
+<tr>
+<td><code>hidden_states</code></td>
+<td>每请求或每分支的 draft recurrent input</td>
+<td>target hidden 经 draft_extend</td>
+<td>draft model forward</td>
+</tr>
+<tr>
+<td><code>parent_list/top_scores_index</code></td>
+<td>候选父子与保留节点</td>
+<td>多步 draft组织逻辑</td>
+<td>tree builder</td>
+</tr>
+<tr>
+<td><code>custom_mask/positions</code></td>
+<td>tree target attention几何</td>
+<td><code>build_tree_kernel_efficient</code></td>
+<td>target attention backend</td>
+</tr>
+<tr>
+<td><code>retrieve_index</code></td>
+<td>每请求每条接受路径对应的全局节点索引</td>
+<td>tree builder</td>
+<td><code>eagle_sample</code>、KV/path compact</td>
+</tr>
+<tr>
+<td><code>accept_lens</code></td>
+<td>accepted drafts + bonus</td>
+<td><code>eagle_sample</code></td>
+<td>draft_extend、result processor</td>
+</tr>
+<tr>
+<td>steps=0 <code>next_draft_input</code></td>
+<td>默认由draft_extend产生；实验跳过时为zero stubs + bonus</td>
+<td>worker branch</td>
+<td>后续trivial verify；升回steps&gt;0时的冷恢复</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+  </section><section class="sf-topic sf-topic--why" data-topic-kind="why" aria-labelledby="为什么存在">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="为什么存在"><span class="sf-sec-number" aria-hidden="true">04</span>为什么存在</h2>
+    </header>
+
+      <div class="sf-topic__body"><p>普通 causal batch默认每一行能看到前面所有行；tree中兄弟节点不是同一生成历史，若没有 <code>custom_mask</code>，分支 <code>b1</code> 会错误读取兄弟 <code>a1</code> 的 KV，target logit不再对应任何合法序列。仅保存扁平 token也无法在拒绝时选择“沿哪个父节点继续”。parent、mask、retrieve三类数据分别解决生成拓扑、attention可见性和接受路径回收，少任意一个都无法正确把 tree并行验证还原成单条自回归序列。</p>
+<p>draft_extend 的存在解决另一种错位。target verify 写的是 target KV，draft下一轮需要自己的模型状态；只把 bonus token喂给 draft而不修复 accepted prefix，draft KV会保留未接受分支或缺少刚提交路径。EAGLE选择以 target hidden和 accepted token做一个 extend阶段，使 draft的最后状态重新落在 target已确认前沿。代价是多一个阶段和复杂的缓存生命周期，但它允许下一轮继续从热的 draft KV出发，而不是每轮从完整 committed prefix重新 prefill。</p>
+</div>
+  </section><section class="sf-topic sf-topic--objects" data-topic-kind="objects" aria-labelledby="对象与状态">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="对象与状态"><span class="sf-sec-number" aria-hidden="true">05</span>对象与状态</h2>
+    </header>
+
+      <div class="sf-topic__body sf-object-body"><p><code>EagleDraftInput</code> 是跨轮种子。<code>bonus_tokens</code> 是上轮 target 给出的链尾 token；<code>topk_p/topk_index</code> 是 draft_extend 对下一步的 proposal seed；<code>hidden_states</code> 对 STANDALONE 可以为 <code>None</code>，但在普通 EAGLE中是 draft读取的 recurrent hidden。filter/merge会按 surviving request同步切片或拼接这些字段，overlap时也可先只保存 <code>future_indices</code>，由 <code>FutureMap</code>在 forward入口解析真实值。</p>
+<p><code>EagleVerifyInput</code> 是本轮一次性 target布局：<code>draft_token</code> 扁平保存整棵树节点，<code>custom_mask</code>限制祖先可见性，<code>positions</code>给每个节点其逻辑位置，三个 retrieve字段描述可接受路径的索引和链接，<code>draft_token_num</code>是每请求 tree node预算，而 <code>max_tree_depth=spec_steps+1</code> 才约束 <code>accept_index</code> 每行宽度。这两个宽度在 <code>topk&gt;1</code> 时不同，是不能把 tree当线性 block的直接证据。</p>
+<p>KV 有三层状态。decode准备先按 committed 长度与 reserve公式扩 <code>req_to_token</code>，得到可写节点槽；draft steps写 draft模型自己的分支状态；target verify写 target tree节点 KV。accept后，<code>topk&gt;1</code> 路径可能不在每请求 block前部，<code>_finalize_accept_tree_path()</code>调用 KV move把 accepted path复制到连续前部，并同步 compact predict/hidden。尾部未接受槽仍只是 over-allocation，最终由请求缓存/释放生命周期处理；随后 <code>_draft_extend_for_decode()</code>只选择接受链所需输入与 hidden，让 draft KV前沿跟上。</p>
+<p>先用组件图固定所有权。<code>EAGLEWorkerV2</code> 是 Scheduler 看到的 composite receiver；<code>EagleDraftWorker</code> 内部有 draft-decode 与 draft-extend 两类 runner/backend，target <code>TpModelWorker</code> 则拥有 target attention 与 target KV。target hidden 是从 target 结果流向 draft-extend 的语义桥梁，不是两个 KV pool 共享内容。</p>
+<figure class="diagram-frame" data-diagram-frame data-diagram-kind="component"><div class="diagram-toolbar"><span class="diagram-toolbar__identity"><b>组件 / 所有权图</b><span>EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask · 先用组件图固定所有权</span></span><span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span><button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button></div><div class="diagram-legend" aria-label="图内语义色图例"><span class="diagram-legend__item" data-tone="blue">入口 / 接口</span><span class="diagram-legend__item" data-tone="orange">owner / 调度</span><span class="diagram-legend__item" data-tone="green">持久状态</span><span class="diagram-legend__item" data-tone="purple">执行组件</span></div><div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="图形阅读区，可横向滚动"><div class="diagram-frame__canvas"><pre class="mermaid" aria-label="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask · 先用组件图固定所有权">flowchart LR
+    S[Scheduler\nmodel_worker]
+    subgraph EW[EAGLEWorkerV2 composite]
+        O[forward_batch_generation]
+        DW[EagleDraftWorker]
+        TB[tree builder + verify helper]
+        DE[draft-extend runner / backend]
+    end
+    subgraph DRAFT[draft execution ownership]
+        DR[draft-decode runner / backend]
+        DK[draft KV branches]
+        SEED[EagleDraftInput\ntopk / hidden / bonus]
+    end
+    subgraph TARGET[target execution ownership]
+        TW[target TpModelWorker]
+        TA[target attention backend]
+        TK[target KV tree slots]
+        LH[target logits + hidden]
+    end
+    S --&gt; O
+    O --&gt; DW --&gt; DR --&gt; DK
+    SEED --&gt; DW
+    DW --&gt; TB --&gt; TW --&gt; TA --&gt; TK
+    TW --&gt; LH
+    LH --&gt;|accept index + compact| TB
+    LH --&gt;|accepted hidden| DE
+    TB --&gt;|accepted tokens / lens| DE
+    DE --&gt; DK
+    DE --&gt;|warm next EagleDraftInput| SEED
+</pre></div></div><figcaption><b>读图方法：</b>先认实例与持久状态的 owner，再沿组合、复用和下一消费者读边。</figcaption></figure>
+</div>
+  </section><section class="sf-topic sf-topic--source-flow" data-topic-kind="source-flow" aria-labelledby="当前源码调用链">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="当前源码调用链"><span class="sf-sec-number" aria-hidden="true">06</span>当前源码调用链</h2>
+    </header>
+
+      <div class="sf-topic__body"><figure class="diagram-frame" data-diagram-frame data-diagram-kind="sequence"><div class="diagram-toolbar"><span class="diagram-toolbar__identity"><b>时序 / 泳道图</b><span>EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask · 当前源码调用链</span></span><span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span><button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button></div><div class="diagram-legend" aria-label="图内语义色图例"><span class="diagram-legend__item" data-tone="blue">caller</span><span class="diagram-legend__item" data-tone="orange">scheduler</span><span class="diagram-legend__item" data-tone="purple">device work</span><span class="diagram-legend__item" data-tone="cyan">IPC / collective</span></div><div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="图形阅读区，可横向滚动"><div class="diagram-frame__canvas"><pre class="mermaid" aria-label="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask · 当前源码调用链">sequenceDiagram
+    participant S as Scheduler / ScheduleBatch R0
+    participant EW as EAGLEWorkerV2
+    participant DW as EagleDraftWorker
+    participant TB as tree builder
+    participant TW as target TpModelWorker
+    participant DE as draft_extend
+    S-&gt;&gt;EW: forward_batch_generation(batch)
+    EW-&gt;&gt;DW: draft(batch.spec_info: EagleDraftInput)
+    DW-&gt;&gt;DW: multi-step top-k + parent_list
+    DW-&gt;&gt;TB: build_eagle_verify_input(...)
+    TB--&gt;&gt;EW: EagleVerifyInput(mask, positions, retrieve*)
+    EW-&gt;&gt;TW: TARGET_VERIFY forward
+    TW--&gt;&gt;EW: target logits + hidden + tree KV writes
+    EW-&gt;&gt;EW: eagle_sample → accept_lens/accept_index/bonus
+    EW-&gt;&gt;EW: compact accepted path when topk &gt; 1
+    alt steps &gt; 0 or skip-zero flag is false (default)
+        EW-&gt;&gt;DE: _draft_extend_for_decode(batch, result)
+        DE--&gt;&gt;EW: warm next EagleDraftInput
+    else adaptive topk=1, steps=0 and skip-zero flag=true
+        EW-&gt;&gt;EW: _stub_skipped_draft_extend(): keep bonus, zero shape stubs
+        Note over EW: draft KV is stale, later upshift is cold recovery
+    end
+    EW--&gt;&gt;S: GenerationBatchResult
+</pre></div></div><figcaption><b>读图方法：</b>从上到下区分 Python 调用、CPU 状态写入、异步 device enqueue、wait 与 return。</figcaption></figure>
+<p>prefill路径先由 target以 <code>CaptureHiddenMode.FULL</code>运行。worker先 publish <code>new_seq_lens</code>，再进入 <code>_draft_extend_for_prefill()</code>：它将每个 extend片段的 token左移并以 target采样尾 token补末位，用 target hidden作为 <code>EagleDraftExtendInput</code>，运行 draft extend，最后从 logits构造 <code>topk_p/topk_index</code>，从 draft输出取最后 hidden，并把 target next token保存为 bonus。</p>
+<p>decode时 <code>EagleDraftWorker.draft()</code>先经 <code>prepare_for_draft()</code>为每步分支确定 draft写槽和 <code>ForwardBatch</code>，然后在 <code>draft_forward()</code>中重复 top-k选择；除最后一步外，每一步更新 input、out cache loc、hidden并调用 draft runner。它把各步 score/token/parent组织成固定 node预算，再由 <code>build_eagle_verify_input()</code>构建 mask、position和retrieve links。<code>run_eagle_verify()</code>在 plan stream准备 target verify metadata，等待依赖后调用 target worker，应用 grammar mask（若有），执行 <code>eagle_sample()</code>得到 <code>predict/accept_lens/accept_index</code>，必要时 compact accepted tree path，返回带 hidden的结果。外层 worker在 verify-end publish后再运行 <code>_draft_extend_for_decode()</code>，把 <code>accept_lens-1</code>和<code>accept_lens</code>分别标作 correct drafts 与 accept tokens，选择每请求最后 accepted行，更新 draft KV并组装下一轮 seed。</p>
+<p>对 topk=2 的 R0，结构图还不足以说明 token 如何搬运。下图把“树上的 target 输入”、“raw accept 索引”、“用户输出”、“已提交 target KV”和“下轮 anchor”分开。这五者之所以数量可以相近但内容不同，根源是 target logit 预测的 bonus <code>B</code> 在本轮尚未作为 target input。</p>
+<figure class="diagram-frame" data-diagram-frame data-diagram-kind="data"><div class="diagram-toolbar"><span class="diagram-toolbar__identity"><b>数据 / Tensor 流</b><span>EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask · 对 topk=2 的 R0，结构图还不足以说明 token 如何搬运</span></span><span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span><button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button></div><div class="diagram-legend" aria-label="图内语义色图例"><span class="diagram-legend__item" data-tone="blue">输入对象</span><span class="diagram-legend__item" data-tone="green">KV / tensor</span><span class="diagram-legend__item" data-tone="purple">计算</span><span class="diagram-legend__item" data-tone="cyan">传输</span></div><div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="图形阅读区，可横向滚动"><div class="diagram-frame__canvas"><pre class="mermaid" aria-label="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask · 对 topk=2 的 R0，结构图还不足以说明 token 如何搬运">flowchart TD
+    subgraph TREE[R0 flattened tree and legal ancestry]
+        A((anchor A)) --&gt; X[x]
+        A --&gt; Y[y]
+        X --&gt; P[p]
+        X --&gt; Q[q]
+        Y --&gt; R[r]
+        Y --&gt; SS[s]
+    end
+    MASK[custom_mask\nq can read prefix, A, x only] -. visibility contract .-&gt; Q
+    TREE --&gt; FLAT[flattened node block\nphysical order may be A,x,y,p,q,r,s]
+    FLAT --&gt; TARGET[target TARGET_VERIFY\nlogits + hidden + target tree KV]
+    TARGET --&gt; RAW[raw accept_index = node positions for A,x,q\naccept_lens=3; bonus=B]
+    RAW --&gt; MOVE[_finalize_accept_tree_path\nmove target KV / predict / hidden to block front]
+    MOVE --&gt; KVC[target committed input chain\nA, x, q]
+    MOVE --&gt; OUT[user-visible candidate run\nx, q, B]
+    OUT --&gt; NEXT[next EagleDraftInput\nbonus=B]
+    MOVE --&gt; DE[draft_extend with accepted hidden]
+    DE --&gt; DKV[draft KV repaired to accepted frontier]
+    DKV --&gt; NEXT
+</pre></div></div><figcaption><b>读图方法：</b>沿对象或 tensor 身份、shape/索引和存储位置读，不把控制流误当数据复制。</figcaption></figure>
+</div>
+  </section><section class="sf-topic sf-topic--example" data-topic-kind="example" aria-labelledby="连续例子">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="连续例子"><span class="sf-sec-number" aria-hidden="true">07</span>连续例子</h2>
+    </header>
+
+      <div class="sf-teach-walk" data-teaching-walk data-step-count="4">
+        <div class="sf-teach-walk__head"><b>沿固定样例逐步运行</b><span>切换步骤时同时观察对象、状态与下一消费者</span></div>
+        <div class="sf-teach-walk__source"><section class="sf-walk-panel" data-walk-panel="1"><p>t0，R0 committed prefix结束于位置99，prefill target给 bonus <code>A</code>。draft_extend输出 step0 seed候选 <code>x(0.6)</code>、<code>y(0.4)</code>以及 hidden <code>hA</code>。t1，draft step0保留 <code>x/y</code>两个分支；step1从它们扩展出 <code>x→p</code>、<code>x→q</code>、<code>y→r</code>、<code>y→s</code>，再按累积score截成 node预算。扁平 <code>draft_token</code> 的物理顺序不保证接受路径连续，因此同时生成 parent和retrieve索引。</p>
+</section><section class="sf-walk-panel" data-walk-panel="2"><p>t2，tree builder为 <code>A</code>、<code>x/y</code>和第二层节点生成positions。mask允许 <code>p</code>看 prefix、<code>A</code>、<code>x</code>，却不允许它看 <code>y</code>；<code>r</code>只沿 <code>A→y</code>。target一次 verify产生每个节点的下一token分布。假设 target在根预测 <code>x</code>，在 <code>x</code>后预测 <code>q</code>，在 <code>q</code>后预测 bonus <code>B</code>，那么接受路径是 <code>A→x→q</code>对应的输出 <code>[x,q,B]</code>，<code>accept_lens=3</code>，而不是所有 target算过节点。</p>
+</section><section class="sf-walk-panel" data-walk-panel="3"><p>t3，若这些节点在扁平tree block中位于索引 <code>[0,1,4]</code>，<code>accept_index</code>保存这条链。<code>_finalize_accept_tree_path()</code>把其 target KV、predict与hidden挪到 R0 block的连续前部，未接受的 <code>y/p/r/s</code>不进入 committed path。t4，draft_extend读取接受数、连续化后的 token与 target hidden，完成 accepted chain的 draft forward；它产生下一轮 bonus <code>B</code>配套的top-k seed和last hidden。只有这一步结束后，下一轮 draft才既知道从哪个 token开始，又有与 committed prefix一致的 draft KV。</p>
+</section><section class="sf-walk-panel" data-walk-panel="4"><p>另起R0a边界例：配置受支持的adaptive <code>topk=1</code>，第二轮把steps降为0。worker仍构造一个只含旧bonus的trivial verify，target接受根并产生新bonus。默认环境值为false，所以仍跑draft_extend以保持将来升档时的draft KV热状态；“没有新draft step”默认不等于绕开repair。只有显式设置 <code>SGLANG_SPEC_SKIP_ZERO_STEP_DRAFT_EXTEND=true</code> 时，verify后才调用 <code>_stub_skipped_draft_extend()</code>：bonus继续可供下一次steps=0 trivial verify，<code>topk_p/topk_index/hidden_states</code>只是shape-valid零值，期间不被steps=0消费；若随后升回steps&gt;0，draft从陈旧状态冷恢复，源码不保证与默认热路径等价的首轮接受表现。原R0的topk=2 tree例不满足adaptive守卫，不能借用这条切换时间线。</p>
+</section></div>
+      </div>
+  </section><section class="sf-topic sf-topic--why-here" data-topic-kind="why-here" aria-labelledby="为什么必须在这里">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="为什么必须在这里"><span class="sf-sec-number" aria-hidden="true">08</span>为什么必须在这里</h2>
+    </header>
+
+      <div class="sf-topic__body"><p>tree mask必须在 draft结果已知之后、target verify之前构建：更早时 parent和被保留节点尚未确定，更晚时 attention已经错误读取兄弟。plan stream可以提前准备不依赖 draft输出的部分，但源码在主流等待后仍调用 backend更新 verify buffers，修正依赖真实 mask/position的内容。</p>
+<p>accepted path compact必须在 target verify和accept之后，因为只有 <code>accept_index</code>能指出真实路径；又必须在默认draft_extend与持久缓存消费者之前，否则它们会把“每请求 block前部”误当成接受链。draft_extend置于publish之后并不表示一般情况下可省略：publish只让Scheduler规划下一轮长度，默认EAGLE worker的最后共享buffer reader仍是draft runner。若Scheduler过早覆写这些buffer，会产生write-after-read竞态；源码用 <code>war_fastpath_runner</code>明确指向draft runner正是这个边界。steps=0实验开关是有意识接受stale draft state的例外，必须同时说明它的守卫和冷恢复代价，不能据此删掉默认依赖。</p>
+</div>
+  </section><section class="sf-topic sf-topic--boundary" data-topic-kind="boundary" aria-labelledby="边界矩阵">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="边界矩阵"><span class="sf-sec-number" aria-hidden="true">09</span>边界矩阵</h2>
+    </header>
+
+      <div class="sf-topic__body"><div class="table-scroll teaching-table"><table>
+<thead>
+<tr>
+<th>边界</th>
+<th>本页主线</th>
+<th>变化后的真实分支</th>
+<th>不能沿用的假设</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EAGLE vs EAGLE3</td>
+<td>共享 V2 tree/verify骨架</td>
+<td>draft模型hidden语义、DP context、部分attention实现不同</td>
+<td>不能据树合同断言模型层相同</td>
+</tr>
+<tr>
+<td>topk=1</td>
+<td>tree退化为链，accepted path已在前部</td>
+<td>可走预分配chain fast path</td>
+<td>不需要tree compact不等于没有 retrieve/accept</td>
+</tr>
+<tr>
+<td>topk&gt;1</td>
+<td>node数大于depth，需 mask/retrieve/compact</td>
+<td>page&gt;1需分支页对齐和前缀尾复制</td>
+<td><code>draft_token_num == accept_index width</code> 为假</td>
+</tr>
+<tr>
+<td>rejection sampling</td>
+<td>仅topk=1，保存每步 draft_probs</td>
+<td><code>eagle_sample</code>使用 proposal q</td>
+<td>greedy argmax接受规则不能外推</td>
+</tr>
+<tr>
+<td>logprob</td>
+<td>verify后可调用 <code>compute_spec_v2_logprobs</code></td>
+<td>draft_extend内部显式关掉 logprob</td>
+<td>内部 draft logits不是公开target logprob</td>
+</tr>
+<tr>
+<td>DP/PP</td>
+<td>draft worker <code>pp_rank=0</code>，spec worker不支持一般PP</td>
+<td>EAGLE3/DP attention有专门context与同步</td>
+<td>不可把 target TP/PP拓扑原样套到 draft</td>
+</tr>
+<tr>
+<td>graph/eager</td>
+<td>二者返回相同对象合同</td>
+<td>metadata init、静态buffer、可捕获batch不同</td>
+<td>Python call返回不证明 device work已完成</td>
+</tr>
+<tr>
+<td>adaptive steps=0</td>
+<td>trivial verify + 默认draft_extend</td>
+<td>仅当 <code>SGLANG_SPEC_SKIP_ZERO_STEP_DRAFT_EXTEND=true</code> 才用zero stubs跳过</td>
+<td>开关默认false；跳过会使draft KV陈旧，升档为冷恢复</td>
+</tr>
+<tr>
+<td>PD/disagg</td>
+<td><code>carries_draft_hidden_states()</code>标记EAGLE family</td>
+<td>跨进程需专用 draft input/hidden传输</td>
+<td>FutureMap同进程relay不是RDMA/PD证据</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+  </section><section class="sf-topic sf-topic--recap" data-topic-kind="recap" aria-labelledby="source-action-changed-state-why">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="source-action-changed-state-why"><span class="sf-sec-number" aria-hidden="true">10</span>source action / changed state / why</h2>
+    </header>
+
+      <div class="sf-state-flow-source" data-state-flow><div class="table-scroll teaching-table"><table>
+<thead>
+<tr>
+<th>source action</th>
+<th>changed state</th>
+<th>why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>target prefill capture FULL</td>
+<td>target hidden与bonus可供 draft extend</td>
+<td>给第一轮 draft建立正确 seed/KV</td>
+</tr>
+<tr>
+<td><code>draft_forward()</code>多步top-k</td>
+<td>seed → tree nodes、parents、scores</td>
+<td>用有限node预算覆盖多条候选链</td>
+</tr>
+<tr>
+<td><code>build_eagle_verify_input()</code></td>
+<td>tree拓扑 → mask/position/retrieve</td>
+<td>让 target并行计算仍符合各自因果路径</td>
+</tr>
+<tr>
+<td><code>run_eagle_verify()</code></td>
+<td>target logits → accept path/lens/bonus</td>
+<td>target而非 draft拥有提交裁决权</td>
+</tr>
+<tr>
+<td>accepted path compact</td>
+<td>分散tree节点 → 每请求连续前部</td>
+<td>后续KV与hidden消费者按chain读取</td>
+</tr>
+<tr>
+<td><code>_draft_extend_for_decode()</code></td>
+<td>accepted target hidden/token → 下一轮 <code>EagleDraftInput</code></td>
+<td>修复draft KV并形成热启动闭环</td>
+</tr>
+<tr>
+<td><code>_stub_skipped_draft_extend()</code></td>
+<td>steps=0 next input保留bonus并填zero stubs</td>
+<td>实验性省掉repair，同时接受draft状态陈旧</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+  </section><section class="sf-topic sf-topic--self-check" data-topic-kind="self-check" aria-labelledby="自测">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="自测"><span class="sf-sec-number" aria-hidden="true">11</span>自测</h2>
+    </header>
+
+      <div class="sf-self-test" data-self-test>
+        <ol>
+<li><code>topk=2, spec_steps=3</code> 时，为什么 <code>draft_token_num</code> 可以大于 <code>accept_index</code> 的行宽？两者分别限制什么？</li>
+<li>R0 的节点 <code>p</code> 与 <code>r</code> 是兄弟分支后代；若 custom mask允许 <code>p</code>读取 <code>r</code> 的 KV，哪一层正确性被破坏？</li>
+<li><code>accept_lens=3</code> 为何要同时传 <code>num_correct_drafts=2</code> 和 <code>num_accept_tokens=3</code> 给 draft_extend？</li>
+<li>target verify已经写了 accepted KV，为什么仍需 draft_extend？它修的是哪一侧的状态？</li>
+<li>steps=0时默认是否跳过draft_extend？哪个环境变量改变它，返回stub中什么仍有效，升回steps&gt;0的代价是什么？</li>
+</ol>
+
+      </div>
+  </section><section class="sf-topic sf-topic--evidence" data-topic-kind="evidence" aria-labelledby="source-evidence">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="source-evidence"><span class="sf-sec-number" aria-hidden="true">12</span>源码引用与上下文</h2>
+    </header>
+
+      <details class="sf-source-details"><summary>展开本章源码片段与定位工具</summary><div class="source-microscope" data-source-microscope data-source-key="source" data-default-step="source-1"><div class="source-microscope__head"><h3>源码显微镜：receiver、状态写入与下一消费者</h3><p>左侧按本章论证顺序定位决定性源码；每一跳必须回到正文判断它是 call、write、return 还是 next-consumer。相邻卡片本身不冒充直接调用边。</p></div><div class="source-microscope__tabs" data-source-tabs><button class="button button--quiet" data-source-step="source-1">01 · EagleVerifyInput</button><button class="button button--quiet" data-source-step="source-2">02 · EagleDraftInput</button><button class="button button--quiet" data-source-step="source-3">03 · draft</button><button class="button button--quiet" data-source-step="source-4">04 · build_eagle_verify_input</button><button class="button button--quiet" data-source-step="source-5">05 · run_eagle_verify</button><button class="button button--quiet" data-source-step="source-6">06 · _finalize_accept_tree_path</button><button class="button button--quiet" data-source-step="source-7">07 · _draft_extend_for_decode</button><button class="button button--quiet" data-source-step="source-8">08 · forward_batch_generation</button><button class="button button--quiet" data-source-step="source-9">09 · SGLANG_SPEC_SKIP_ZERO_STEP_DRAFT_EXTEND</button></div><div class="source-microscope__stage"><section class="source-microscope__panel" data-source-panel="source-1"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>EagleVerifyInput</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>tree verify 的 token、mask、position 与 retrieve links 合同</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>EagleDraftInput</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/eagle_info.py:16</span><span>步骤 1 / 9</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/eagle_info.py:16 附近源码"><code>     12 | logger = logging.getLogger(__name__)
+     13 | 
+     14 | 
+     15 | @dataclass
+&gt;    16 | class EagleVerifyInput(SpecInput):
+     17 |     draft_token: torch.Tensor
+     18 |     custom_mask: torch.Tensor
+     19 |     positions: torch.Tensor
+     20 |     retrieve_index: torch.Tensor</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-2"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>EagleDraftInput</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>跨轮 draft seed、top-k、hidden 与 bonus token 状态</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>draft</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/eagle_info.py:142</span><span>步骤 2 / 9</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/eagle_info.py:142 附近源码"><code>    138 |         return kv_indices, cum_kv_seq_len, qo_indptr, self.custom_mask
+    139 | 
+    140 | 
+    141 | @dataclass
+&gt;   142 | class EagleDraftInput(SpecInput):
+    143 |     # For idle stubs use `create_idle_input`, not the bare ctor: `filter_batch`
+    144 |     # / `merge_batch` slice / cat `topk_p` / `topk_index` / `hidden_states` /
+    145 |     # `bonus_tokens` unconditionally.
+    146 | </code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-3"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>draft</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>EAGLE draft 执行并组装 tree verify input 的入口</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>build_eagle_verify_input</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/eagle_worker_v2.py:500</span><span>步骤 3 / 9</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/eagle_worker_v2.py:500 附近源码"><code>    496 |                 f&quot;mem usage={(before_mem - after_mem):.2f} GB, &quot;
+    497 |                 f&quot;avail mem={after_mem:.2f} GB.&quot;,
+    498 |             )
+    499 | 
+&gt;   500 |     def draft(self, batch: ScheduleBatch):
+    501 |         draft_input: EagleDraftInput = batch.spec_info
+    502 |         forward_batch, can_cuda_graph = prepare_for_draft(
+    503 |             draft_input,
+    504 |             self.req_to_token_pool,</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-4"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>build_eagle_verify_input</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>parent/score/token 转换为 custom mask 与 retrieve 结构</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>run_eagle_verify</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/eagle_worker_common.py:316</span><span>步骤 4 / 9</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/eagle_worker_common.py:316 附近源码"><code>    312 |     )
+    313 |     return forward_batch, can_cuda_graph
+    314 | 
+    315 | 
+&gt;   316 | def build_eagle_verify_input(
+    317 |     batch: ScheduleBatch,
+    318 |     draft_input: EagleDraftInput,
+    319 |     parent_list: torch.Tensor,
+    320 |     top_scores_index: torch.Tensor,</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-5"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>run_eagle_verify</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>target verify、sample、accepted path compaction 与共同结果</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>_finalize_accept_tree_path</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/eagle_worker_common.py:457</span><span>步骤 5 / 9</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/eagle_worker_common.py:457 附近源码"><code>    453 |     out.view(bs, nd, *x.shape[1:])[:, :s1] = gathered.view(bs, s1, *x.shape[1:])
+    454 |     return out
+    455 | 
+    456 | 
+&gt;   457 | def run_eagle_verify(
+    458 |     batch: ScheduleBatch,
+    459 |     *,
+    460 |     target_worker: TpModelWorker,
+    461 |     req_to_token_pool: ReqToTokenPool,</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-6"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>_finalize_accept_tree_path</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>将非连续 tree accept 索引搬运为每请求 block 前部的显式状态边界</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>_draft_extend_for_decode</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/eagle_worker_common.py:402</span><span>步骤 6 / 9</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/eagle_worker_common.py:402 附近源码"><code>    398 |         draft_probs=draft_probs,
+    399 |     )
+    400 | 
+    401 | 
+&gt;   402 | def _finalize_accept_tree_path(
+    403 |     batch: ScheduleBatch,
+    404 |     accept_index: torch.Tensor,
+    405 |     accept_lens: torch.Tensor,
+    406 |     predict: torch.Tensor,</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-7"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>_draft_extend_for_decode</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>接受后用 target hidden 修复 draft KV 并产出下一轮 seed</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>forward_batch_generation</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/eagle_worker_v2.py:869</span><span>步骤 7 / 9</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/eagle_worker_v2.py:869 附近源码"><code>    865 |             )
+    866 |             self.dsa_extend_topk_buf = buf
+    867 |         return buf[:num_tokens]
+    868 | 
+&gt;   869 |     def _draft_extend_for_decode(
+    870 |         self, batch: ScheduleBatch, batch_result: GenerationBatchResult
+    871 |     ):
+    872 |         # Batch 2: Draft extend
+    873 |         draft_extend_input = EagleDraftExtendInput(</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-8"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>forward_batch_generation</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>steps=0 trivial verify以及默认执行或实验性跳过draft_extend的分支</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>SGLANG_SPEC_SKIP_ZERO_STEP_DRAFT_EXTEND</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/eagle_worker_v2.py:1122</span><span>步骤 8 / 9</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/eagle_worker_v2.py:1122 附近源码"><code>   1118 |                         else self.server_args.cuda_graph_bs_decode
+   1119 |                     ),
+   1120 |                 )
+   1121 | 
+&gt;  1122 |     def forward_batch_generation(
+   1123 |         self, batch: ScheduleBatch, on_publish=None, grammar_barrier=None
+   1124 |     ):
+   1125 |         if batch.forward_mode.is_extend() or batch.is_extend_in_batch:
+   1126 |             # Target prefill</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-9"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>SGLANG_SPEC_SKIP_ZERO_STEP_DRAFT_EXTEND</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>非默认steps=0跳过draft_extend开关，默认值为false</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>回到本章结论</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/environ.py:794</span><span>步骤 9 / 9</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/environ.py:794 附近源码"><code>    790 |     SGLANG_TEST_RAGGED_VERIFY_FORCE_UNIFORM_CAPTURE = EnvBool(False)
+    791 |     # Skip draft_extend while adaptive spec is at steps=0 (drafting disabled).
+    792 |     # Saves the per-step draft forward, but the draft KV goes stale: an upshift
+    793 |     # back to steps&gt;0 starts from a cold draft state (low accept until it recovers).
+&gt;   794 |     SGLANG_SPEC_SKIP_ZERO_STEP_DRAFT_EXTEND = EnvBool(False)
+    795 |     # Kill-switch for the draft-extend cuda graph. Draft extend then always runs
+    796 |     # eager. Escape hatch for setups where the capture&#x27;s memory pool costs more
+    797 |     # than the graph saves (e.g. DeepEP MoE workspace captured at full dispatch
+    798 |     # capacity).</code></pre></div></section></div><div class="source-microscope__toolbar"><span class="source-microscope__status" data-source-status aria-live="polite"></span><div class="source-microscope__actions"><button class="button button--quiet" data-source-action="prev">上一跳</button><button class="button" data-source-action="next">下一跳</button><button class="button button--quiet" data-source-action="reset">回到入口</button></div></div></div></details>
+  </section>  </article>
+              <nav class="sf-pager" aria-label="相邻章节">
+<a href="common-contract.html"><span>← 上一章</span><b>Draft 只提案：共同 worker 合同与四个长度</b></a><a href="dflash-block.html"><span>下一章 →</span><b>DFlash fixed-block draft、hidden injection 与 compact cache</b></a>              </nav>
+
+            <footer class="sf-footer"><span>投机解码源码专题</span><span>源码快照 f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</span><span>纯静态 · 本地依赖 · 可离线分享</span></footer>
+            <p class="print-only">投机解码源码专题 · EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask · f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</p>
+          </div>
+
+          <aside class="sf-page-toc" aria-label="本页目录">
+            <p class="sf-page-toc__title">On this page</p>
+            <ol data-page-toc-list><li><a href="#直接结论" data-level="2">直接结论</a></li><li><a href="#当前路径假设" data-level="2">当前路径假设</a></li><li><a href="#输入-本页职责与输出" data-level="2">输入、本页职责与输出</a></li><li><a href="#为什么存在" data-level="2">为什么存在</a></li><li><a href="#对象与状态" data-level="2">对象与状态</a></li><li><a href="#当前源码调用链" data-level="2">当前源码调用链</a></li><li><a href="#连续例子" data-level="2">连续例子</a></li><li><a href="#为什么必须在这里" data-level="2">为什么必须在这里</a></li><li><a href="#边界矩阵" data-level="2">边界矩阵</a></li><li><a href="#source-action-changed-state-why" data-level="2">source action / changed state / why</a></li><li><a href="#自测" data-level="2">自测</a></li><li><a href="#source-evidence" data-level="2">源码引用与上下文</a></li></ol>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="search-dialog" id="course-search-dialog" data-search-dialog aria-labelledby="course-search-title">
+    <div class="search-dialog__head"><strong id="course-search-title">搜索课程</strong><button class="sf-icon-button" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+    <form class="search-dialog__form" data-search-form role="search"><label class="sr-only" for="course-search-input">搜索对象、方法、状态或章节</label><input id="course-search-input" type="search" data-search-input autocomplete="off" placeholder="例如：running_batch、ForwardBatch、TARGET_VERIFY"><button class="sf-button" type="submit">搜索</button></form>
+    <p class="search-dialog__status" data-search-status aria-live="polite"></p><ol class="search-results" data-search-results></ol>
+  </dialog>
+
+  <dialog class="diagram-viewer" id="diagram-viewer-dialog" data-diagram-dialog aria-labelledby="diagram-viewer-title">
+    <div class="diagram-viewer__head"><div><strong id="diagram-viewer-title" data-diagram-title>图解沉浸阅读</strong> <span class="diagram-viewer__zoom" data-diagram-zoom>100%</span></div><div class="diagram-viewer__tools"><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-in" aria-label="放大">＋</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-out" aria-label="缩小">−</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="fit">看全图</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="reset">100%</button><button class="sf-button" type="button" data-diagram-action="close">关闭 ×</button></div></div>
+    <div class="diagram-viewer__viewport" data-diagram-viewport><div class="diagram-viewer__canvas mermaid" data-diagram-canvas></div></div>
+  </dialog>
+
+<script src="assets/data/search-index.js" defer></script><script src="assets/vendor/mermaid.min.js" defer></script>  <script src="assets/js/site-shell.js" defer></script>
+  <script src="assets/js/toc-search.js" defer></script>
+  <script src="assets/js/diagram-viewer.js" defer></script>
+  <script src="assets/js/source-microscope.js" defer></script>
+  <script src="assets/js/labs.js" defer></script>
+  <script src="assets/js/lesson-components.js" defer></script>
+</body>
+</html>

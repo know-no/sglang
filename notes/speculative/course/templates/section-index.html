@@ -1,0 +1,62 @@
+{% extends "page.html" %}
+
+{% block title %}{{ section.title }} · {{ site.short_title|default(site.title) }}{% endblock %}
+{% block body_class %}sf-course-page sf-section-index{% endblock %}
+
+{% block page_header %}
+  <header class="sf-hero">
+    <p class="sf-hero__eyebrow">{{ section.kicker|default('Subsystem dissection') }}</p>
+    <h1>{{ section.title }}</h1>
+    {% if section.lead|default(section.purpose|default(section.summary|default(''))) %}<p class="sf-hero__lead">{{ section.lead|default(section.purpose|default(section.summary)) }}</p>{% endif %}
+    <div class="sf-evidence-strip">
+      {% if source_snapshot %}<span><strong>源码版本</strong> {{ current_snapshot_text }}</span>{% endif %}
+      {% if section.purpose|default('') %}<span><strong>模块作用</strong> {{ section.purpose }}</span>{% endif %}
+      {% if section.responsibility|default('') %}<span><strong>子系统职责</strong> {{ section.responsibility }}</span>{% endif %}
+      {% if section.evidence_scope|default('') %}<span><strong>证据范围</strong> {{ section.evidence_scope }}</span>{% endif %}
+    </div>
+    <div class="sf-hero__actions">
+      {% if section_cards|default([]) %}<a class="sf-button" href="{{ section_cards[0].url }}">进入第一章 →</a>{% endif %}
+      <button class="sf-button sf-button--quiet" type="button" data-search-open>在课程中搜索</button>
+    </div>
+  </header>
+
+  {% if section.contract|default(false) %}
+    <section class="sf-contract" aria-label="子系统边界">
+      <div><b>主要输入</b><span>{{ section.contract.input }}</span></div>
+      <div><b>拥有状态</b><span>{{ section.contract.state }}</span></div>
+      <div><b>主要输出</b><span>{{ section.contract.output }}</span></div>
+      <div><b>下游</b><span>{{ section.contract.next_consumer }}</span></div>
+    </section>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  {{ content_html|default('')|safe }}
+
+  <section class="sf-orientation" aria-label="本模块学习边界">
+    <div><b>Why this subsystem exists</b><span>{{ section.role|default(section.purpose) }}</span></div>
+    <div><b>Learning outcome</b><span>{{ section.study_outcome|default('能沿对象、状态、当前源码主链和结论边界独立解释本模块。') }}</span></div>
+  </section>
+
+  {% include "components/subsystem-overview.html" %}
+
+  {% if section_cards|default([]) %}
+    <section class="sf-overview-section" id="section-lessons">
+      <header class="sf-overview-head">
+        <p class="sf-overview-head__eyebrow">Mechanism lessons</p>
+        <h2>本子系统的机制路线</h2>
+        <p>每页负责一个完整状态交接；页面数量用于保存深度，具体机制可以拥有多个过程实验。</p>
+      </header>
+      <ol class="sf-syllabus">
+        {% for card in section_cards %}
+          <li class="sf-syllabus__item" style="--row-tone:var(--domain-{{ card.domain|default(section.domain|default('entry')) }},var(--page-accent))">
+            <span class="sf-syllabus__number">{{ '%02d'|format(loop.index) }} · {{ card.tier|default('chapter') }}</span>
+            <div>{% if card.group|default(false) %}<span class="sf-topic__kicker">{{ card.group.title if card.group is mapping else card.group }}</span>{% endif %}<h3>{{ card.title }}</h3></div>
+            <p>{{ card.summary|default('进入该机制的对象、状态、调用链与边界。') }}</p>
+            <a href="{{ card.url }}" data-course-link data-chapter-id="{{ card.id|default(card.slug|default(card.url)) }}" data-search-title="{{ card.title }}" data-search-section="{{ section.title }}" {% if card.summary|default('') %}data-search-summary="{{ card.summary }}"{% endif %}>学习本章 →</a>
+          </li>
+        {% endfor %}
+      </ol>
+    </section>
+  {% endif %}
+{% endblock %}

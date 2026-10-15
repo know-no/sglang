@@ -54,13 +54,13 @@ class FullCudaGraphBackend(BaseCudaGraphBackend):
         cuda_graph_runner: BaseCudaGraphRunner,
         *,
         enable_memory_saver: bool = False,
-    ) -> None:
-        self._graphs: Dict[Any, torch.cuda.CUDAGraph] = {}
-        self._outputs: Dict[Any, Any] = {}
+    ) -> None: # 此前创建的静态输入 buffers 仍由 Decode Runner 持有。这里新增的是捕获结果的管理状态。
+        self._graphs: Dict[Any, torch.cuda.CUDAGraph] = {} #shape_key -> CUDA Graph
+        self._outputs: Dict[Any, Any] = {} # shape_key -> 捕获前向返回的对象
         self._pool = None
         self._device_module = cuda_graph_runner.device_module
         self._tp_group = cuda_graph_runner.model_runner.tp_group
-        self._capture_stream: Optional[torch.cuda.Stream] = None
+        self._capture_stream: Optional[torch.cuda.Stream] = None # 现在还没有用于捕获的cuda stream呢
         self._memory_saver_adapter: Optional[Any] = TorchMemorySaverAdapter.create(
             enable=enable_memory_saver
             and get_bool_env_var("SGLANG_MEMORY_SAVER_CUDA_GRAPH")

@@ -1,0 +1,324 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Draft proposal → Target verify → accept → KV commit">
+  <link rel="icon" href="data:,">
+  <title>01 · Scheduler 前向隔离 · dSpark V2 · 投机解码专题</title>
+  <link rel="stylesheet" href="../course/assets/css/specforge-course.css">
+  <link rel="stylesheet" href="../course/assets/css/labs.css">
+  <link rel="stylesheet" href="../course/assets/css/print.css">
+  
+  <!-- Generated from notes/speculative/visualizations/sources/dspark-forward-isolation.html.jinja by notes/speculative/course/build.py; source-sha256=636bdafd915e7a571309c6f18aa5c1e1f6778576be1da3210d463433cbb211ab. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; style-src 'self' 'unsafe-inline' file:; script-src 'self' file:; img-src 'self' data: file:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'">
+<link rel="stylesheet" href="assets/dspark-visual-system.css">
+<style>@scope (.dspark-lab) {
+
+    .isolation-board { min-width: 1320px; }
+    .iso-head, .iso-row { display:grid; grid-template-columns:92px 1.15fr 1.18fr 1.22fr 1.2fr 1.1fr; border-left:1px solid var(--line); }
+    .iso-head > div, .iso-row > div { min-width:0; border-right:1px solid var(--line); border-bottom:1px solid var(--line); }
+    .iso-head { border-top:1px solid var(--line); }
+    .iso-head > div { min-height:132px; padding:12px; background:var(--surface-2); }
+    .iso-head__corner { display:grid; align-content:end; color:var(--faint); font:800 12px/1.35 var(--mono); }
+    .iso-head .instance { display:block; color:var(--data); font:800 12px/1.35 var(--mono); overflow-wrap:anywhere; }
+    .iso-head .fqcn { display:block; margin-top:7px; color:var(--muted); font:12px/1.35 var(--mono); overflow-wrap:anywhere; }
+    .iso-row__time { padding:13px 10px; color:var(--ui); background:var(--surface); font:800 12px/1.3 var(--mono); }
+    .iso-row__cell { position:relative; min-height:104px; padding:10px; background:color-mix(in srgb,var(--surface) 76%,transparent); }
+    .iso-event { --tone:var(--main); min-height:78px; padding:10px; border:1px solid var(--tone); border-left:4px solid var(--tone); background:var(--surface); color:var(--text); font:12px/1.42 var(--mono); overflow-wrap:anywhere; }
+    .iso-event[data-kind="data"] { --tone:var(--data); }
+    .iso-event[data-kind="guard"] { --tone:var(--guard); border-style:dashed; }
+    .iso-event[data-kind="return"] { --tone:var(--main); border-style:dotted; }
+    .iso-event b { display:block; color:var(--tone); margin-bottom:5px; }
+    .iso-arrow::after { content:"→"; position:absolute; right:-10px; top:42%; z-index:2; color:var(--main); font:800 18px/1 var(--mono); }
+    .state-views { display:grid; grid-template-columns:repeat(3,minmax(260px,1fr)); gap:30px; min-width:930px; padding:10px 2px; }
+    .state-view { --tone:var(--data); position:relative; padding:16px; border:1px solid var(--tone); background:var(--surface); }
+    .state-view[data-kind="guard"] { --tone:var(--guard); border-style:dashed; }
+    .state-view[data-kind="main"] { --tone:var(--main); }
+    .state-view:not(:last-child)::after { content:"→"; position:absolute; right:-22px; top:46%; color:var(--main); font:800 20px/1 var(--mono); }
+    .state-view h3 { margin:0; color:var(--tone); font:800 12px/1.35 var(--mono); }
+    .state-view pre { margin:12px 0 0; color:var(--text); font:12px/1.7 var(--mono); white-space:pre-wrap; }
+    .ref-box { margin-top:12px; padding:10px; border-left:3px solid var(--data); color:var(--muted); background:color-mix(in srgb,var(--data) 5%,transparent); font-size:12px; }
+    .why-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+    .next-owner { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:16px; align-items:center; margin-top:24px; padding:16px; border-block:1px solid var(--line); }
+    .next-owner p { margin:5px 0 0; color:var(--muted); }
+    .next-owner a { padding:9px 12px; border:1px solid var(--ui); color:var(--ui); text-decoration:none; font:800 11px/1.3 var(--mono); }
+    .step-copyline { min-height:58px; margin-bottom:15px; padding:11px 13px; border-left:4px solid var(--guard); background:color-mix(in srgb,var(--guard) 4%,transparent); color:var(--muted); }
+    .step-copyline b { color:var(--guard); }
+    @media(max-width:700px){.why-grid{grid-template-columns:1fr}.next-owner{grid-template-columns:1fr}}
+  
+}</style>
+<link rel="stylesheet" href="assets/dspark-source-studio.css">
+<script src="assets/dspark-site.js" defer></script>
+<script src="assets/dspark-learning-layer.js" defer></script>
+<script src="assets/dspark-source-studio.js" defer></script>
+<script src="assets/dspark-stepper.js" defer></script>
+  <link rel="stylesheet" href="assets/dspark-course-shell.css">
+
+</head>
+<body class="sf-course-page sf-lab-page" data-root-url="sglang-course-v2/index.html"
+      data-nav-open="false" data-nav-pinned="false"
+      data-page-id="lab-dspark-forward-isolation" data-chapter-id="lab-dspark-forward-isolation"
+      data-section-id="lab"
+      data-page="01"
+      style="--page-accent: var(--domain-speculative, var(--domain-entry))">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+
+  <div class="sf-shell">
+    <div class="sf-navigation">
+      <nav class="sf-rail" aria-label="课程工具">
+        <button class="sf-rail__button sf-rail__menu" type="button" data-nav-toggle aria-controls="course-navigation" aria-expanded="false">
+          <span aria-hidden="true">☰</span><span class="sr-only">打开课程目录</span>
+        </button>
+        <a class="sf-rail__brand" href="sglang-course-v2/index.html" aria-label="回到 SGLang 课程地图">S</a>
+        <div class="sf-rail__spacer"></div>
+        <button class="sf-rail__button" type="button" data-search-open aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span class="sr-only">搜索课程</span></button>
+        <button class="sf-rail__button" type="button" data-theme-toggle><span aria-hidden="true">◐</span><span class="sr-only" data-theme-label>深色</span></button>
+      </nav>
+
+      <aside class="sf-drawer" id="course-navigation" aria-label="全部课程目录">
+        <header class="sf-drawer__head">
+          <div><p class="sf-drawer__eyebrow">SGLang source course</p><a href="sglang-course-v2/index.html">投机解码专题</a></div>
+          <button class="sf-icon-button" type="button" data-nav-close aria-label="关闭课程目录">×</button>
+        </header>
+        <div class="sf-drawer__tools">
+          <button class="sf-button sf-button--quiet" type="button" data-search-open><span aria-hidden="true">⌕</span> 搜索</button>
+          <button class="sf-button sf-button--quiet" type="button" data-theme-toggle><span aria-hidden="true">◐</span> <span data-theme-label>深色</span></button>
+          <button class="sf-button sf-button--quiet sf-drawer__pin" type="button" data-nav-pin aria-pressed="false"><span aria-hidden="true">⌖</span> <span data-nav-pin-label>固定目录</span></button>
+        </div>
+        <p class="sf-drawer__context"><b>dSpark 交互实验</b><span>01 · Scheduler 前向隔离 · dSpark V2</span></p>
+        <nav class="sf-drawer__tree" aria-label="全部章节"><div class="sf-course-tree">
+    
+      <details class="sf-course-tree__section">
+        <summary><span class="sf-course-tree__number">01</span><span>Speculative Decoding 全家族</span></summary>
+        <ul class="sf-course-tree__children sf-course-tree__children--section">
+          <li class="sf-course-tree__overview"><a href="sglang-course-v2/index.html" data-course-link data-chapter-id="speculative"
+     data-search-title="Speculative Decoding 全家族" data-search-section="Speculative Decoding 全家族"
+     
+     
+     >Speculative Decoding 全家族</a></li>
+          <li><a href="sglang-course-v2/common-contract.html" data-course-link data-chapter-id="spec-common-contract"
+     data-search-title="Draft 只提案：共同 worker 合同与四个长度" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。"
+     
+     >Draft 只提案：共同 worker 合同与四个长度</a></li><li><a href="sglang-course-v2/eagle-tree.html" data-course-link data-chapter-id="eagle-tree"
+     data-search-title="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。"
+     
+     >EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a></li><li><a href="sglang-course-v2/dflash-block.html" data-course-link data-chapter-id="dflash-block"
+     data-search-title="DFlash fixed-block draft、hidden injection 与 compact cache" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。"
+     
+     >DFlash fixed-block draft、hidden injection 与 compact cache</a></li><li><a href="sglang-course-v2/dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"
+     data-search-title="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。"
+     
+     >DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a></li><li><a href="sglang-course-v2/dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"
+     data-search-title="DSpark confidence、history、per-step budget 与 ragged layout" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。"
+     
+     >DSpark confidence、history、per-step budget 与 ragged layout</a></li><li><a href="sglang-course-v2/dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"
+     data-search-title="DSpark Target verify、accept/finalize 与 KV commit/reclaim" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。"
+     
+     >DSpark Target verify、accept/finalize 与 KV commit/reclaim</a></li><li><a href="sglang-course-v2/dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"
+     data-search-title="DSpark folded fast path、capture/replay 与 overlap" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。"
+     
+     >DSpark folded fast path、capture/replay 与 overlap</a></li><li><a href="sglang-course-v2/boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"
+     data-search-title="Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。"
+     
+     >Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a></li>
+          
+        </ul>
+      </details>
+    
+  </div></nav>
+      </aside>
+    </div>
+
+    <button class="sf-nav-backdrop" type="button" data-nav-backdrop aria-label="关闭课程目录"></button>
+
+    <div class="sf-main-frame">
+      <main class="sf-main sf-main--wide" id="main-content" tabindex="-1">
+        <div class="sf-page-grid">
+          <div class="sf-content-column">
+            
+              <nav aria-label="面包屑"><ol class="sf-breadcrumbs">
+                <li><a href="sglang-course-v2/index.html">投机解码专题</a></li><li><a href="index.html">投机实验路线</a></li><li><span aria-current="page">01 · Scheduler 前向隔离 · dSpark V2</span></li>
+              </ol></nav>
+            
+
+            
+  <nav class="sf-hero__actions" aria-label="实验源文件"><a href="sources/dspark-forward-isolation.html.jinja" download>下载实验 HTML 源文件</a></nav>
+
+
+            <nav class="sf-hero__actions" aria-label="关联阅读入口" data-repository-companion><a href="../../index.html">SGLang 全景图</a></nav>
+            
+
+            
+
+            
+            
+
+            
+  <div class="dspark-lab" data-toc-source>
+<!-- lab-content:start -->
+  <nav data-site-nav aria-label="dSpark 学习页面"></nav>
+  <div class="page page--wide" data-dspark-main>
+    <header class="hero">
+      <p class="eyebrow">01 · Scheduler 隔离事务</p>
+      <h1>同一个 <code>ScheduleBatch</code> 可以临时变成 Target Verify 视图，但不能把临时视图带到下一轮</h1>
+      <p class="lead"><code>Scheduler._forward_isolation()</code> 不是模型算法，而是一次事务边界：先保存 Scheduler 的持久视图，允许 dSpark worker 临时重绑字段，worker 完整返回后恢复，再只提交已经验证过的跨轮状态。</p>
+      <div class="evidence-strip"><span><strong>当前对象</strong> <code>batch = plan.batch_to_run : ScheduleBatch</code>，不是 <code>Req</code> 列表，也不等同于 <code>scheduler.running_batch</code></span><span><strong>默认示例</strong> non-overlap · CUDA dSpark V2 · PP=1 · decode</span><span><strong>证据边界</strong> checkout f01a0c7f97ec · 静态源码核验 · 未执行 GPU 运行时验证</span></div>
+      <div class="route-switch" aria-label="选择讲解路线"><button type="button" data-route-choice="static-greedy">STATIC · 贪心</button><button type="button" data-route-choice="compact-sampling">COMPACT · 随机采样</button><button type="button" data-route-choice="folded-greedy">FOLDED · 贪心</button></div>
+      <div data-semantic-legend></div>
+    </header>
+
+    <section class="handoff" aria-label="Scheduler 隔离交接契约">
+      <div class="handoff__item"><b>输入</b><span><code>batch_to_run : ScheduleBatch</code>，Scheduler 已准备好的本轮可执行批次</span></div>
+      <div class="handoff__item"><b>临时变化</b><span><code>input_ids/spec_info/forward_mode/seq_lens/sampling_info</code> 可在 worker 内被重绑</span></div>
+      <div class="handoff__item"><b>返回</b><span><code>batch_result : GenerationBatchResult</code>；退出隔离区时 batch 已恢复</span></div>
+      <div class="handoff__item"><b>持久提交</b><span>non-overlap 写回 <code>next_draft_input/new_seq_lens</code>；overlap 走 <code>FutureMap</code></span></div>
+    </section>
+
+    <section class="section" id="transaction-flow">
+      <div class="section__head"><p class="section__kicker">主视图 · 对象状态调用泳道</p><h2><code>resolve → snapshot → 临时重绑 → ForwardBatch 捕获 → restore → commit</code></h2><p class="section__intro">泳道明确区分“同一个 Scheduler 对象被临时重绑”和“新构造的 ForwardBatch 已经持有执行所需引用”。选择 STATIC、COMPACT 或 FOLDED 不改变这层事务顺序。</p></div>
+      <div class="visual stepper" data-stepper data-steps="8">
+        <div class="visual__bar"><strong>non-overlap decode · 一次完整隔离事务</strong><button class="zoom-button" type="button" data-zoom-target="#isolation-board">放大主图</button></div>
+        <div class="visual__body">
+          <div class="stepper__toolbar"><div class="stepper__buttons" aria-label="隔离流程播放控制"><button type="button" data-step-action="prev">上一步</button><button type="button" data-step-action="next">下一步</button><button type="button" data-step-action="play">播放</button><button type="button" data-step-action="reset">重置</button></div><div class="stepper__progress" aria-hidden="true"><span data-step-progress></span></div><div class="stepper__status" data-step-status aria-live="polite"></div></div>
+          <div class="step-copyline" aria-live="polite">
+            <div data-step-copy="0"><b>第 1 步 · 解析入口</b> non-overlap 也调用 <code>resolve_forward_inputs()</code>；纯 dSpark decode 的三个 guard 都不成立，所以是 guard-only no-op。</div>
+            <div data-step-copy="1"><b>第 2 步 · 保存</b> 对 spec V2 的全部 dataclass 字段做浅快照，并把 <code>sampling_info</code> 换成 forward-only copy。</div>
+            <div data-step-copy="2"><b>第 3 步 · 动态分派</b> <code>scheduler.model_worker</code> 的运行时接收者是 <code>DSparkWorkerV2</code>，不是 Target 的 <code>TpModelWorker</code>。</div>
+            <div data-step-copy="3"><b>第 4 步 · 临时视图</b> <code>DFlashVerifyInput.prepare_for_verify()</code> 把同一 batch 临时改成 <code>TARGET_VERIFY</code> 并构造独立 <code>verify_forward_batch</code>。</div>
+            <div data-step-copy="4"><b>第 5 步 · 模型完成</b> Target 计算、接受与 Draft KV 提交都在 worker 返回前完成，结果被装进 <code>GenerationBatchResult</code>。</div>
+            <div data-step-copy="5"><b>第 6 步 · 恢复</b> <code>finally</code> 恢复 Scheduler 字段；重绑 batch 字段不会修改 ForwardBatch 已捕获的 tensor 对象。</div>
+            <div data-step-copy="6"><b>第 7 步 · 持久提交</b> 恢复之后再写 <code>next_draft_input/new_seq_lens</code>；顺序反过来会把新状态覆盖掉。</div>
+            <div data-step-copy="7"><b>第 8 步 · 下一消费者</b> 恢复后的 <code>forward_mode=DECODE</code> 使 <code>Scheduler.process_batch_result()</code> 正确进入 decode handler。</div>
+          </div>
+          <div class="swim-scroll" id="isolation-board"><div class="isolation-board" role="table" aria-label="Scheduler 前向隔离对象状态调用泳道">
+            <div class="iso-head" role="row"><div class="iso-head__corner" role="columnheader">时间</div><div role="columnheader"><span class="instance">scheduler : Scheduler</span><span class="fqcn">sglang.srt.managers.scheduler.Scheduler</span></div><div role="columnheader"><span class="instance">batch_to_run : ScheduleBatch</span><span class="fqcn">sglang.srt.managers.schedule_batch.ScheduleBatch</span></div><div role="columnheader"><span class="instance">scheduler.model_worker : DSparkWorkerV2</span><span class="fqcn">sglang.srt.speculative.dspark_components.dspark_worker_v2.DSparkWorkerV2</span></div><div role="columnheader"><span class="instance">verify_forward_batch : ForwardBatch</span><span class="fqcn">sglang.srt.model_executor.forward_batch_info.ForwardBatch</span></div><div role="columnheader"><span class="instance">batch_result : GenerationBatchResult</span><span class="fqcn">sglang.srt.managers.utils.GenerationBatchResult</span></div></div>
+            <div class="iso-row" role="row" data-step-node="0"><div class="iso-row__time">T0<br>入口解析</div><div class="iso-row__cell"><div class="iso-event iso-arrow" data-kind="guard"><b>resolve_forward_inputs(batch, future_map)</b>是否修改字段由 staging / ordinary decode / overlap spec 三组 guard 决定。</div></div><div class="iso-row__cell"><div class="iso-event" data-kind="guard"><b>纯 dSpark decode</b><code>prefill_input_ids_cpu=None</code><br><code>spec_algo.is_none()=False</code><br><code>enable_overlap=False</code><br>因此不改字段。</div></div><div class="iso-row__cell"></div><div class="iso-row__cell"></div><div class="iso-row__cell"></div></div>
+            <div class="iso-row" role="row" data-step-node="1"><div class="iso-row__time">T1<br>事务开始</div><div class="iso-row__cell"><div class="iso-event iso-arrow" data-kind="guard"><b>with _forward_isolation(batch, overlap=False)</b><code>sched_snapshot={全部 dataclass 字段}</code></div></div><div class="iso-row__cell"><div class="iso-event" data-kind="data"><b>sampling_info 替换</b><code>copy_for_forward()</code> 去 orchestrator、共享已预累计 penalty buffer，避免同轮多次装配重复累计。</div></div><div class="iso-row__cell"></div><div class="iso-row__cell"></div><div class="iso-row__cell"></div></div>
+            <div class="iso-row" role="row" data-step-node="2"><div class="iso-row__time">T2<br>worker 调用</div><div class="iso-row__cell"><div class="iso-event iso-arrow"><b>forward_batch_generation(batch)</b>调用同一个 <code>ScheduleBatch</code> 实例。</div></div><div class="iso-row__cell"><div class="iso-event" data-kind="data"><b>Scheduler 视图</b><code>DECODE + DFlashDraftInputV2</code></div></div><div class="iso-row__cell"><div class="iso-event"><b>DSparkWorkerV2._forward_decode()</b>提案 → 规划 → Target Verify → 接受 → hidden/KV 提交。</div></div><div class="iso-row__cell"></div><div class="iso-row__cell"></div></div>
+            <div class="iso-row" role="row" data-step-node="3"><div class="iso-row__time">T3<br>Target 装配</div><div class="iso-row__cell"></div><div class="iso-row__cell"><div class="iso-event iso-arrow" data-kind="guard"><b>DFlashVerifyInput.prepare_for_verify()</b><code>input_ids=verify_tensor</code><br><code>spec_info=verify_input</code><br><code>forward_mode=TARGET_VERIFY</code></div></div><div class="iso-row__cell"><div class="iso-event iso-arrow"><b>ForwardBatch.init_new(...)</b><code>capture_hidden_mode=FULL</code></div></div><div class="iso-row__cell"><div class="iso-event" data-kind="data"><b>捕获执行引用</b><code>input_ids → verify_tensor#V</code><br><code>spec_info → verify_input#Q</code><br><code>forward_mode=TARGET_VERIFY</code></div></div><div class="iso-row__cell"></div></div>
+            <div class="iso-row" role="row" data-step-node="4"><div class="iso-row__time">T4<br>worker 返回</div><div class="iso-row__cell"></div><div class="iso-row__cell"></div><div class="iso-row__cell"><div class="iso-event iso-arrow" data-kind="return"><b>return batch_result</b>Target 已完成、接受边界已确定、下一轮对象已构造。</div></div><div class="iso-row__cell"><div class="iso-event" data-kind="return"><b>执行已完成</b>Target forward 在 worker 返回前消费完捕获字段；异步 tensor 生命周期由 stream/lifetime 机制保护。</div></div><div class="iso-row__cell"><div class="iso-event" data-kind="data"><b>待提交结果</b><code>next_draft_input(anchor=Y)</code><br><code>new_seq_lens=[22]</code></div></div></div>
+            <div class="iso-row" role="row" data-step-node="5"><div class="iso-row__time">T5<br>finally</div><div class="iso-row__cell"><div class="iso-event iso-arrow" data-kind="guard"><b>restore snapshot</b><code>for name,value: setattr(batch,name,value)</code></div></div><div class="iso-row__cell"><div class="iso-event" data-kind="data"><b>原视图恢复</b><code>input_ids=None</code><br><code>spec_info=DFlashDraftInputV2(X)</code><br><code>forward_mode=DECODE</code><br><code>seq_lens=[20]</code></div></div><div class="iso-row__cell"></div><div class="iso-row__cell"></div><div class="iso-row__cell"></div></div>
+            <div class="iso-row" role="row" data-step-node="6"><div class="iso-row__time">T6<br>显式提交</div><div class="iso-row__cell"><div class="iso-event iso-arrow"><b>Scheduler.run_batch()</b>只重放允许跨轮持久化的结果。</div></div><div class="iso-row__cell"><div class="iso-event" data-kind="data"><b>durable commit</b><code>spec_info=next_draft_input(Y)</code><br><code>seq_lens=[22]</code><br><code>seq_lens_cpu=[22]</code><br><code>input_ids=None</code></div></div><div class="iso-row__cell"></div><div class="iso-row__cell"></div><div class="iso-row__cell"><div class="iso-event" data-kind="return"><b>copy_to_cpu()</b>同步结果供 non-overlap 结果处理器读取。</div></div></div>
+            <div class="iso-row" role="row" data-step-node="7"><div class="iso-row__time">T7<br>结果消费</div><div class="iso-row__cell"><div class="iso-event"><b>process_batch_result(batch,result)</b><code>forward_mode.is_decode()==True</code> → <code>process_batch_result_decode()</code></div></div><div class="iso-row__cell"><div class="iso-event" data-kind="data"><b>跨轮状态</b>同一 batch 只保留下一轮真正需要的 anchor 与长度。</div></div><div class="iso-row__cell"></div><div class="iso-row__cell"></div><div class="iso-row__cell"><div class="iso-event" data-kind="return"><b>next consumer</b>有效输出写入 <code>Req.output_ids</code>；下一轮从 <code>spec_info</code> 启动 Draft。</div></div></div>
+          </div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="three-views">
+      <div class="section__head"><p class="section__kicker">辅助视图 · 同一对象的三种视图</p><h2>恢复不是“撤销计算”，提交也不是“保留所有临时字段”</h2><p class="section__intro">固定例子：进入隔离前 anchor 是 <code>X@20</code>；Target 验证候选 <code>[X,a,b,c,d]</code>；最终接受 <code>[a,Y]</code>，新长度为 22。</p></div>
+      <div class="visual"><div class="visual__bar"><strong><code>batch_to_run</code> 三视图 + <code>ForwardBatch</code> 引用关系</strong><button class="zoom-button" type="button" data-zoom-target="#state-views">放大辅图</button></div><div class="visual__body canvas-scroll"><div class="state-views" id="state-views">
+        <article class="state-view"><h3>① 进入隔离 · Scheduler 持久视图</h3><pre>batch.input_ids = None
+batch.spec_info = DFlashDraftInputV2(
+  bonus_tokens=[X], new_seq_lens=[20])
+batch.forward_mode = DECODE
+batch.seq_lens = [20]</pre></article>
+        <article class="state-view" data-kind="guard"><h3>② Target Verify · 临时执行视图</h3><pre>batch.input_ids = [X,a,b,c,d]
+batch.spec_info = verify_input : DFlashVerifyInput
+batch.forward_mode = TARGET_VERIFY
+
+verify_forward_batch.input_ids ─┐
+                              └→ tensor#V</pre><div class="ref-box">之后执行 <code>batch.input_ids = None</code> 只是让 batch 字段指向别处；不会原地修改 <code>tensor#V</code>，因此 <code>verify_forward_batch</code> 不会丢输入。</div></article>
+        <article class="state-view" data-kind="main"><h3>③ restore 后 commit · 下一轮持久视图</h3><pre>batch.input_ids = None
+batch.spec_info = DFlashDraftInputV2(
+  bonus_tokens=[Y], new_seq_lens=[22])
+batch.forward_mode = DECODE
+batch.seq_lens = [22]</pre></article>
+      </div></div></div>
+    </section>
+
+    <section class="section" id="why-failure">
+      <div class="section__head"><p class="section__kicker">为什么 / 如果省略 / 易错边界</p><h2>四个常见疑问，分别对应四种不同错误</h2></div>
+      <div class="why-grid">
+        <article class="callout" data-kind="data"><b>为什么必须临时重绑同一个 ScheduleBatch？</b><p><code>ForwardBatch.init_new()</code> 从当前 batch 读取 <code>input_ids/spec_info/forward_mode/seq_lens</code> 来装配位置与注意力元数据。不重绑，就按旧 <code>DECODE + DFlashDraftInputV2</code> 视图装配，Target 的 verify 行、位置和 metadata 都会错。</p></article>
+        <article class="callout" data-kind="guard"><b>为什么 DFlashVerifyInput 不能直接跨轮？</b><p>它描述一次已排好位置和布局的 Target 执行：含 <code>draft_token/positions/custom_mask/ragged_verify_layout</code>。接受后候选后缀失效；下一轮只需要新 bonus 和新长度，因此必须构造新的 <code>DFlashDraftInputV2</code>。</p></article>
+        <article class="callout" data-kind="fail"><b>漏恢复 forward_mode，最先错在哪里？</b><p><code>TARGET_VERIFY.is_decode()==False</code>，但 <code>TARGET_VERIFY.is_extend()==True</code>。因此 worker 返回后的 <code>Scheduler.process_batch_result()</code> 会跳过 decode 分支并最先误入 <code>process_batch_result_prefill()</code>。</p></article>
+        <article class="callout" data-kind="fail"><b>为什么必须 restore 后再 commit？</b><p>先 commit 再 restore 会用旧快照覆盖 <code>next_draft_input/new_seq_lens</code>，下一轮重新读取旧 anchor/长度。省略 restore 则把一次性 verify tensor、mask、布局和模式泄漏到 Scheduler 跨轮状态。</p></article>
+      </div>
+      <details class="source-details"><summary>源码锚点与关键代码</summary><div class="source-details__body">
+        <div class="source-anchor"><code>python/sglang/srt/managers/scheduler.py:3326–3367</code><span><code>_forward_isolation()</code> 对 spec V2 全字段快照，替换 <code>sampling_info</code>，并在 <code>finally</code> 恢复。</span></div>
+        <div class="source-anchor"><code>python/sglang/srt/managers/scheduler.py:3495–3521</code><span>non-overlap spec V2 调用 resolver 与 worker；退出隔离后显式提交 <code>next_draft_input/new_seq_lens</code> 并清空 <code>input_ids</code>。</span></div>
+        <div class="source-anchor"><code>python/sglang/srt/speculative/dflash_info.py:53–94</code><span><code>DFlashVerifyInput.prepare_for_verify()</code> 临时重绑 batch，随后 <code>ForwardBatch.init_new()</code> 捕获 verify 输入与 FULL hidden 配置。</span></div>
+        <div class="source-anchor"><code>python/sglang/srt/model_executor/forward_batch_info.py:98–161</code><span><code>TARGET_VERIFY</code> 属于 <code>is_extend()</code>，不属于 <code>is_decode()</code>；这是漏恢复后错误分派的决定性条件。</span></div>
+        <div class="source-anchor"><code>python/sglang/srt/managers/scheduler.py:3653–3673</code><span><code>process_batch_result()</code> 依赖恢复后的 <code>batch.forward_mode</code> 选择 decode / prefill / idle 结果处理器。</span></div>
+      </div></details>
+      <div class="next-owner"><div><strong>下一消费者：隔离事务的 overlap 版本</strong><p>同一事务顺序不变，但长度、bonus 和 tensor 生命周期由 <code>FutureMap</code>、stream 与两轮引用环协同维护。</p></div><a data-nav href="dspark-overlap-nonoverlap-timeline.html">进入 01A 对齐时间线 →</a></div>
+    </section>
+
+    <div class="pager"><a data-nav href="dspark-complete-execution-flow.html">← 00 · 完整执行地图</a><a data-nav href="dspark-overlap-nonoverlap-timeline.html">01A · overlap / non-overlap 时间线 →</a></div>
+    <footer class="site-footer">证据边界 · 当前源码 f01a0c7f97ec · CUDA dSpark V2 / PP=1 · 静态源码核验 · 不声称完成 GPU/CUDA Graph 运行时验证</footer>
+  </div>
+<!-- lab-content:end -->
+  </div>
+
+
+            
+
+            <footer class="sf-footer"><span>投机解码源码专题</span><span>纯静态 · 本地依赖 · 可离线分享</span></footer>
+            <p class="print-only">投机解码源码专题 · 01 · Scheduler 前向隔离 · dSpark V2 · None</p>
+          </div>
+
+          <aside class="sf-page-toc" aria-label="本页目录">
+            <p class="sf-page-toc__title">On this page</p>
+            <ol data-page-toc-list></ol>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="search-dialog" id="course-search-dialog" data-search-dialog aria-labelledby="course-search-title">
+    <div class="search-dialog__head"><strong id="course-search-title">搜索课程</strong><button class="sf-icon-button" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+    <form class="search-dialog__form" data-search-form role="search"><label class="sr-only" for="course-search-input">搜索对象、方法、状态或章节</label><input id="course-search-input" type="search" data-search-input autocomplete="off" placeholder="例如：running_batch、ForwardBatch、TARGET_VERIFY"><button class="sf-button" type="submit">搜索</button></form>
+    <p class="search-dialog__status" data-search-status aria-live="polite"></p><ol class="search-results" data-search-results></ol>
+  </dialog>
+
+  <dialog class="diagram-viewer" id="diagram-viewer-dialog" data-diagram-dialog aria-labelledby="diagram-viewer-title">
+    <div class="diagram-viewer__head"><div><strong id="diagram-viewer-title" data-diagram-title>图解沉浸阅读</strong> <span class="diagram-viewer__zoom" data-diagram-zoom>100%</span></div><div class="diagram-viewer__tools"><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-in" aria-label="放大">＋</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-out" aria-label="缩小">−</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="fit">看全图</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="reset">100%</button><button class="sf-button" type="button" data-diagram-action="close">关闭 ×</button></div></div>
+    <div class="diagram-viewer__viewport" data-diagram-viewport><div class="diagram-viewer__canvas mermaid" data-diagram-canvas></div></div>
+  </dialog>
+
+  <script src="sglang-course-v2/assets/data/search-index.js" defer></script>
+  <script src="../course/assets/vendor/mermaid.min.js" defer></script>
+  <script src="../course/assets/js/site-shell.js" defer></script>
+  <script src="../course/assets/js/toc-search.js" defer></script>
+  <script src="../course/assets/js/diagram-viewer.js" defer></script>
+  <script src="../course/assets/js/source-microscope.js" defer></script>
+  <script src="../course/assets/js/labs.js" defer></script>
+  <script src="../course/assets/js/lesson-components.js" defer></script>
+  
+  
+</body>
+</html>

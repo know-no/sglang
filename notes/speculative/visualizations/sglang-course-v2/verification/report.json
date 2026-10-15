@@ -1,0 +1,40 @@
+{
+  "status": "pass",
+  "error_count": 0,
+  "metrics": {
+    "chapters": 8,
+    "html_pages": 9,
+    "search_records": 75,
+    "mermaid_blocks": 27,
+    "remote_runtime_resources": 0,
+    "diagram_architecture": 2,
+    "diagram_component": 9,
+    "diagram_sequence": 8,
+    "diagram_state": 1,
+    "diagram_data": 5,
+    "diagram_code": 2,
+    "diagram_kind_count": 6,
+    "manifest_entries": 24
+  },
+  "checks": [
+    "exact standalone page set",
+    "local links, fragments, and unique ids",
+    "offline runtime resources and path hygiene",
+    "JavaScript syntax and local Mermaid bundle",
+    "three complementary source-first diagrams per speculative lesson",
+    "architecture/component/sequence/state/data/code semantic coverage",
+    "complete-book full-body search index",
+    "SHA-256 manifest file set and content hashes"
+  ],
+  "browser_visual_validation": {
+    "status": "pass",
+    "report": "verification/browser-report.json",
+    "verified_at": "2026-09-09T18:15:12.566958+00:00",
+    "scope": "Desktop subset: speculative mirror index.html and boundary-matrix.html at 1280/1600, including layout/render checks. Actual search for boundary-matrix navigates within the mirror; first-server search navigates to the full course. Includes that external destination hash. No claim of checking all 8 mirror chapters."
+  },
+  "runtime_limitations": [
+    "No CUDA/ROCm speculative execution was performed.",
+    "Browser acceptance is reported separately and hash-bound; this static verifier does not execute a browser."
+  ],
+  "errors": []
+}

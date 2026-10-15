@@ -1,0 +1,351 @@
+{
+  "status": "pass",
+  "verified_at": "2026-09-09T12:02:04.683068+00:00",
+  "scope": "15 dSpark deep-study pages via loopback HTTP; 14 multi-step transitions, one static step with disabled navigation/play, failure toggles, nine lesson sections, same-page anchors, cross-site links and 1440/360 page overflow; legacy course redirect preserves query/hash. No GPU execution.",
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "width": 360,
+      "height": 800
+    }
+  ],
+  "artifact_hashes": {
+    "dspark-forward-isolation.html": "636bdafd915e7a571309c6f18aa5c1e1f6778576be1da3210d463433cbb211ab",
+    "dspark-sampling-rejection-lab.html": "26b037335d60f637c75fc7e8aec738037618276133785796f8a5ef2ef1102881",
+    "dspark-complete-execution-flow.html": "f0a579fa97438f0b25b7b7224dc9b793bc30cbf5542f714cbcdb299fd6a46dc9",
+    "dspark-markov-head-internals.html": "758e9c98883460abce4696ad74fb753051fb13f828168a54619abbaf11494590",
+    "dspark-survival-topk-layout.html": "4f2a9a3d1cc6e1c6a38a5a8e649f17252f9391dfa322c9e9877dc9f4d5120b29",
+    "dspark-draft-proposal.html": "475ce628eda0a5addbe2dbd1df29ec9ce3875ddde422674832954407f7b9a717",
+    "dspark-confidence-budget-layout.html": "832c243abf92c56326c78564c70e87995b8037cfb330b7d52c419df430652cb1",
+    "dspark-prefill-bootstrap.html": "8c40c7100e982ef8e68bbfc52adfd2046a8c2c874e5fee1cbf610f7f7d311fc1",
+    "dspark-target-hidden-kv-explainer.html": "e50b51cbc2b1762fcdef8590498832e3bcb98fab1dac532af7870c043cacaaa4",
+    "dspark-verify-step-through.html": "6d7c9bf87573396608c70147fd600301a5715732d0fbba7b00fce1499e4723e5",
+    "dspark-folded-capture-replay.html": "5e3fbc5e592cbc942f07668b8babffde61454e2099a30fca32d7693e4da1a970",
+    "dspark-overlap-nonoverlap-timeline.html": "eba9298665729ee6972587a9a160304f33b4c171de60ac7f6ee28d8eb1bc30f1",
+    "dspark-folded-fast-path.html": "24ec2c732ff210aa62fa9e412e1aa293fa85c5920c208dd5fe5ffe1e34bc9100",
+    "dspark-accept-finalize.html": "6f626d9c0654eca2050e3d01056fb450ef8e50caa6de7a401fe9dbbe2c9363fd",
+    "dspark-budget-history-sps.html": "ed56fd5cd7b3d136a1185cd9d4c47ee5bf34386dd8c1a088ca7a2959f8833e66",
+    "assets/dspark-site.js": "93181eb5660aad374c0a5f6e61272953e20c307bf65c5986c4dce1c1fba49a88",
+    "assets/dspark-source-studio.js": "1979f2b0857e638335f0a40132948323965e10437cb3dc65b6fa3aab74402058",
+    "assets/dspark-learning-layer.js": "b1f286f78b61c056424a09458506f9b1866f966e51e205c4bb35fca4c104180f",
+    "assets/dspark-stepper.js": "cafacd83779b3182e729ae38e1fceed482f48bd2f55dbe2437316def51f5e011",
+    "assets/dspark-visual-system.css": "16dc042b82cc51f26df7580dd64b297a5551d213beb0a92b16ec6ced6f56b717",
+    "assets/dspark-source-studio.css": "137db54f6a0b85af6f3a6a68e3381efd9b1ebe9381897ccec71dd3fc27a9edfe"
+  },
+  "pages": [
+    {
+      "file": "dspark-accept-finalize.html",
+      "stepCount": 2,
+      "singleStepDisabled": false,
+      "stepAdvanced": true,
+      "failureToggle": true,
+      "desktop": {
+        "overflow": false,
+        "chapters": 9,
+        "related": [
+          "../../index.html",
+          "index.html",
+          "sglang-course-v2/dspark-verify-accept-kv.html",
+          "../sglang-dspark-single-round-decode.md"
+        ],
+        "brokenSelfAnchors": []
+      },
+      "mobileOverflow": false,
+      "errors": []
+    },
+    {
+      "file": "dspark-budget-history-sps.html",
+      "stepCount": 1,
+      "singleStepDisabled": true,
+      "stepAdvanced": false,
+      "failureToggle": true,
+      "desktop": {
+        "overflow": false,
+        "chapters": 9,
+        "related": [
+          "../../index.html",
+          "index.html",
+          "sglang-course-v2/dspark-confidence-layout.html",
+          "../sglang-dspark-single-round-decode.md"
+        ],
+        "brokenSelfAnchors": []
+      },
+      "mobileOverflow": false,
+      "errors": []
+    },
+    {
+      "file": "dspark-complete-execution-flow.html",
+      "stepCount": 11,
+      "singleStepDisabled": false,
+      "stepAdvanced": true,
+      "failureToggle": true,
+      "desktop": {
+        "overflow": false,
+        "chapters": 9,
+        "related": [
+          "../../index.html",
+          "index.html",
+          "sglang-course-v2/index.html",
+          "../sglang-draft-target-verify-lifecycle.md"
+        ],
+        "brokenSelfAnchors": []
+      },
+      "mobileOverflow": false,
+      "errors": []
+    },
+    {
+      "file": "dspark-confidence-budget-layout.html",
+      "stepCount": 3,
+      "singleStepDisabled": false,
+      "stepAdvanced": true,
+      "failureToggle": true,
+      "desktop": {
+        "overflow": false,
+        "chapters": 9,
+        "related": [
+          "../../index.html",
+          "index.html",
+          "sglang-course-v2/dspark-confidence-layout.html",
+          "../sglang-dspark-single-round-decode.md"
+        ],
+        "brokenSelfAnchors": []
+      },
+      "mobileOverflow": false,
+      "errors": []
+    },
+    {
+      "file": "dspark-draft-proposal.html",
+      "stepCount": 3,
+      "singleStepDisabled": false,
+      "stepAdvanced": true,
+      "failureToggle": true,
+      "desktop": {
+        "overflow": false,
+        "chapters": 9,
+        "related": [
+          "../../index.html",
+          "index.html",
+          "sglang-course-v2/dspark-bootstrap-proposal.html",
+          "../sglang-dspark-single-round-decode.md"
+        ],
+        "brokenSelfAnchors": []
+      },
+      "mobileOverflow": false,
+      "errors": []
+    },
+    {
+      "file": "dspark-folded-capture-replay.html",
+      "stepCount": 4,
+      "singleStepDisabled": false,
+      "stepAdvanced": true,
+      "failureToggle": true,
+      "desktop": {
+        "overflow": false,
+        "chapters": 9,
+        "related": [
+          "../../index.html",
+          "index.html",
+          "sglang-course-v2/dspark-folded-overlap.html",
+          "../sglang-dspark-single-round-decode.md"
+        ],
+        "brokenSelfAnchors": []
+      },
+      "mobileOverflow": false,
+      "errors": []
+    },
+    {
+      "file": "dspark-folded-fast-path.html",
+      "stepCount": 4,
+      "singleStepDisabled": false,
+      "stepAdvanced": true,
+      "failureToggle": true,
+      "desktop": {
+        "overflow": false,
+        "chapters": 9,
+        "related": [
+          "../../index.html",
+          "index.html",
+          "sglang-course-v2/dspark-folded-overlap.html",
+          "../sglang-dspark-single-round-decode.md"
+        ],
+        "brokenSelfAnchors": []
+      },
+      "mobileOverflow": false,
+      "errors": []
+    },
+    {
+      "file": "dspark-forward-isolation.html",
+      "stepCount": 4,
+      "singleStepDisabled": false,
+      "stepAdvanced": true,
+      "failureToggle": true,
+      "desktop": {
+        "overflow": false,
+        "chapters": 9,
+        "related": [
+          "../../index.html",
+          "index.html",
+          "sglang-course-v2/common-contract.html",
+          "../sglang-draft-target-verify-lifecycle.md"
+        ],
+        "brokenSelfAnchors": []
+      },
+      "mobileOverflow": false,
+      "errors": []
+    },
+    {
+      "file": "dspark-markov-head-internals.html",
+      "stepCount": 4,
+      "singleStepDisabled": false,
+      "stepAdvanced": true,
+      "failureToggle": true,
+      "desktop": {
+        "overflow": false,
+        "chapters": 9,
+        "related": [
+          "../../index.html",
+          "index.html",
+          "sglang-course-v2/dspark-bootstrap-proposal.html",
+          "../sglang-dspark-single-round-decode.md"
+        ],
+        "brokenSelfAnchors": []
+      },
+      "mobileOverflow": false,
+      "errors": []
+    },
+    {
+      "file": "dspark-overlap-nonoverlap-timeline.html",
+      "stepCount": 4,
+      "singleStepDisabled": false,
+      "stepAdvanced": true,
+      "failureToggle": true,
+      "desktop": {
+        "overflow": false,
+        "chapters": 9,
+        "related": [
+          "../../index.html",
+          "index.html",
+          "sglang-course-v2/dspark-folded-overlap.html",
+          "../sglang-dspark-single-round-decode.md"
+        ],
+        "brokenSelfAnchors": []
+      },
+      "mobileOverflow": false,
+      "errors": []
+    },
+    {
+      "file": "dspark-prefill-bootstrap.html",
+      "stepCount": 3,
+      "singleStepDisabled": false,
+      "stepAdvanced": true,
+      "failureToggle": true,
+      "desktop": {
+        "overflow": false,
+        "chapters": 9,
+        "related": [
+          "../../index.html",
+          "index.html",
+          "sglang-course-v2/dspark-bootstrap-proposal.html",
+          "../sglang-dspark-single-round-decode.md"
+        ],
+        "brokenSelfAnchors": []
+      },
+      "mobileOverflow": false,
+      "errors": []
+    },
+    {
+      "file": "dspark-sampling-rejection-lab.html",
+      "stepCount": 3,
+      "singleStepDisabled": false,
+      "stepAdvanced": true,
+      "failureToggle": true,
+      "desktop": {
+        "overflow": false,
+        "chapters": 9,
+        "related": [
+          "../../index.html",
+          "index.html",
+          "sglang-course-v2/dspark-verify-accept-kv.html",
+          "../sglang-dspark-single-round-decode.md"
+        ],
+        "brokenSelfAnchors": []
+      },
+      "mobileOverflow": false,
+      "errors": []
+    },
+    {
+      "file": "dspark-survival-topk-layout.html",
+      "stepCount": 2,
+      "singleStepDisabled": false,
+      "stepAdvanced": true,
+      "failureToggle": true,
+      "desktop": {
+        "overflow": false,
+        "chapters": 9,
+        "related": [
+          "../../index.html",
+          "index.html",
+          "sglang-course-v2/dspark-confidence-layout.html",
+          "../sglang-dspark-single-round-decode.md"
+        ],
+        "brokenSelfAnchors": []
+      },
+      "mobileOverflow": false,
+      "errors": []
+    },
+    {
+      "file": "dspark-target-hidden-kv-explainer.html",
+      "stepCount": 3,
+      "singleStepDisabled": false,
+      "stepAdvanced": true,
+      "failureToggle": true,
+      "desktop": {
+        "overflow": false,
+        "chapters": 9,
+        "related": [
+          "../../index.html",
+          "index.html",
+          "sglang-course-v2/dspark-verify-accept-kv.html",
+          "../sglang-dspark-single-round-decode.md"
+        ],
+        "brokenSelfAnchors": []
+      },
+      "mobileOverflow": false,
+      "errors": []
+    },
+    {
+      "file": "dspark-verify-step-through.html",
+      "stepCount": 3,
+      "singleStepDisabled": false,
+      "stepAdvanced": true,
+      "failureToggle": true,
+      "desktop": {
+        "overflow": false,
+        "chapters": 9,
+        "related": [
+          "../../index.html",
+          "index.html",
+          "sglang-course-v2/dspark-verify-accept-kv.html",
+          "../sglang-dspark-verify-visual-guide.md"
+        ],
+        "brokenSelfAnchors": []
+      },
+      "mobileOverflow": false,
+      "errors": []
+    }
+  ],
+  "redirect": {
+    "url": "http://127.0.0.1:8766/notes/speculative/visualizations/sglang-course-v2/index.html?route=folded-greedy#subsystem-flow",
+    "preservedQuery": true,
+    "preservedHash": true
+  },
+  "targeted_regression": {
+    "page": "dspark-verify-step-through.html",
+    "reduced_motion_last_step_replays": true,
+    "single_step_budget_controls_disabled": true,
+    "scope": "After the final reduced-motion branch fix, these two branches were rechecked in a fresh browser session; the 15-page interaction and viewport audit preceded this one-line preference-specific change."
+  }
+}

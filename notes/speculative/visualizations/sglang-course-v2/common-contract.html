@@ -1,0 +1,541 @@
+
+
+
+
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。">
+  <link rel="icon" href="data:,">
+  <title>Draft 只提案：共同 worker 合同与四个长度 · 投机解码专题</title>
+  <link rel="stylesheet" href="assets/css/specforge-course.css">
+  <link rel="stylesheet" href="assets/css/labs.css">
+  <link rel="stylesheet" href="assets/css/print.css">
+</head>
+<body class="sf-course-page" data-root-url="index.html"
+      data-nav-open="false" data-nav-pinned="false"
+data-page-id="spec-common-contract" data-chapter-id="spec-common-contract"data-section-id="speculative"      style="--page-accent: var(--domain-speculative, var(--domain-entry))">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+
+  <div class="sf-shell">
+    <div class="sf-navigation">
+      <nav class="sf-rail" aria-label="课程工具">
+        <button class="sf-rail__button sf-rail__menu" type="button" data-nav-toggle aria-controls="course-navigation" aria-expanded="false">
+          <span aria-hidden="true">☰</span><span class="sr-only">打开课程目录</span>
+        </button>
+        <a class="sf-rail__brand" href="index.html" aria-label="回到 SGLang 课程地图">S</a>
+        <div class="sf-rail__spacer"></div>
+        <button class="sf-rail__button" type="button" data-search-open aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span class="sr-only">搜索课程</span></button>
+        <button class="sf-rail__button" type="button" data-theme-toggle><span aria-hidden="true">◐</span><span class="sr-only" data-theme-label>深色</span></button>
+      </nav>
+
+      <aside class="sf-drawer" id="course-navigation" aria-label="全部课程目录">
+        <header class="sf-drawer__head">
+          <div><p class="sf-drawer__eyebrow">SGLang source course</p><a href="index.html">投机解码专题</a></div>
+          <button class="sf-icon-button" type="button" data-nav-close aria-label="关闭课程目录">×</button>
+        </header>
+        <div class="sf-drawer__tools">
+          <button class="sf-button sf-button--quiet" type="button" data-search-open><span aria-hidden="true">⌕</span> 搜索</button>
+          <button class="sf-button sf-button--quiet" type="button" data-theme-toggle><span aria-hidden="true">◐</span> <span data-theme-label>深色</span></button>
+          <button class="sf-button sf-button--quiet sf-drawer__pin" type="button" data-nav-pin aria-pressed="false"><span aria-hidden="true">⌖</span> <span data-nav-pin-label>固定目录</span></button>
+        </div>
+        <p class="sf-drawer__context"><b>Speculative Decoding 全家族</b><span>Draft 只提案：共同 worker 合同与四个长度</span></p>
+        <nav class="sf-drawer__tree" aria-label="全部章节"><div class="sf-course-tree">
+      <details class="sf-course-tree__section" open>
+        <summary><span class="sf-course-tree__number">01</span><span>Speculative Decoding 全家族</span></summary>
+        <ul class="sf-course-tree__children sf-course-tree__children--section">
+<li class="sf-course-tree__overview"><a href="index.html" data-course-link data-chapter-id="speculative"
+     data-search-title="Speculative Decoding 全家族" data-search-section="Speculative Decoding 全家族"
+aria-current="page">Speculative Decoding 全家族</a></li><li><a href="common-contract.html" data-course-link data-chapter-id="spec-common-contract"
+     data-search-title="Draft 只提案：共同 worker 合同与四个长度" data-search-section="Speculative Decoding 全家族"
+data-search-summary="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。"aria-current="page">Draft 只提案：共同 worker 合同与四个长度</a></li><li><a href="eagle-tree.html" data-course-link data-chapter-id="eagle-tree"
+     data-search-title="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask" data-search-section="Speculative Decoding 全家族"
+data-search-summary="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。">EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a></li><li><a href="dflash-block.html" data-course-link data-chapter-id="dflash-block"
+     data-search-title="DFlash fixed-block draft、hidden injection 与 compact cache" data-search-section="Speculative Decoding 全家族"
+data-search-summary="追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。">DFlash fixed-block draft、hidden injection 与 compact cache</a></li><li><a href="dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"
+     data-search-title="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer" data-search-section="Speculative Decoding 全家族"
+data-search-summary="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。">DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a></li><li><a href="dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"
+     data-search-title="DSpark confidence、history、per-step budget 与 ragged layout" data-search-section="Speculative Decoding 全家族"
+data-search-summary="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。">DSpark confidence、history、per-step budget 与 ragged layout</a></li><li><a href="dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"
+     data-search-title="DSpark Target verify、accept/finalize 与 KV commit/reclaim" data-search-section="Speculative Decoding 全家族"
+data-search-summary="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。">DSpark Target verify、accept/finalize 与 KV commit/reclaim</a></li><li><a href="dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"
+     data-search-title="DSpark folded fast path、capture/replay 与 overlap" data-search-section="Speculative Decoding 全家族"
+data-search-summary="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。">DSpark folded fast path、capture/replay 与 overlap</a></li><li><a href="boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"
+     data-search-title="Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec" data-search-section="Speculative Decoding 全家族"
+data-search-summary="用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。">Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a></li>        </ul>
+      </details>
+  </div></nav>
+      </aside>
+    </div>
+
+    <button class="sf-nav-backdrop" type="button" data-nav-backdrop aria-label="关闭课程目录"></button>
+
+    <div class="sf-main-frame">
+      <main class="sf-main" id="main-content" tabindex="-1">
+        <div class="sf-page-grid">
+          <div class="sf-content-column">
+              <nav aria-label="面包屑"><ol class="sf-breadcrumbs">
+<li><a href="index.html">Speculative Decoding 专题</a></li><li><span aria-current="page">Draft 只提案：共同 worker 合同与四个长度</span></li>              </ol></nav>
+
+              <header class="sf-hero">
+                <h1>Draft 只提案：共同 worker 合同与四个长度</h1>
+<p class="sf-hero__lead">区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。</p>                <div class="sf-evidence-strip">
+<span><strong>源码版本</strong> f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</span>                </div>
+                <div class="sf-hero__actions"></div>
+              </header>
+
+
+            <nav class="sf-hero__actions" aria-label="关联阅读入口" data-repository-companion><a href="../index.html">投机可视化总入口</a></nav>
+<details class="sf-source-details"><summary>版本与验证范围</summary><p>保留原投机解码资料与核对日期。页面重建与链接检查不增加 GPU 或端到端验证证据。</p></details>
+              <aside class="sf-contract" aria-label="深入源码笔记" data-related-notes data-repository-companion>
+                <div><b>深入源码笔记</b><span>课程负责连贯导览；逐段源码推导与补充讨论在以下主文维护。</span></div>
+<div><a href="../../sglang-draft-target-verify-lifecycle.html">Draft → Target Verify 完整调用链</a></div>              </aside>
+
+              <nav class="sf-stage-map" aria-label="本章学习路径">
+                <div class="sf-stage-map__head"><span>Stage roadmap</span><b>沿同一组对象，从结论走到源码与边界</b></div>
+                <ol><li><a href="#直接结论"><span>01</span>先钉住结论</a></li><li><a href="#当前路径假设"><span>02</span>前置直觉与运行坐标</a></li><li><a href="#对象与状态"><span>05</span>对象与所有权地图</a></li><li><a href="#当前源码调用链"><span>06</span>当前源码主链</a></li><li><a href="#连续例子"><span>07</span>固定样例 · 连续过程</a></li><li><a href="#边界矩阵"><span>09</span>分支与结论边界</a></li><li><a href="#自测"><span>11</span>自测与复盘</a></li></ol>
+              </nav>
+<details class="sf-mobile-toc"><summary>本页目录</summary><ol><li><a href="#直接结论">直接结论</a></li><li><a href="#当前路径假设">当前路径假设</a></li><li><a href="#输入-本页职责与输出">输入、本页职责与输出</a></li><li><a href="#为什么存在">为什么存在</a></li><li><a href="#对象与状态">对象与状态</a></li><li><a href="#当前源码调用链">当前源码调用链</a></li><li><a href="#连续例子">连续例子</a></li><li><a href="#为什么必须在这里">为什么必须在这里</a></li><li><a href="#边界矩阵">边界矩阵</a></li><li><a href="#source-action-changed-state-why">source action / changed state / why</a></li><li><a href="#自测">自测</a></li><li><a href="#source-evidence">源码引用与上下文</a></li></ol></details>
+<article class="sf-deep-lesson" data-toc-source data-lesson>
+<section class="sf-topic sf-topic--verdict" data-topic-kind="verdict" aria-labelledby="直接结论">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="直接结论"><span class="sf-sec-number" aria-hidden="true">01</span>直接结论</h2>
+    </header>
+
+      <div class="sf-note sf-note--key"><p>Speculative decoding 的共同合同不是“先由小模型生成几个 token，再由大模型看一遍”这么松散，而是 Scheduler 把一次生成 forward 的完整所有权交给一个 composite <code>model_worker</code>：它内部组织 draft、target verify、accept、下一轮状态修复，最后仍返回普通调度器认识的 <code>GenerationBatchResult</code>。draft 只拥有候选提案权；target 的分布与 accept 规则决定哪些候选可提交。R0 的用户输出、<code>Req.output_ids</code>、<code>Req.kv_committed_len</code> 都不会在 draft 时推进，而是在 result processor 看到 <code>accept_lens</code> 后才落到 Scheduler 的持久请求状态。</p>
+<p>学习这套合同最重要的是同时保留五条前沿：proposal frontier 表示已经提出多少候选；verify frontier 表示 target 实际计算了多少行；accept frontier 表示其中连续可接收多少 draft；emit frontier 表示经过 grammar/stop 处理后真正写入 <code>output_ids</code> 的 token；KV frontier 又分 allocator 已预留上界与 <code>kv_committed_len</code> 已确认前缀。它们经常数值相近，但绝不是同一字段。把 <code>speculative_num_draft_tokens</code> 直接当作“本轮输出数”，或把 reserve 当成 commit，都会把拒绝分支、bonus token 和 over-allocation 解释错。</p>
+</div>
+  </section><section class="sf-topic sf-topic--prereq" data-topic-kind="prereq" aria-labelledby="当前路径假设">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="当前路径假设"><span class="sf-sec-number" aria-hidden="true">02</span>当前路径假设</h2>
+    </header>
+
+      <div class="sf-note sf-note--scope"><p>本页以当前工作树的 SRT 文本生成路径为准：Scheduler 已创建通用 <code>TpModelWorker</code> target，speculative algorithm 不是 <code>NONE</code>，运行设备与参数已经通过对应 <code>_handle_*</code> 启动校验。重点是 spec-v2 共同调度合同；overlap 开启时会通过 <code>FutureMap</code> 中继下一轮输入，关闭时 Scheduler 同步安装 <code>next_draft_input</code>，但 worker 内部的 draft/verify/accept 语义不因此改变。</p>
+<p>R0 是一个已完成 prefill、进入 decode 的请求。示例采用线性候选便于统一计数；EAGLE <code>topk&gt;1</code> 实际是树，DFlash 是固定 block，DSpark 的 verify width 是 <code>gamma+1</code> 且可 ragged，NGram 在 CPU corpus 构树。硬件后端也不是一条万能路径：DFlash、DSpark、EAGLE、NPU/ROCm/CPU 的启动守卫和 kernel 分支不同。下文只声称当前源码中的状态合同，不把静态可达路径当成已完成 GPU E2E、性能收益或所有后端等价证据。</p>
+</div>
+  </section><section class="sf-topic sf-topic--contract" data-topic-kind="contract" aria-labelledby="输入-本页职责与输出">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="输入-本页职责与输出"><span class="sf-sec-number" aria-hidden="true">03</span>输入、本页职责与输出</h2>
+    </header>
+
+      <div class="sf-contract-body"><p>输入是 Scheduler 选出的 decode <code>ScheduleBatch</code>，其中 R0 已有 committed prefix、<code>req_pool_indices</code>、<code>seq_lens</code>、采样状态和上一轮算法专属 <code>spec_info</code>。本页职责是解释 Scheduler 如何选择 composite worker、谁预留 KV、draft/verify/accept 分别改变什么、以及统一结果怎样回到 Req。输出不是某一种算法的内部树或 confidence，而是跨算法都必须对齐的结果字段：扁平且按固定 stride 排列的 <code>next_token_ids</code>、每请求 <code>accept_lens</code>、下一轮 <code>next_draft_input</code>、可选 <code>new_seq_lens</code>，以及 logits/metrics 辅助数据。</p>
+<div class="table-scroll teaching-table"><table>
+<thead>
+<tr>
+<th>名称</th>
+<th>R0 的含义</th>
+<th>典型载体</th>
+<th>下一消费者</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>proposed</td>
+<td>draft 提出的节点或线性候选数量</td>
+<td>Eagle tree、DFlash block、DSpark <code>draft_tokens</code></td>
+<td>target verify 构造器</td>
+</tr>
+<tr>
+<td>verified</td>
+<td>target 实际执行的输入行数</td>
+<td>fixed width 或 <code>RaggedVerifyLayout</code></td>
+<td>accept kernel</td>
+</tr>
+<tr>
+<td>accepted</td>
+<td>连续正确 drafts 加一个 target bonus</td>
+<td><code>accept_lens</code>；DSpark 内部 <code>commit_lens</code></td>
+<td>result processor</td>
+</tr>
+<tr>
+<td>emitted</td>
+<td>grammar/finish 截断后写入用户输出的连续 token</td>
+<td>每请求 <code>accept_tokens</code>、<code>Req.output_ids</code></td>
+<td>detokenizer/output streamer</td>
+</tr>
+<tr>
+<td>allocated KV</td>
+<td>当前请求地址表已经保留的上界</td>
+<td><code>req.kv.kv_allocated_len</code>、<code>req_to_token</code></td>
+<td>下一 forward 或最终释放</td>
+</tr>
+<tr>
+<td>committed KV</td>
+<td>target 已确认、允许进入 prefix cache 的前缀长度</td>
+<td><code>req.kv_committed_len</code></td>
+<td>下轮 reserve、finish release/cache insert</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+  </section><section class="sf-topic sf-topic--why" data-topic-kind="why" aria-labelledby="为什么存在">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="为什么存在"><span class="sf-sec-number" aria-hidden="true">04</span>为什么存在</h2>
+    </header>
+
+      <div class="sf-topic__body"><p>如果 composite worker 不隐藏算法差异，Scheduler 主循环就必须理解 EAGLE tree 的 retrieve links、DFlash 的 fixed block、DSpark 的 confidence/ragged layout、NGram 的 host tree，任何新算法都会复制 batch/filter/overlap/result 代码。当前设计把差异放在 <code>SpeculativeAlgorithm.create_worker()</code> 和算法 worker 中，而 Scheduler 只关心 <code>model_worker.forward_batch_generation()</code> 及共同结果。这不是说所有算法共享同一个 draft input；恰恰相反，<code>SpecInputType</code> 和各 dataclass 明确阻止 attention backend 把不同布局误认成同一种。</p>
+<p>KV 也必须拆成 reserve 与 commit。target verify 需要在不知道 accept 长度前为候选行准备地址；overlap 还允许 CPU 请求状态比设备上的新长度落后一轮，因此 EAGLE/DFlash family 会保留额外 headroom。若只在 accept 后才分配，target verify 没有写入位置；若预留后立即把全部候选计为 committed，拒绝 token 会进入 radix prefix 或用户后续上下文，造成正确性错误。当前源码选择“先扩地址映射，后由 result processor推进 committed frontier，finish/retract 再释放 over-allocation”。</p>
+</div>
+  </section><section class="sf-topic sf-topic--objects" data-topic-kind="objects" aria-labelledby="对象与状态">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="对象与状态"><span class="sf-sec-number" aria-hidden="true">05</span>对象与状态</h2>
+    </header>
+
+      <div class="sf-topic__body sf-object-body"><p><code>SpeculativeAlgorithm</code> 是能力和工厂入口，不只是字符串枚举。它回答是否为 DFlash family、是否支持 ragged verify、是否有 draft KV、是否需要跨 PD 传 draft hidden，并创建具体 worker。<code>BaseSpecWorker</code> 给 target/draft worker、memory pool、attention backend、verify 完成回调等建立最低接口；具体 worker可以是 EAGLE 的 <code>EAGLEWorkerV2</code>、DFlash/DSpark 自己的 orchestrator，也可以是没有 draft model 的 <code>NGRAMWorker</code>。</p>
+<p>Scheduler 先持有 <code>self.tp_worker</code> 作为 target。<code>maybe_init_draft_worker()</code> 把它传给工厂得到 <code>self.draft_worker</code>，内存池初始化时 target 是 allocator 的所有者，spec worker获得 pool/allocator 或按算法创建私有 draft 映射；随后 <code>init_model_worker()</code> 令 <code>self.model_worker=self.draft_worker</code>。因此 runtime receiver 是 composite worker，不是“Scheduler 先调小模型再调大模型”的两个独立调用。</p>
+<p>R0 的 <code>ScheduleBatch.spec_info</code> 是跨轮的算法状态；worker在一轮内可暂时替换为 verify input，再返回新的 draft input。<code>GenerationBatchResult.accept_lens</code> 的共同语义是每请求本轮可提交 token 数，包含 bonus；<code>num_correct_drafts=accept_lens-1</code>。result processor按 <code>speculative_num_draft_tokens</code> 作为扁平 stride 切片，而不是按本轮 accept 数改变行起点。最后它先解析、按 grammar保留合法前缀，再增加 <code>req.kv_committed_len</code>，之后 decode loop 才扩展 <code>Req.output_ids</code> 并判断 finish。</p>
+<p>下图只画所有权，不画一轮的时间顺序。关键是 <code>Scheduler.model_worker</code> 只有一个运行时 receiver；target worker 仍然是 target model、target KV pool 与 allocator 的所有者，composite worker 把 draft 状态与 target verify 组合起来，但不取代 Scheduler 对持久 <code>Req</code> 的最终提交权。</p>
+<figure class="diagram-frame" data-diagram-frame data-diagram-kind="component"><div class="diagram-toolbar"><span class="diagram-toolbar__identity"><b>组件 / 所有权图</b><span>Draft 只提案：共同 worker 合同与四个长度 · 下图只画所有权，不画一轮的时间顺序</span></span><span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span><button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button></div><div class="diagram-legend" aria-label="图内语义色图例"><span class="diagram-legend__item" data-tone="blue">入口 / 接口</span><span class="diagram-legend__item" data-tone="orange">owner / 调度</span><span class="diagram-legend__item" data-tone="green">持久状态</span><span class="diagram-legend__item" data-tone="purple">执行组件</span></div><div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="图形阅读区，可横向滚动"><div class="diagram-frame__canvas"><pre class="mermaid" aria-label="Draft 只提案：共同 worker 合同与四个长度 · 下图只画所有权，不画一轮的时间顺序">flowchart LR
+    subgraph SP[Scheduler process]
+        S[Scheduler\nmodel_worker = composite]
+        SB[ScheduleBatch\nR0 + spec_info]
+        RP[BatchResultProcessor]
+        R[Req R0\noutput_ids / kv_committed_len]
+    end
+    subgraph CW[concrete composite spec worker]
+        W[EAGLE / DFlash / DSpark / NGram worker]
+        D[draft proposal state\nalgorithm-owned]
+        V[target verify + accept]
+    end
+    subgraph TARGET[target execution ownership]
+        T[TpModelWorker\nCUDA or ROCm generic path]
+        M[ModelRunner + attention backend]
+        Q[ReqToTokenPool mapping]
+        A[TokenToKVPoolAllocator]
+        K[target token-to-KV pool]
+    end
+    S --&gt; SB --&gt; W
+    W --&gt; D
+    W --&gt; V --&gt; T --&gt; M
+    M --&gt; K
+    T --&gt; Q
+    T --&gt; A
+    Q -. shared or wrapped mapping .-&gt; W
+    A -. target creates then hands contract to worker .-&gt; W
+    W --&gt;|GenerationBatchResult| RP --&gt; R
+    R --&gt;|next round persistent truth| SB
+</pre></div></div><figcaption><b>读图方法：</b>先认实例与持久状态的 owner，再沿组合、复用和下一消费者读边。</figcaption></figure>
+</div>
+  </section><section class="sf-topic sf-topic--source-flow" data-topic-kind="source-flow" aria-labelledby="当前源码调用链">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="当前源码调用链"><span class="sf-sec-number" aria-hidden="true">06</span>当前源码调用链</h2>
+    </header>
+
+      <div class="sf-topic__body"><figure class="diagram-frame" data-diagram-frame data-diagram-kind="sequence"><div class="diagram-toolbar"><span class="diagram-toolbar__identity"><b>时序 / 泳道图</b><span>Draft 只提案：共同 worker 合同与四个长度 · 当前源码调用链</span></span><span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span><button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button></div><div class="diagram-legend" aria-label="图内语义色图例"><span class="diagram-legend__item" data-tone="blue">caller</span><span class="diagram-legend__item" data-tone="orange">scheduler</span><span class="diagram-legend__item" data-tone="purple">device work</span><span class="diagram-legend__item" data-tone="cyan">IPC / collective</span></div><div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="图形阅读区，可横向滚动"><div class="diagram-frame__canvas"><pre class="mermaid" aria-label="Draft 只提案：共同 worker 合同与四个长度 · 当前源码调用链">sequenceDiagram
+    participant S as Scheduler process
+    participant F as SpeculativeAlgorithm factory
+    participant W as composite spec worker
+    participant D as draft phase
+    participant T as target TpModelWorker
+    participant P as BatchResultProcessor
+    S-&gt;&gt;F: create_worker(server_args)
+    F--&gt;&gt;S: concrete worker class
+    S-&gt;&gt;W: forward_batch_generation(ScheduleBatch R0)
+    W-&gt;&gt;D: propose candidates / tree / block
+    D--&gt;&gt;W: algorithm-specific verify input
+    W-&gt;&gt;T: TARGET_VERIFY forward
+    T--&gt;&gt;W: target logits + optional hidden
+    W-&gt;&gt;W: accept + next_draft_input + new_seq_lens
+    W--&gt;&gt;S: GenerationBatchResult
+    S-&gt;&gt;P: process_batch_result_decode
+    P-&gt;&gt;P: slice by stride, grammar truncate
+    P-&gt;&gt;P: Req.kv_committed_len += emitted count
+    P-&gt;&gt;P: Req.output_ids.extend(emitted tokens)
+</pre></div></div><figcaption><b>读图方法：</b>从上到下区分 Python 调用、CPU 状态写入、异步 device enqueue、wait 与 return。</figcaption></figure>
+<p>启动阶段先执行 <code>Scheduler.init_tp_model_worker()</code>，CUDA/ROCm 等通用路径构造 <code>TpModelWorker</code>，MLX 则有明确 override；随后 <code>maybe_init_draft_worker()</code> 在 spec 非 <code>NONE</code> 时调用 <code>create_worker()</code>。<code>init_memory_pools()</code> 先让 target 建 pool，再把 target 的 pool/allocator 交给 composite worker；<code>init_model_worker()</code> 最终把执行接收者换成 spec worker。</p>
+<p>decode 准备阶段，<code>ScheduleBatch.prepare_for_decode()</code> 看到 spec 后调用 <code>spec_prepare_for_decode()</code> 并立刻 return，所以普通 <code>alloc_for_decode(token_per_req=1)</code> 与 <code>req.kv_committed_len += 1</code> 不会先执行。EAGLE 走 <code>eagle_prepare_for_decode()</code>；DFlash family 由 <code>DFlashDraftInputV2.prepare_for_decode()</code> 预留。forward结束后 Scheduler取得 <code>GenerationBatchResult</code>。外层 <code>BatchResultProcessor.process_batch_result_decode()</code>先等待必要的 <code>copy_done</code> device-to-host事件；随后 <code>_resolve_spec_v2_tokens()</code>读取已在CPU的 <code>accept_lens</code>，以结果记录的 stride切出每个 R0 的 accepted run，执行 grammar保留，并只为仍有效的请求推进 committed 长度。decode处理的后续部分再把同一列表写入 <code>output_ids</code>、更新 stop 状态并在 finish 时调用 <code>release_kv_cache()</code>处理未提交尾部。</p>
+<p>下图把 R0 一轮的五条前沿画成状态迁移。它不是五个不同请求，而是同一 R0 从 CPU committed 事实、到预留地址、再到 target 裁决和 Scheduler 提交的五个不同证据层。</p>
+<figure class="diagram-frame" data-diagram-frame data-diagram-kind="state"><div class="diagram-toolbar"><span class="diagram-toolbar__identity"><b>状态迁移图</b><span>Draft 只提案：共同 worker 合同与四个长度 · 下图把 R0 一轮的五条前沿画成状态迁移</span></span><span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span><button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button></div><div class="diagram-legend" aria-label="图内语义色图例"><span class="diagram-legend__item" data-tone="blue">当前状态</span><span class="diagram-legend__item" data-tone="orange">guard</span><span class="diagram-legend__item" data-tone="green">已提交状态</span><span class="diagram-legend__item" data-tone="red">失败 / 回收</span></div><div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="图形阅读区，可横向滚动"><div class="diagram-frame__canvas"><pre class="mermaid" aria-label="Draft 只提案：共同 worker 合同与四个长度 · 下图把 R0 一轮的五条前沿画成状态迁移">stateDiagram-v2
+    [*] --&gt; C100
+    state "CPU Req committed=100\noutput_ids 未增长" as C100
+    state "allocator reserved=108\nreq_to_token 已有 verify slots" as R108
+    state "proposal=[d1,d2,d3]\n无提交权" as P3
+    state "target rows=[A,d1,d2,d3]\nverified=4" as V4
+    state "raw worker result\n[d1,d2,B,0], accept_lens=3" as A3
+    state "grammar retained=[d1,d2]\n或无 grammar 保留3个" as G
+    state "Req committed=102/103\noutput_ids 追加 retained run" as CNEW
+    state "next anchor=B\nallocated tail 仍未 committed" as NEXT
+    C100 --&gt; R108: spec prepare / reserve
+    R108 --&gt; P3: draft proposal
+    P3 --&gt; V4: TARGET_VERIFY
+    V4 --&gt; A3: accept + bonus
+    A3 --&gt; G: CPU result + grammar / finish / retract
+    G --&gt; CNEW: resolve tokens then decode loop
+    CNEW --&gt; NEXT: cache / release keeps valid prefix
+    NEXT --&gt; R108: next decode round
+</pre></div></div><figcaption><b>读图方法：</b>沿 guard 阅读状态迁移；每条边都应能回答谁改了什么、下一轮谁读取。</figcaption></figure>
+</div>
+  </section><section class="sf-topic sf-topic--example" data-topic-kind="example" aria-labelledby="连续例子">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="连续例子"><span class="sf-sec-number" aria-hidden="true">07</span>连续例子</h2>
+    </header>
+
+      <div class="sf-topic__body"><p>t0，R0 的 committed prefix 长度为 100，allocator 为 overlap 预留到 108；<code>kv_allocated_len=108</code> 不表示 101～107 已有可信上下文。上一轮留下 anchor <code>A</code>。t1，draft提出 <code>[d1,d2,d3]</code>；若算法以 anchor 为 verify 输入，target看到 <code>[A,d1,d2,d3]</code> 四行。proposal=3，verified=4，此时 <code>Req.output_ids</code> 与 <code>kv_committed_len</code> 仍不变。</p>
+<p>t2，target预测说明 <code>d1,d2</code> 连续匹配，第三个位置不匹配并给出 bonus <code>B</code>。worker构造 padded row <code>[d1,d2,B,0]</code>，<code>accept_lens[R0]=3</code>，<code>num_correct_drafts=2</code>，<code>new_seq_lens=103</code>，下一轮 anchor 是 <code>B</code>。注意输出内容与有效 KV 输入存在滚动关系：target forward 已为 <code>[A,d1,d2]</code> 产生可提交 KV，<code>B</code> 是该链尾的预测并作为本轮输出与下轮 anchor；不同算法用 draft_extend 或 target-hidden injection 保持 draft 侧状态一致。</p>
+<p>t3，result processor按 stride=4 取前三个 token。若无 grammar/stop 截断，<code>kv_committed_len:100→103</code>，随后 <code>output_ids</code> 追加 <code>[d1,d2,B]</code>。预留仍可能是 108，差值 5 是 headroom，不是 rejected tokens 已被提交。t4，下一轮以前缀 103 和 anchor <code>B</code> 继续；若 R0 此时结束，<code>release_kv_cache()</code>只把有效 committed 前缀交给 cache，并回收 committed 到 allocated 之间的 over-allocation。连续两轮才能看清 reserve 可以提前、commit 必须等待结果、anchor 又同时跨轮。</p>
+<p>若 grammar 在 <code>d2</code> 后完成，result processor可能只保留 <code>[d1,d2]</code>，committed 与 emitted 都推进 2，而 worker原始 <code>accept_lens=3</code> 不能直接当最终用户长度。若请求在 overlap 延迟结果到达前已 retract/finish，processor不会再次推进它；这解释了为何提交动作必须由 Scheduler 的当前 Req 状态裁决。</p>
+<div class="step-lab" data-step-lab data-lab-id="spec-four-frontiers" data-default-step="prefix">
+  <div class="step-lab__head">
+    <h3>状态实验：proposal、verified、accepted、committed 不是一个长度</h3>
+    <p>用 R0 的 committed=100、allocated=108 和三个 draft token 推进一轮；每一步只点亮当前真正成立的前沿。</p>
+  </div>
+  <div class="step-lab__tabs" data-lab-tabs>
+    <button class="button" data-lab-step="prefix">1 prefix</button>
+    <button class="button" data-lab-step="reserve">2 reserve</button>
+    <button class="button" data-lab-step="proposal">3 proposal</button>
+    <button class="button" data-lab-step="verify">4 verify</button>
+    <button class="button" data-lab-step="commit">5 Scheduler commit</button>
+    <button class="button" data-lab-step="release">6 release/cache</button>
+  </div>
+  <div class="step-lab__stage">
+    <section class="step-lab__panel" data-lab-panel="prefix">
+      <div class="state-grid" style="--columns:4"><div class="state-cell" data-kind="main">emitted=len(output_ids)=0</div><div class="state-cell" data-kind="main">committed absolute prefix=100</div><div class="state-cell" data-kind="off">proposed=0</div><div class="state-cell" data-kind="guard">allocated=108</div></div>
+      <p>emitted 是用户输出 token 数；committed 是包含 prompt/prefix 的绝对 KV 前沿。108 是 allocator headroom，三种坐标不能混成一个长度。</p>
+    </section>
+    <section class="step-lab__panel" data-lab-panel="reserve">
+      <div class="state-transition"><div class="state-transition__state"><b>ordinary decode</b><br>通常 token_per_req=1</div><div class="state-transition__arrow">spec prepare 截断 →</div><div class="state-transition__state"><b>verify block reserve</b><br>mapping/slot 为候选布局预留，committed 不动</div></div>
+      <p>如果先走 ordinary alloc 再走 spec alloc，会让长度和地址表双推进。</p>
+    </section>
+    <section class="step-lab__panel" data-lab-panel="proposal">
+      <div class="state-grid" style="--columns:4"><div class="state-cell" data-kind="async">draft=[d1,d2,d3]</div><div class="state-cell" data-kind="main">proposed=3</div><div class="state-cell" data-kind="off">accepted unknown</div><div class="state-cell" data-kind="guard">committed=100</div></div>
+      <p>draft 只提案；即使 draft 侧已写专用 KV，也不能自行修改 target/用户语义。</p>
+    </section>
+    <section class="step-lab__panel" data-lab-panel="verify">
+      <div class="state-grid" style="--columns:4"><div class="state-cell" data-kind="async">target rows=[A,d1,d2,d3]</div><div class="state-cell" data-kind="main">verified=4</div><div class="state-cell" data-kind="main">raw accept=[d1,d2,B]</div><div class="state-cell" data-kind="guard">accept_lens=3</div></div>
+      <p>verified 行数、正确 draft 数和含 bonus 的 accept length 是三种计数。</p>
+    </section>
+    <section class="step-lab__panel" data-lab-panel="commit">
+      <div class="state-transition"><div class="state-transition__state"><b>worker result</b><br>padded accepted row + accept_lens</div><div class="state-transition__arrow">grammar/stop/retract 裁决 →</div><div class="state-transition__state"><b>Scheduler Req</b><br>output_ids []→[d1,d2,B], emitted 0→3<br>committed 100→103</div></div>
+      <p>两种计数本轮都增加3，但一个是用户输出数、一个是绝对KV前沿；若 grammar 在 d2 完成，最终增量才都为2，raw <code>accept_lens</code> 仍不能直接当用户可见长度。</p>
+    </section>
+    <section class="step-lab__panel" data-lab-panel="release">
+      <div class="state-grid" style="--columns:3"><div class="state-cell" data-kind="main">prefix cache<br>只接管有效 0..102</div><div class="state-cell" data-kind="guard">allocated tail<br>103..107</div><div class="state-cell" data-kind="failure">finish/retract<br>按 allocator/page 规则回收</div></div>
+      <p>rejected/unused tail 不必每轮逐 slot free；真正释放要服从 generic/paged/算法专用所有权合同。</p>
+    </section>
+  </div>
+  <div class="step-lab__toolbar"><span class="step-lab__status" data-lab-status aria-live="polite"></span><div class="step-lab__actions"><button class="button button--quiet" data-lab-action="prev">上一步</button><button class="button" data-lab-action="next">下一步</button><button class="button button--quiet" data-lab-action="reset">复位</button></div></div>
+</div>
+</div>
+  </section><section class="sf-topic sf-topic--why-here" data-topic-kind="why-here" aria-labelledby="为什么必须在这里">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="为什么必须在这里"><span class="sf-sec-number" aria-hidden="true">08</span>为什么必须在这里</h2>
+    </header>
+
+      <div class="sf-topic__body"><p>worker 工厂必须在 Scheduler 完成 target 创建之后运行，因为 composite worker 需要现成 target worker、model config、设备和并行状态；memory pool也必须由 target 先建立，才能让 draft选择共享 allocator、共享地址空间或私有映射。spec decode 准备必须截断普通 decode 分支，否则同一 R0 会先分配一个普通 token、再分配 verify block，长度与地址表都会双推进。</p>
+<p>accept 后的持久 commit 必须留在 result processor。worker位于设备执行边界，看到的是 launch 时的 batch；Scheduler 才知道 result回来时请求是否已 retract、grammar 是否截断、finish 是否发生。反过来，target verify 前的地址预留必须在 schedule/prepare 阶段完成，因为 forward 内不能等 CPU finish 逻辑后再获得写槽。这个时间上的分工同时服务同步与 overlap，但不意味着 <code>publish()</code> 的 Python 返回就是 GPU 工作完成；真实可见性由 stream/event依赖约束。</p>
+</div>
+  </section><section class="sf-topic sf-topic--boundary" data-topic-kind="boundary" aria-labelledby="边界矩阵">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="边界矩阵"><span class="sf-sec-number" aria-hidden="true">09</span>边界矩阵</h2>
+    </header>
+
+      <div class="sf-topic__body"><div class="table-scroll teaching-table"><table>
+<thead>
+<tr>
+<th>边界</th>
+<th>共同合同</th>
+<th>算法差异</th>
+<th>不能外推的结论</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>worker</td>
+<td>Scheduler 执行 composite <code>model_worker</code></td>
+<td>EAGLE、DFlash、DSpark、NGram concrete class 不同</td>
+<td>不等于都含独立 draft model</td>
+</tr>
+<tr>
+<td>draft input</td>
+<td><code>ScheduleBatch.spec_info</code> 跨轮</td>
+<td>tree state、block anchor、confidence budget、host corpus tree</td>
+<td>不能互换 dataclass 或 attention metadata</td>
+</tr>
+<tr>
+<td>hidden</td>
+<td>target 可为内部 draft 状态提供 hidden</td>
+<td>EAGLE 经 draft_extend；DFlash/DSpark物化 draft KV；Standalone/NGram 不同</td>
+<td>不等于公开 <code>return_hidden_states</code> 能力</td>
+</tr>
+<tr>
+<td>verify</td>
+<td>target 是最终分布裁决者</td>
+<td>tree/fixed/ragged/host tree 布局不同</td>
+<td>普通 decode 一行不能代表 spec verify</td>
+</tr>
+<tr>
+<td>logprob</td>
+<td>结果合同可以带 logits</td>
+<td>EAGLE/NGram有路径，DFlash/DSpark当前直接拒绝</td>
+<td>不能从算法原理推断 API 已支持</td>
+</tr>
+<tr>
+<td>DP/PP/CP</td>
+<td>均需启动守卫和参与一致性</td>
+<td>DSpark有受限 DP，DFlash拒绝 DP/PP，EAGLE族另有边界</td>
+<td>不能把某算法后端覆盖复制给其他算法</td>
+</tr>
+<tr>
+<td>PD/disagg</td>
+<td>committed prefix仍是 verifier真相</td>
+<td>当前 draft hidden transfer 主要标记 EAGLE family；decoupled有独立协议</td>
+<td>同机 FutureMap 不等于跨进程 token sync</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+  </section><section class="sf-topic sf-topic--recap" data-topic-kind="recap" aria-labelledby="source-action-changed-state-why">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="source-action-changed-state-why"><span class="sf-sec-number" aria-hidden="true">10</span>source action / changed state / why</h2>
+    </header>
+
+      <div class="sf-state-flow-source" data-state-flow><div class="table-scroll teaching-table"><table>
+<thead>
+<tr>
+<th>source action</th>
+<th>changed state</th>
+<th>why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>create_worker()</code></td>
+<td>algorithm → concrete composite class</td>
+<td>隔离算法专属对象与流程</td>
+</tr>
+<tr>
+<td><code>init_model_worker()</code></td>
+<td><code>Scheduler.model_worker</code> 指向 spec worker</td>
+<td>保持 Scheduler 主循环结果合同不变</td>
+</tr>
+<tr>
+<td><code>spec_prepare_for_decode()</code></td>
+<td>扩大 <code>req_to_token</code> / allocated frontier</td>
+<td>verify 前必须已有候选写槽</td>
+</tr>
+<tr>
+<td>draft + target verify</td>
+<td>生成候选、logits、accept indices/lens</td>
+<td>draft 不能自行提交 target 语义</td>
+</tr>
+<tr>
+<td><code>_resolve_spec_v2_tokens()</code></td>
+<td>accepted padded rows → per-Req retained run；推进 committed</td>
+<td>结合当前 Req、grammar、retract 状态裁决</td>
+</tr>
+<tr>
+<td><code>release_kv_cache()</code></td>
+<td>缓存 committed prefix、释放 over-allocation</td>
+<td>防止拒绝/预留尾部进入持久前缀</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+  </section><section class="sf-topic sf-topic--self-check" data-topic-kind="self-check" aria-labelledby="自测">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="自测"><span class="sf-sec-number" aria-hidden="true">11</span>自测</h2>
+    </header>
+
+      <div class="sf-self-test" data-self-test>
+        <ol>
+<li>R0 的 proposed=6、target verified=7 是否推出 <code>output_ids</code> 一定增加 7？请指出至少两个阻止该推论的字段或阶段。</li>
+<li>为什么 spec 开启后不能再执行普通 <code>alloc_for_decode(token_per_req=1)</code> 的长度推进？</li>
+<li><code>accept_lens=4</code> 时，<code>num_correct_drafts</code> 是多少，bonus 是否包含在 committed 数中？</li>
+<li>overlap 下 <code>kv_allocated_len=120</code>、<code>kv_committed_len=113</code> 各自说明什么？finish 时哪一段可以进入 prefix cache、哪一段需回收？</li>
+<li>请按 receiver/return/next consumer 复述：Scheduler把 R0 发给谁，worker返回什么，谁最终写 <code>Req.output_ids</code>。</li>
+</ol>
+
+      </div>
+  </section><section class="sf-topic sf-topic--evidence" data-topic-kind="evidence" aria-labelledby="source-evidence">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="source-evidence"><span class="sf-sec-number" aria-hidden="true">12</span>源码引用与上下文</h2>
+    </header>
+
+      <details class="sf-source-details"><summary>展开本章源码片段与定位工具</summary><div class="source-microscope" data-source-microscope data-source-key="source" data-default-step="source-1"><div class="source-microscope__head"><h3>源码显微镜：receiver、状态写入与下一消费者</h3><p>左侧按本章论证顺序定位决定性源码；每一跳必须回到正文判断它是 call、write、return 还是 next-consumer。相邻卡片本身不冒充直接调用边。</p></div><div class="source-microscope__tabs" data-source-tabs><button class="button button--quiet" data-source-step="source-1">01 · SpeculativeAlgorithm</button><button class="button button--quiet" data-source-step="source-2">02 · create_worker</button><button class="button button--quiet" data-source-step="source-3">03 · maybe_init_draft_worker</button><button class="button button--quiet" data-source-step="source-4">04 · init_model_worker</button><button class="button button--quiet" data-source-step="source-5">05 · spec_prepare_for_decode</button><button class="button button--quiet" data-source-step="source-6">06 · _resolve_spec_v2_tokens</button></div><div class="source-microscope__stage"><section class="source-microscope__panel" data-source-panel="source-1"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>SpeculativeAlgorithm</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>内建算法枚举与跨算法能力查询的共同入口</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>create_worker</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/spec_info.py:30</span><span>步骤 1 / 6</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/spec_info.py:30 附近源码"><code>     26 |     from sglang.srt.speculative.ngram_worker import NGRAMWorker
+     27 |     from sglang.srt.speculative.ragged_verify import RaggedVerifyLayout
+     28 | 
+     29 | 
+&gt;    30 | class SpeculativeAlgorithm(Enum):
+     31 |     &quot;&quot;&quot;Builtin speculative decoding algorithms. Plugin-registered ones are
+     32 |     ``CustomSpecAlgo`` instances; ``from_string`` returns either type, and
+     33 |     both expose the same ``is_*()`` / ``create_worker`` interface so callers
+     34 |     dispatch uniformly without isinstance checks.</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-2"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>create_worker</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>算法名到具体 composite worker 的工厂分派</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>maybe_init_draft_worker</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/spec_info.py:248</span><span>步骤 2 / 6</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/spec_info.py:248 附近源码"><code>    244 |         return self.get_num_tokens_per_req_for_target_verify(
+    245 |             num_draft_tokens, is_draft_worker
+    246 |         )
+    247 | 
+&gt;   248 |     def create_worker(
+    249 |         self, server_args: ServerArgs
+    250 |     ) -&gt; Optional[Union[Type[BaseSpecWorker], Type[TpModelWorker], Type[NGRAMWorker]]]:
+    251 |         assert (
+    252 |             not self.is_none()</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-3"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>maybe_init_draft_worker</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>Scheduler 用已有 target worker 创建 speculative worker</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>init_model_worker</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/managers/scheduler.py:824</span><span>步骤 3 / 6</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/managers/scheduler.py:824 附近源码"><code>    820 |             from sglang.srt.managers.tp_worker import TpModelWorker
+    821 | 
+    822 |             self.tp_worker = TpModelWorker(**worker_kwargs)
+    823 | 
+&gt;   824 |     def maybe_init_draft_worker(self):
+    825 |         if self.spec_algorithm.is_none():
+    826 |             self.draft_worker = None
+    827 |             self.external_corpus_manager = None
+    828 |             return</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-4"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>init_model_worker</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>speculative 开启后 model_worker 被替换成 composite worker</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>spec_prepare_for_decode</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/managers/scheduler.py:901</span><span>步骤 4 / 6</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/managers/scheduler.py:901 附近源码"><code>    897 |         self.tp_worker.init_cuda_graphs()
+    898 |         if self.draft_worker is not None:
+    899 |             self.draft_worker.init_cuda_graphs()
+    900 | 
+&gt;   901 |     def init_model_worker(self):
+    902 |         # Load model weights.
+    903 |         self.init_tp_model_worker()
+    904 |         self.maybe_init_draft_worker()
+    905 | </code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-5"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>spec_prepare_for_decode</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>spec decode 接管普通单 token decode 的准备与预留</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>_resolve_spec_v2_tokens</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/spec_utils.py:935</span><span>步骤 5 / 6</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/spec_utils.py:935 附近源码"><code>    931 |                 mamba_steps_to_track=mamba_steps_to_track,
+    932 |             )
+    933 | 
+    934 | 
+&gt;   935 | def spec_prepare_for_decode(batch: ScheduleBatch) -&gt; None:
+    936 |     &quot;&quot;&quot;eagle/ngram share a stateless free function; dflash keeps stateful
+    937 |     prep on its draft input -- the dispatcher routes.
+    938 |     &quot;&quot;&quot;
+    939 |     server_args = get_server_args()</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-6"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>_resolve_spec_v2_tokens</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>accept_lens 转成每请求输出并推进 kv_committed_len</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>回到本章结论</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/managers/scheduler_components/batch_result_processor.py:546</span><span>步骤 6 / 6</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/managers/scheduler_components/batch_result_processor.py:546 附近源码"><code>    542 |                 )
+    543 |             logprob_pt += num_input_logprobs
+    544 |         return logprob_pt
+    545 | 
+&gt;   546 |     def _resolve_spec_v2_tokens(
+    547 |         self,
+    548 |         result: GenerationBatchResult,
+    549 |         batch: ScheduleBatch,
+    550 |     ) -&gt; List[List[int]]:</code></pre></div></section></div><div class="source-microscope__toolbar"><span class="source-microscope__status" data-source-status aria-live="polite"></span><div class="source-microscope__actions"><button class="button button--quiet" data-source-action="prev">上一跳</button><button class="button" data-source-action="next">下一跳</button><button class="button button--quiet" data-source-action="reset">回到入口</button></div></div></div></details>
+  </section>  </article>
+              <nav class="sf-pager" aria-label="相邻章节">
+<span></span><a href="eagle-tree.html"><span>下一章 →</span><b>EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</b></a>              </nav>
+
+            <footer class="sf-footer"><span>投机解码源码专题</span><span>源码快照 f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</span><span>纯静态 · 本地依赖 · 可离线分享</span></footer>
+            <p class="print-only">投机解码源码专题 · Draft 只提案：共同 worker 合同与四个长度 · f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</p>
+          </div>
+
+          <aside class="sf-page-toc" aria-label="本页目录">
+            <p class="sf-page-toc__title">On this page</p>
+            <ol data-page-toc-list><li><a href="#直接结论" data-level="2">直接结论</a></li><li><a href="#当前路径假设" data-level="2">当前路径假设</a></li><li><a href="#输入-本页职责与输出" data-level="2">输入、本页职责与输出</a></li><li><a href="#为什么存在" data-level="2">为什么存在</a></li><li><a href="#对象与状态" data-level="2">对象与状态</a></li><li><a href="#当前源码调用链" data-level="2">当前源码调用链</a></li><li><a href="#连续例子" data-level="2">连续例子</a></li><li><a href="#为什么必须在这里" data-level="2">为什么必须在这里</a></li><li><a href="#边界矩阵" data-level="2">边界矩阵</a></li><li><a href="#source-action-changed-state-why" data-level="2">source action / changed state / why</a></li><li><a href="#自测" data-level="2">自测</a></li><li><a href="#source-evidence" data-level="2">源码引用与上下文</a></li></ol>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="search-dialog" id="course-search-dialog" data-search-dialog aria-labelledby="course-search-title">
+    <div class="search-dialog__head"><strong id="course-search-title">搜索课程</strong><button class="sf-icon-button" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+    <form class="search-dialog__form" data-search-form role="search"><label class="sr-only" for="course-search-input">搜索对象、方法、状态或章节</label><input id="course-search-input" type="search" data-search-input autocomplete="off" placeholder="例如：running_batch、ForwardBatch、TARGET_VERIFY"><button class="sf-button" type="submit">搜索</button></form>
+    <p class="search-dialog__status" data-search-status aria-live="polite"></p><ol class="search-results" data-search-results></ol>
+  </dialog>
+
+  <dialog class="diagram-viewer" id="diagram-viewer-dialog" data-diagram-dialog aria-labelledby="diagram-viewer-title">
+    <div class="diagram-viewer__head"><div><strong id="diagram-viewer-title" data-diagram-title>图解沉浸阅读</strong> <span class="diagram-viewer__zoom" data-diagram-zoom>100%</span></div><div class="diagram-viewer__tools"><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-in" aria-label="放大">＋</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-out" aria-label="缩小">−</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="fit">看全图</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="reset">100%</button><button class="sf-button" type="button" data-diagram-action="close">关闭 ×</button></div></div>
+    <div class="diagram-viewer__viewport" data-diagram-viewport><div class="diagram-viewer__canvas mermaid" data-diagram-canvas></div></div>
+  </dialog>
+
+<script src="assets/data/search-index.js" defer></script><script src="assets/vendor/mermaid.min.js" defer></script>  <script src="assets/js/site-shell.js" defer></script>
+  <script src="assets/js/toc-search.js" defer></script>
+  <script src="assets/js/diagram-viewer.js" defer></script>
+  <script src="assets/js/source-microscope.js" defer></script>
+  <script src="assets/js/labs.js" defer></script>
+  <script src="assets/js/lesson-components.js" defer></script>
+</body>
+</html>

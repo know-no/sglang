@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; style-src 'self' 'unsafe-inline' file:; script-src 'self' file:; img-src 'self' data: file:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'">
+  <title>03A · Markov Head 内部机制 · dSpark V2</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="assets/dspark-visual-system.css">
+  <style>
+    .markov-canvas{min-width:1180px;padding:18px 10px 28px}.parallel-band{display:grid;grid-template-columns:170px repeat(4,minmax(170px,1fr));gap:12px;align-items:stretch}.band-label{display:grid;align-content:center;padding:14px;border-right:3px solid var(--cuda);color:var(--cuda);font:800 12px/1.45 var(--mono)}.slot-card{--tone:var(--cuda);padding:14px;border:1px dashed var(--tone);background:var(--surface)}.slot-card b{display:block;color:var(--tone);font:800 12px/1.3 var(--mono)}.slot-card span{display:block;margin-top:7px;color:var(--muted);font:12px/1.4 var(--mono)}.serial-label{margin:28px 0 10px 182px;color:var(--guard);font:800 11px/1.3 var(--mono)}.serial-chain{display:grid;grid-template-columns:170px repeat(4,minmax(170px,1fr));gap:24px;align-items:stretch}.serial-chain .band-label{border-color:var(--main);color:var(--main)}.markov-step{position:relative;padding:14px;border:1px solid var(--main);background:rgba(98,245,154,.035)}.markov-step:not(:last-child)::after{content:"prev token →";position:absolute;right:-25px;top:44%;z-index:2;padding:2px 3px;background:var(--bg);color:var(--guard);font:9px/1 var(--mono)}.markov-step b{display:block;color:var(--main);font:800 12px/1.3 var(--mono)}.markov-step code{display:block;margin-top:7px;color:var(--muted);font-size:11px}.markov-step output{display:block;margin-top:10px;color:var(--text);font:900 24px/1 var(--mono)}.dependency-note{margin-top:18px;padding:12px 14px;border:1px dashed var(--guard);color:var(--muted);background:rgba(255,208,96,.035);font-size:12px}.heads{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.head-card{--tone:var(--data);padding:16px;border:1px solid var(--tone);background:var(--surface)}.head-card:nth-child(2){--tone:var(--guard);border-style:dashed}.head-card:nth-child(3){--tone:var(--cuda);border-style:dashed}.head-card h3{margin:0;color:var(--tone);font:800 14px/1.35 var(--mono)}.head-card code{display:block;margin-top:10px;color:var(--text);font-size:11px}.head-card p{margin:9px 0 0;color:var(--muted);font-size:12px}.state-ledger{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;margin-top:16px;border:1px solid var(--line);background:var(--line)}.state-ledger div{padding:13px;background:var(--surface)}.state-ledger b{display:block;color:var(--data);font:800 11px/1.3 var(--mono)}.state-ledger span{display:block;margin-top:6px;color:var(--muted);font-size:12px}.state-ledger .no-write b{color:var(--off)}@media(max-width:760px){.heads,.state-ledger{grid-template-columns:1fr}}
+  </style>
+  <link rel="stylesheet" href="assets/dspark-source-studio.css">
+  <script src="assets/dspark-site.js" defer></script>
+  <script src="assets/dspark-learning-layer.js" defer></script>
+  <script src="assets/dspark-source-studio.js" defer></script>
+  <script src="assets/dspark-stepper.js" defer></script>
+</head>
+<body data-page="03A">
+  <nav data-site-nav aria-label="dSpark 学习页面"></nav>
+  <main class="page page--wide">
+    <header class="hero">
+      <span class="topic-badge">专题页 · 归属 03 Draft 提案</span>
+      <p class="eyebrow">03A · Markov Head 内部机制</p>
+      <h1>串行的是 logits 修正与采样，不是四次 Transformer forward</h1>
+      <p class="lead">四个槽位的 hidden <code>h0…h3</code> 已经一次并行得到。Markov head 只用“上一步真实采样 token”修正当前槽位的基础 logits；它不会把 a/b/c/d 再送回 Transformer，也不会生成这些 token 的新 hidden 或 KV。</p>
+      <div class="evidence-strip"><span><strong>共同契约</strong> · <code>markov_head.sample_block(base_logits, first_prev_tokens=X, hidden_states, sampler)</code></span><span><strong>动态类</strong> · <code>VanillaMarkov / GatedMarkovHead / RNNHead</code></span><span><strong>证据</strong> · <code>sglang.srt.models.dspark</code> 当前源码</span></div>
+      <div class="route-switch" aria-label="选择讲解路线"><button type="button" data-route-choice="static-greedy">STATIC · 贪心</button><button type="button" data-route-choice="compact-sampling">COMPACT · 随机采样</button><button type="button" data-route-choice="folded-greedy">FOLDED · 贪心</button></div>
+      <div data-semantic-legend></div>
+    </header>
+    <section class="handoff" aria-label="Markov Head 交接契约">
+      <div class="handoff__item"><b>输入 · 已完成</b><span><code>base_logits[1,4,V]</code>、<code>draft_hidden[1,4,H]</code>、anchor <code>X</code>。</span></div>
+      <div class="handoff__item"><b>串行状态</b><span><code>prev_tokens</code>；RNN 版本还携带小型 <code>state[1,markov_rank]</code>。</span></div>
+      <div class="handoff__item"><b>输出</b><span><code>draft_tokens=[a,b,c,d]</code> 与普通路径的 <code>corrected_logits[1,4,V]</code>。</span></div>
+      <div class="handoff__item"><b>下一消费者</b><span><code>DraftBlockProposer.propose()</code> 封装为 <code>DraftProposal</code>；sampling 的 q 材料交给 06。</span></div>
+    </section>
+    <section class="section" aria-labelledby="markov-title">
+      <div class="section__head"><p class="section__kicker">主视图 · 并行上半场 + 串行下半场</p><h2 id="markov-title">先同时得到四个 hidden，再按真实 token 依赖逐步采样</h2><p class="section__intro">每推进一步，只激活一段新的 Markov 依赖；已经完成的 Transformer hidden 不再重算。</p></div>
+      <div class="visual stepper" data-stepper data-steps="7">
+        <div class="visual__bar"><span><strong>B=1 · G=4</strong> · 悬停同名 hidden/token 可联动</span><button class="zoom-button" type="button" data-zoom-target="#markov-canvas">放大主图</button></div>
+        <div class="visual__body">
+          <div class="stepper__toolbar"><div class="stepper__buttons"><button type="button" data-step-action="prev">上一步</button><button type="button" data-step-action="next">下一步</button><button type="button" data-step-action="play">播放</button><button type="button" data-step-action="reset">重置</button></div><div class="stepper__progress"><span data-step-progress></span></div><div class="stepper__status" data-step-status></div></div>
+          <div class="canvas-scroll"><div id="markov-canvas" class="markov-canvas">
+            <div class="parallel-band" data-step-node="0"><div class="band-label">Draft 输入<br><code>[X,M,M,M]</code></div><article class="slot-card"><b>slot 0 · pos20</b><span>X embedding</span></article><article class="slot-card"><b>slot 1 · pos21</b><span>MASK embedding</span></article><article class="slot-card"><b>slot 2 · pos22</b><span>MASK embedding</span></article><article class="slot-card"><b>slot 3 · pos23</b><span>MASK embedding</span></article></div>
+            <div class="parallel-band" data-step-node="1" style="margin-top:12px"><div class="band-label">一次 Transformer<br>并行四行</div><article class="slot-card" tabindex="0" data-entity="h0"><b>h0 + L0</b><span>raw_hidden[0]<br>base_logits[0]</span></article><article class="slot-card" tabindex="0" data-entity="h1"><b>h1 + L1</b><span>raw_hidden[1]<br>base_logits[1]</span></article><article class="slot-card" tabindex="0" data-entity="h2"><b>h2 + L2</b><span>raw_hidden[2]<br>base_logits[2]</span></article><article class="slot-card" tabindex="0" data-entity="h3"><b>h3 + L3</b><span>raw_hidden[3]<br>base_logits[3]</span></article></div>
+            <div class="serial-label" data-step-node="2">以下才开始 token 依赖；Lk 是已算好的基础 logits</div>
+            <div class="serial-chain"><div class="band-label">Markov head<br>串行小循环</div><article class="markov-step" data-step-node="3" tabindex="0" data-entity="h0"><b>step 0 · prev=X</b><code>Q0 = apply(L0, X, h0)</code><output>a</output></article><article class="markov-step" data-step-node="4" tabindex="0" data-entity="h1"><b>step 1 · prev=a</b><code>Q1 = apply(L1, a, h1)</code><output>b</output></article><article class="markov-step" data-step-node="5" tabindex="0" data-entity="h2"><b>step 2 · prev=b</b><code>Q2 = apply(L2, b, h2)</code><output>c</output></article><article class="markov-step" data-step-node="6" tabindex="0" data-entity="h3"><b>step 3 · prev=c</b><code>Q3 = apply(L3, c, h3)</code><output>d</output></article></div>
+            <div class="dependency-note"><strong>真正的依赖：</strong><code>prev_tokens = next_tokens</code> 每步更新；因此后置 token 拥有前置 token 条件。<strong>不存在的动作：</strong>没有 <code>draft_model_runner.forward(a/b/c)</code>，也没有把 a/b/c/d 写回后置槽位的 Transformer KV。</div>
+          </div></div>
+        </div>
+      </div>
+    </section>
+    <section class="section" aria-labelledby="variants-title">
+      <div class="section__head"><p class="section__kicker">辅助视图 · 三种具体 head</p><h2 id="variants-title">它们改变“如何算 bias”，不改变“必须按 token 链串行”</h2></div>
+      <div class="visual"><div class="visual__bar"><span><strong>动态接收者</strong> · <code>self._proposer.draft_model.markov_head</code></span><button class="zoom-button" type="button" data-zoom-target="#head-variants">放大辅助图</button></div><div class="visual__body" id="head-variants">
+        <div class="heads"><article class="head-card"><h3>VanillaMarkov</h3><code>bias = W2(Embedding(prev_token))</code><p>只从上一 token 的低秩 embedding 生成 bias，再加到当前基础 logits。</p></article><article class="head-card"><h3>GatedMarkovHead</h3><code>gate = σ(Proj([h_k, emb(prev)]))<br>bias = W2(gate ⊙ emb(prev))</code><p>当前槽位 hidden 决定 prev-token bias 的门控强度。</p></article><article class="head-card"><h3>RNNHead</h3><code>(state_k,bias_k) = rnn_step(state, emb(prev), h_k)</code><p>除了上一 token，还跨 step 携带小型 RNN state；仍不调用 Transformer。</p></article></div>
+        <div class="state-ledger"><div><b>会改变 · corrected logits</b><span>每个 Qk 都加入具体 head 的 bias。</span></div><div><b>会改变 · sampled token</b><span>greedy 取 argmax；sampling 按 temperature 后分布抽一个。</span></div><div class="no-write"><b>不会改变 · draft_hidden</b><span>h0…h3 已由一次 forward 固定。</span></div><div class="no-write"><b>不会新增 · Draft KV</b><span>Markov 步骤不运行 attention/Transformer，不产生 token 自身的新 KV。</span></div></div>
+      </div></div>
+    </section>
+    <details class="source-details"><summary>为什么、失败模式与源码锚点</summary><div class="source-details__body">
+      <div class="callouts"><div class="callout" data-kind="main"><b>为什么这样拆</b><p>昂贵 Transformer 保持一次 block forward；便宜的小头承担 G 步 token 条件，使后置 proposal 能依赖真实前置采样。</p></div><div class="callout" data-kind="fail"><b>误解 · “四步串行等于四次模型”</b><p>错。串行 loop 只计算低秩/门控/RNN bias 和 sampler；hidden 与 KV 没有重跑。</p></div><div class="callout" data-kind="data"><b>sampling 的后继契约</b><p>多个 token 的概率都可能非零，但每一步 sampler 只抽取一个 token；完整 Qk 留到拒绝采样修正。</p></div><div class="callout" data-kind="guard"><b>folded 边界</b><p>全贪心且 Draft CUDA 图命中时，小头与 sampler 可在图内执行；数学依赖顺序不变。</p></div></div>
+      <div class="source-anchor"><code>python/sglang/srt/models/dspark.py:34–64</code><span><code>run_markov_block()</code> 的逐步 <code>apply_step_logits → sampler → prev_tokens=next_tokens</code>。</span></div><div class="source-anchor"><code>python/sglang/srt/models/dspark.py:67–130, 133–163, 164–263</code><span>Vanilla、Gated、RNN 的具体计算与共同 <code>sample_block()</code> 契约。</span></div><div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_draft.py:177–238, 316–335</code><span>普通路径的 greedy/sampling sampler、corrected logits 与 proposal 封装。</span></div>
+    </div></details>
+    <div class="pager"><a data-nav href="dspark-draft-proposal.html">← 03 · Draft 提案</a><a data-nav href="dspark-confidence-budget-layout.html">04 · 置信度 / 预算 / 布局 →</a></div>
+    <footer class="site-footer">证据边界 · 当前源码 f01a0c7f97ec · 本页描述静态源码中的数学与调用契约 · 未执行具体 checkpoint 的 GPU 性能对比。</footer>
+  </main>
+</body>
+</html>

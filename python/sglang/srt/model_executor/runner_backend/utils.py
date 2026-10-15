@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 # Track first occurrence of each fallback warning to avoid log spam.
 _TC_PIECEWISE_DECODE_FALLBACK_LOGGED = False
 
-
+# 默认配置下，decode进入的是FullCudaGraphBackend，在 decode 场景BREAKABLE还是实验分支
 def resolve_decode_backend(
     cuda_graph_runner: BaseCudaGraphRunner,
 ) -> BaseCudaGraphBackend:
@@ -108,7 +108,7 @@ def resolve_prefill_backend(
     model_runner = cuda_graph_runner.model_runner
     cfg = model_runner.server_args.cuda_graph_config
     backend_name = cfg.prefill.backend if cfg is not None else Backend.TC_PIECEWISE
-
+    # 按已经解析的配置分派；通用默认由 cuda_graph_config.default_prefill_backend() 决定：CUDA 为 BREAKABLE，其他平台为 TC。
     if backend_name == Backend.BREAKABLE:
         return BreakableCudaGraphBackend(
             cuda_graph_runner,
@@ -120,5 +120,6 @@ def resolve_prefill_backend(
             cuda_graph_runner,
             enable_memory_saver=model_runner.server_args.enable_memory_saver,
         )
-    # Default: tc_piecewise.
+    # 未选 BREAKABLE/FULL 时返回 TC；这是此函数的兜底分支，不表示所有平台都默认使用 TC。
     return TcPiecewiseCudaGraphBackend(cuda_graph_runner)
+    # TC 构造时立即回调 runner 做模型 warmup/编译准备；实际 CUDA Graph 捕获仍由后续 capture() 驱动。

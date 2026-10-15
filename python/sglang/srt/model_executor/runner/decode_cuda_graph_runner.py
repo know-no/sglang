@@ -258,13 +258,13 @@ class DecodeCudaGraphRunner(BaseCudaGraphRunner):
         # --- capture mode + tokens-per-bs ------------------------------
         self.capture_forward_mode = ForwardMode.DECODE
         self.capture_hidden_mode = CaptureHiddenMode.NULL
-        # Static capture width.
+        # Static capture width. # 投机解码会增加这个值,dspark为gamma+1,原来是 1
         self.captured_req_width = model_runner.decode_num_tokens_per_req(
             num_draft_tokens=self.speculative_num_draft_tokens
         )
         if model_runner.spec_algorithm.is_speculative():
-            if self.model_runner.is_draft_worker:
-                # Draft workers can use TARGET_VERIFY mode.
+            if self.model_runner.is_draft_worker: # draft模型在 draft_worker.init_cuda_graphs 时会进入这里
+                # Draft workers can use TARGET_VERIFY mode.这个路径，本质上提供支持完整 CUDA Graph的固定长度 prefill/extend 执行方式，所以也适用于其他固定长度前向场景
                 if (
                     not self.model_runner.spec_algorithm.supports_target_verify_for_draft()
                 ):
@@ -307,7 +307,7 @@ class DecodeCudaGraphRunner(BaseCudaGraphRunner):
         if self.enable_return_hidden_states:
             self.capture_hidden_mode = CaptureHiddenMode.FULL
 
-        # Attention backend
+        # Attention backend#确定最大容量，让attn backend建好后续捕获，重放依赖的存储；等执行时，每一批具体的请求信息再填进去；
         self.max_bs = max(self.capture_bs)
         self.max_num_token = self.max_bs * self.captured_req_width
         self.attn_backend.init_cuda_graph_state(self.max_bs, self.max_num_token)
@@ -509,7 +509,7 @@ class DecodeCudaGraphRunner(BaseCudaGraphRunner):
             if self.ragged_verify_mode
             else None
         )
-        if ragged_layout is not None:
+        if ragged_layout is not None: # 明确限制了 真实请求数 <= 图的请求槽位数
             return self._can_run_ragged_verify_graph(forward_batch, ragged_layout)
         if self.ragged_verify_mode and forward_batch.forward_mode.is_target_verify():
             return False
@@ -850,10 +850,10 @@ class DecodeCudaGraphRunner(BaseCudaGraphRunner):
         # Capture the large shapes first so that the smaller shapes
         # can reuse the memory pool allocated for the large shapes.
         with freeze_gc(self.model_runner.server_args.enable_cudagraph_gc):
-            if not self.enable_pdmux:
+            if not self.enable_pdmux: # with graph_capture as 方法，准备好要用的流
                 with graph_capture() as graph_capture_context, profile_context as prof:
                     self.stream = graph_capture_context.stream
-                    with self.backend.capture_session(self.stream):
+                    with self.backend.capture_session(self.stream):#让所有档位使用准备好的流和内存池。然后复原
                         self._capture_one_stream()
             else:
                 set_pdmux_status(False)
@@ -917,15 +917,15 @@ class DecodeCudaGraphRunner(BaseCudaGraphRunner):
         stream_idx: Optional[int] = None,
         variant_label: Optional[str] = None,
     ):
-        num_tokens = size * self.captured_req_width
-        bs = self._ragged_capture_slots(num_tokens) if self.ragged_verify_mode else size
-
+        num_tokens = size * self.captured_req_width# 捕获的时候，如果是target verify， 则是token的个数 作为 bs
+        bs = self._ragged_capture_slots(num_tokens) if self.ragged_verify_mode else size # 并且min;每个真实请求至少有一个 verify token，所以 8 个 token 最多对应 8 个真实请求。预留 8 槽，就能覆盖这些组合；同时再用 self.max_bs 限制槽位容量。
+        # 之所以这么弄，是希望同样的 token 总数约束下，可以捕获和重放各种 request分布组合; 8 个请求，每个 1 token → 总共 8 tokens; 4 个请求，每个 2 tokens  → 总共 8 tokens; 3 个请求，长度为 [4,2,1] → 7 tokens，加 1 个 padding
         # Sanity-check: --debug-cuda-graph requires breakable backend.
         if self.model_runner.server_args.debug_cuda_graph:
             assert isinstance(
                 self.backend, BreakableCudaGraphBackend
             ), "Breakable CUDA graph is required for --debug-cuda-graph"
-
+# bs 和 num_tokens不同；bs 是重算过的 batch size；num_tokens是总 token 数；
         forward_batch, attn_backend, pp_proxy_tensors = self.capture_prepare(
             bs, stream_idx=stream_idx, num_tokens=num_tokens
         )
@@ -938,7 +938,7 @@ class DecodeCudaGraphRunner(BaseCudaGraphRunner):
 
             if forward_batch.lora_ids is not None:
                 self.model_runner.lora_manager.prepare_lora_batch(forward_batch)
-
+            # 在调用 capture_one() 之前执行; 不是所有 metadta 都 captured inside； 这是图外的元信息
             attn_backend.init_forward_metadata_out_graph(forward_batch, in_capture=True)
 
             def run_once():
@@ -986,7 +986,7 @@ class DecodeCudaGraphRunner(BaseCudaGraphRunner):
                 )
                 for capture_hook in self.model_runner.capture_tail_hooks:
                     capture_hook(self, out, forward_batch, num_tokens)
-                return out
+                return out # Decode Full 捕获外层 model.forward，正常生成时包含 Transformer 主体及 LM head/logits processor 的 GPU 运算；返回 logits 等输出供重放后读取（PP 的 LM head 仅在最后一个 stage）。
 
             self.deepep_adapter.capture(is_extend_in_batch=False)
             canary_ctx = (
@@ -1068,9 +1068,9 @@ class DecodeCudaGraphRunner(BaseCudaGraphRunner):
         is_ragged = ragged_layout is not None
 
         self.deepep_adapter.replay()
-
-        if not forward_batch.needs_forward_metadata_init():
-            # Pre-planned (plan-stream load_batch already ran).
+        # 什么情况下: 不需要 forward_metadata_init ? 什么情况下需要 ? 提前准备了就不需要，没提前准备就需要
+        if not forward_batch.needs_forward_metadata_init(): # 这里是提前准备的; 本轮 batch 已经提前执行过完整 load_batch()，选档、metadata 和 self.bs 等状态已经准备好了
+            # Pre-planned (plan-stream load_batch already ran). # EAGLE Target Verify：会提前准备，并且 mark_forward_metadata_ready
             # In speculative decoding, these two fields are still needed.
             graph_size_key = (
                 self._ragged_graph_size
@@ -1101,21 +1101,21 @@ class DecodeCudaGraphRunner(BaseCudaGraphRunner):
                 graph_size_key, stream_idx, variant_label
             )
             return
-
+# 普通未预规划 batch 的 needs_forward_metadata_init() 返回 True
         buffers = self.buffers
-        self.recapture_if_needed(forward_batch)
+        self.recapture_if_needed(forward_batch) #检查所需 hidden states 输出模式，如果与捕获模式不同，会清除旧图并且重新捕获；正常模式不变时，不会因为请求或者序列变长而重新捕获
 
         raw_bs = forward_batch.batch_size
 
         if is_ragged:
-            raw_num_token = ragged_layout.graph_num_tokens
-            graph_size_key = self._ragged_graph_num_tokens(raw_num_token)
-            assert graph_size_key == ragged_layout.graph_num_tokens, (
+            raw_num_token = ragged_layout.graph_num_tokens # 但是这个已经是上游 planner 自己选好的图档为的 token 个数了，不是原始的
+            graph_size_key = self._ragged_graph_num_tokens(raw_num_token) # 往上取
+            assert graph_size_key == ragged_layout.graph_num_tokens, ( # 其实上游planner传递过来的已经是选好的图档位了，这里是做一次严格再查校验
                 f"ragged verify tier mismatch: runner tier {graph_size_key} != "
                 f"layout graph_num_tokens {ragged_layout.graph_num_tokens}"
-            )
+            ) # 接下来，这个token档位的图，要准备多少个请求槽位； 见捕获的逻辑; 至少要大于 token 个数才行,是反向的思路，不知道每个 request 的 token分布，或者适应任何 request 的任何分布，从最少要多少个 request 角度想；
             bs = self._ragged_capture_slots(graph_size_key)
-            assert bs >= raw_bs, (
+            assert bs >= raw_bs, ( # 重算出来的 bs 必然大于 raw_bs， 否则对不上，req_pool_indices、seq_lens 等每请求数据都需要槽位
                 f"ragged capture slots {bs} (tier {graph_size_key}) < raw_bs "
                 f"{raw_bs}; the planner must reject this batch before replay"
             )
@@ -1151,9 +1151,9 @@ class DecodeCudaGraphRunner(BaseCudaGraphRunner):
         if (
             not is_ragged
             and self.model_runner.spec_algorithm.is_dflash_family()
-            and self.model_runner.is_draft_worker
-            and forward_batch.input_embeds is not None
-        ):
+            and self.model_runner.is_draft_worker # 草稿模型的 decode # dflash 会（not none），dspark 不会走下面的分支(forward_batch.input_embeds is None)
+            and forward_batch.input_embeds is not None#input_ids 是 token 编号，input_embeds 是这些编号经过 embedding 层后得到的向量; 图外：草稿 mask_ids → target embedding 层 → 本轮 input_embeds
+        ):#模型的 Transformer 层实际从这些向量开始计算。捕获时传给草稿模型的是静态 buffer：每一轮新算出的 embedding，需要写到这块固定地址： copy_ -》 静态 input_embeds buffer -> 图重放;  Draft Transformer
             buffers.input_embeds[:raw_num_token].copy_(forward_batch.input_embeds)
         # Padded tokens aren't read, so skip zeroing. Ragged input_ids arrive
         # from the planner already padded to the tier, invalid slots zeroed.
@@ -1270,8 +1270,8 @@ class DecodeCudaGraphRunner(BaseCudaGraphRunner):
                 )
             else:
                 full_logits = None
-                next_token_logits = (
-                    output.next_token_logits[: self.raw_num_token]
+                next_token_logits = ( # 本来以为这里是丢掉非真实token，不取padding的token；但是发现
+                    output.next_token_logits[: self.raw_num_token]#ragged的raw_num_token 已经是 token 档位，所以这里不会自动去掉全部 padding。
                     if output.next_token_logits is not None
                     else None
                 )

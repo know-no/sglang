@@ -1,0 +1,401 @@
+
+
+
+
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="先建立 draft/target/verify/accept 共同坐标，再分别追踪 EAGLE、DFlash、DSpark 和其他算法。">
+  <link rel="icon" href="data:,">
+  <title>Speculative Decoding 全家族 · 投机解码专题</title>
+  <link rel="stylesheet" href="assets/css/specforge-course.css">
+  <link rel="stylesheet" href="assets/css/labs.css">
+  <link rel="stylesheet" href="assets/css/print.css">
+</head>
+<body class="sf-course-page sf-section-index" data-root-url="index.html"
+      data-nav-open="false" data-nav-pinned="false"
+data-section-id="speculative"      style="--page-accent: var(--domain-speculative, var(--domain-entry))">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+
+  <div class="sf-shell">
+    <div class="sf-navigation">
+      <nav class="sf-rail" aria-label="课程工具">
+        <button class="sf-rail__button sf-rail__menu" type="button" data-nav-toggle aria-controls="course-navigation" aria-expanded="false">
+          <span aria-hidden="true">☰</span><span class="sr-only">打开课程目录</span>
+        </button>
+        <a class="sf-rail__brand" href="index.html" aria-label="回到 SGLang 课程地图">S</a>
+        <div class="sf-rail__spacer"></div>
+        <button class="sf-rail__button" type="button" data-search-open aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span class="sr-only">搜索课程</span></button>
+        <button class="sf-rail__button" type="button" data-theme-toggle><span aria-hidden="true">◐</span><span class="sr-only" data-theme-label>深色</span></button>
+      </nav>
+
+      <aside class="sf-drawer" id="course-navigation" aria-label="全部课程目录">
+        <header class="sf-drawer__head">
+          <div><p class="sf-drawer__eyebrow">SGLang source course</p><a href="index.html">投机解码专题</a></div>
+          <button class="sf-icon-button" type="button" data-nav-close aria-label="关闭课程目录">×</button>
+        </header>
+        <div class="sf-drawer__tools">
+          <button class="sf-button sf-button--quiet" type="button" data-search-open><span aria-hidden="true">⌕</span> 搜索</button>
+          <button class="sf-button sf-button--quiet" type="button" data-theme-toggle><span aria-hidden="true">◐</span> <span data-theme-label>深色</span></button>
+          <button class="sf-button sf-button--quiet sf-drawer__pin" type="button" data-nav-pin aria-pressed="false"><span aria-hidden="true">⌖</span> <span data-nav-pin-label>固定目录</span></button>
+        </div>
+        <p class="sf-drawer__context"><b>Speculative Decoding 全家族</b></p>
+        <nav class="sf-drawer__tree" aria-label="全部章节"><div class="sf-course-tree">
+      <details class="sf-course-tree__section" open>
+        <summary><span class="sf-course-tree__number">01</span><span>Speculative Decoding 全家族</span></summary>
+        <ul class="sf-course-tree__children sf-course-tree__children--section">
+<li class="sf-course-tree__overview"><a href="index.html" data-course-link data-chapter-id="speculative"
+     data-search-title="Speculative Decoding 全家族" data-search-section="Speculative Decoding 全家族"
+aria-current="page">Speculative Decoding 全家族</a></li><li><a href="common-contract.html" data-course-link data-chapter-id="spec-common-contract"
+     data-search-title="Draft 只提案：共同 worker 合同与四个长度" data-search-section="Speculative Decoding 全家族"
+data-search-summary="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。">Draft 只提案：共同 worker 合同与四个长度</a></li><li><a href="eagle-tree.html" data-course-link data-chapter-id="eagle-tree"
+     data-search-title="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask" data-search-section="Speculative Decoding 全家族"
+data-search-summary="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。">EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a></li><li><a href="dflash-block.html" data-course-link data-chapter-id="dflash-block"
+     data-search-title="DFlash fixed-block draft、hidden injection 与 compact cache" data-search-section="Speculative Decoding 全家族"
+data-search-summary="追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。">DFlash fixed-block draft、hidden injection 与 compact cache</a></li><li><a href="dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"
+     data-search-title="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer" data-search-section="Speculative Decoding 全家族"
+data-search-summary="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。">DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a></li><li><a href="dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"
+     data-search-title="DSpark confidence、history、per-step budget 与 ragged layout" data-search-section="Speculative Decoding 全家族"
+data-search-summary="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。">DSpark confidence、history、per-step budget 与 ragged layout</a></li><li><a href="dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"
+     data-search-title="DSpark Target verify、accept/finalize 与 KV commit/reclaim" data-search-section="Speculative Decoding 全家族"
+data-search-summary="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。">DSpark Target verify、accept/finalize 与 KV commit/reclaim</a></li><li><a href="dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"
+     data-search-title="DSpark folded fast path、capture/replay 与 overlap" data-search-section="Speculative Decoding 全家族"
+data-search-summary="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。">DSpark folded fast path、capture/replay 与 overlap</a></li><li><a href="boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"
+     data-search-title="Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec" data-search-section="Speculative Decoding 全家族"
+data-search-summary="用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。">Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a></li>        </ul>
+      </details>
+  </div></nav>
+      </aside>
+    </div>
+
+    <button class="sf-nav-backdrop" type="button" data-nav-backdrop aria-label="关闭课程目录"></button>
+
+    <div class="sf-main-frame">
+      <main class="sf-main" id="main-content" tabindex="-1">
+        <div class="sf-page-grid">
+          <div class="sf-content-column">
+
+  <header class="sf-hero">
+    <p class="sf-hero__eyebrow">Subsystem dissection</p>
+    <h1>Speculative Decoding 全家族</h1>
+<p class="sf-hero__lead">先建立 draft/target/verify/accept 共同坐标，再分别追踪 EAGLE、DFlash、DSpark 和其他算法。</p>    <div class="sf-evidence-strip">
+<span><strong>源码版本</strong> f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</span><span><strong>模块作用</strong> 先建立 draft/target/verify/accept 共同坐标，再分别追踪 EAGLE、DFlash、DSpark 和其他算法。</span>    </div>
+    <div class="sf-hero__actions">
+<a class="sf-button" href="common-contract.html">进入第一章 →</a>      <button class="sf-button sf-button--quiet" type="button" data-search-open>在课程中搜索</button>
+    </div>
+  </header>
+
+
+            <nav class="sf-hero__actions" aria-label="关联阅读入口" data-repository-companion><a href="../index.html">投机可视化总入口</a></nav>
+<details class="sf-source-details"><summary>版本与验证范围</summary><p>保留原投机解码资料与核对日期。页面重建与链接检查不增加 GPU 或端到端验证证据。</p></details>
+
+<details class="sf-mobile-toc"><summary>本页目录</summary><ol><li><a href="#subsystem-overview">子系统三视角总图</a></li><li><a href="#subsystem-map-flow">投机解码总流程</a></li><li><a href="#subsystem-map-interactions">跨子系统交互</a></li><li><a href="#subsystem-map-hierarchy">架构层级 / 所有权</a></li><li><a href="#section-lessons">机制路线</a></li></ol></details>
+  
+
+  <section class="sf-orientation" aria-label="本模块学习边界">
+    <div><b>Why this subsystem exists</b><span>解释草稿提案怎样进入 target verify，以及接受结果如何改变输出与两侧 KV frontier。</span></div>
+    <div><b>Learning outcome</b><span>能独立追踪 EAGLE、DFlash、DSpark，并指出它们真正共享和不共享的合同。</span></div>
+  </section>
+
+  <section class="sf-subsystem-overview" id="subsystem-overview" aria-labelledby="subsystem-overview-title">
+    <header class="sf-overview-head sf-subsystem-overview__head">
+      <p class="sf-overview-head__eyebrow">Subsystem visual atlas</p>
+      <h2 id="subsystem-overview-title">先用三张总图建立子系统坐标，再进入机制路线</h2>
+      <p>先用共同 proposal → target verify → accept → KV finalize 主线固定四个长度与两个 frontier；再看它如何改写普通 Scheduler / ModelRunner / Attention，最后把共享 worker 合同与算法专属组件分层。</p>
+    </header>
+
+    <nav class="sf-subsystem-lenses" aria-label="三种子系统总览视角">
+        <a href="#subsystem-map-flow" data-lens="flow">
+          <small>01 · Proposal-to-commit flow</small>
+          <b>投机解码总流程</b>
+          <span>Draft 的 proposal、Target 的 verified、accept 的 emitted 和 KV committed 为什么必须分开？</span>
+        </a>
+        <a href="#subsystem-map-interactions" data-lens="interactions">
+          <small>02 · Runtime injection points</small>
+          <b>跨子系统交互</b>
+          <span>composite worker 取得哪些职责，又必须把哪些状态交还 Scheduler 与 BatchResultProcessor？</span>
+        </a>
+        <a href="#subsystem-map-hierarchy" data-lens="hierarchy">
+          <small>03 · Shared contract vs algorithms</small>
+          <b>架构层级 / 所有权</b>
+          <span>Algorithm registry、BaseSpecWorker、SpecInput、具体 worker、执行 substrate 与 KV state 分别拥有什么？</span>
+        </a>
+    </nav>
+
+    <div class="sf-subsystem-maps">
+        <article class="sf-subsystem-map" id="subsystem-map-flow" data-lens="flow">
+          <header class="sf-subsystem-map__head">
+            <div>
+              <p>01 · Proposal-to-commit flow</p>
+              <h3>候选在哪里提出、由谁验证、何时接受，两侧 KV frontier 怎样前进</h3>
+            </div>
+            <p><b>这张图回答：</b>Draft 的 proposal、Target 的 verified、accept 的 emitted 和 KV committed 为什么必须分开？</p>
+          </header>
+
+          <figure class="diagram-frame" data-diagram-frame data-diagram-kind="code">
+            <div class="diagram-toolbar">
+              <span class="diagram-toolbar__identity"><b>流程大图</b><span>候选在哪里提出、由谁验证、何时接受，两侧 KV frontier 怎样前进</span></span>
+              <span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span>
+              <button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button>
+            </div>
+            <div class="diagram-legend" aria-label="图内语义色图例">
+              <span class="diagram-legend__item" data-tone="blue">入口 / 控制</span>
+              <span class="diagram-legend__item" data-tone="orange">调度 / 决策</span>
+              <span class="diagram-legend__item" data-tone="purple">模型 / 设备执行</span>
+              <span class="diagram-legend__item" data-tone="green">数据 / 持久状态</span>
+              <span class="diagram-legend__item" data-tone="cyan">进程 / 分布式交接</span>
+              <span class="diagram-legend__item" data-tone="pink">投机分支</span>
+              <span class="diagram-legend__item" data-tone="yellow">工程 / 证据</span>
+            </div>
+            <div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="候选在哪里提出、由谁验证、何时接受，两侧 KV frontier 怎样前进阅读区，可横向滚动">
+              <div class="diagram-frame__canvas"><pre class="mermaid" aria-label="候选在哪里提出、由谁验证、何时接受，两侧 KV frontier 怎样前进">flowchart LR
+  INIT[Scheduler init&lt;br/&gt;target TpModelWorker] --&gt; FACT[SpeculativeAlgorithm.create_worker]
+  FACT --&gt; COMP[composite model_worker&lt;br/&gt;target + draft]
+  COMP --&gt; PF[Target prefill&lt;br/&gt;hidden / bootstrap seed]
+  PF --&gt; PREP[spec_prepare_for_decode&lt;br/&gt;reserve verify positions]
+  PREP --&gt; PROP[Draft proposal&lt;br/&gt;EAGLE tree / DFlash block / DSpark block]
+  PROP --&gt; LAYOUT[verify input / layout&lt;br/&gt;mask / positions / ragged tier]
+  LAYOUT --&gt; VERIFY[Target TARGET_VERIFY&lt;br/&gt;logits + hidden]
+  VERIFY --&gt; ACCEPT[accept / finalize&lt;br/&gt;accepted path + bonus]
+  ACCEPT --&gt; REPAIR[算法专属修复&lt;br/&gt;draft_extend / hidden → Draft KV]
+  ACCEPT --&gt; RET[GenerationBatchResult&lt;br/&gt;tokens / accept_lens / new_seq_lens]
+  REPAIR --&gt; RET
+  RET --&gt; CPU[_resolve_spec_v2_tokens&lt;br/&gt;padded → per-Req lists]
+  CPU --&gt; COMMIT[Req.output_ids / kv_committed_len&lt;br/&gt;reclaim rejected tail]
+  REPAIR --&gt;|next_draft_input / anchor| PROP
+  COMMIT --&gt;|next ScheduleBatch| PREP</pre></div>
+            </div>
+            <figcaption><b>读图结论：</b>Draft 只提出候选；Target verify 与 accept 决定可输出 token。EAGLE、DFlash、DSpark 的 Draft 修复不同，NGram / Frozen-KV 等边界也不能继承双 KV 假设。</figcaption>
+          </figure>
+
+            <nav class="sf-subsystem-map__routes" aria-label="从投机解码总流程下钻机制章节">
+              <span>图中节点下钻</span>
+              <div>
+                  <a href="common-contract.html" data-course-link data-chapter-id="spec-common-contract"><small>01</small>Draft 只提案：共同 worker 合同与四个长度</a>
+                  <a href="eagle-tree.html" data-course-link data-chapter-id="eagle-tree"><small>02</small>EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a>
+                  <a href="dflash-block.html" data-course-link data-chapter-id="dflash-block"><small>03</small>DFlash fixed-block draft、hidden injection 与 compact cache</a>
+                  <a href="dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"><small>04</small>DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a>
+                  <a href="dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"><small>05</small>DSpark confidence、history、per-step budget 与 ragged layout</a>
+                  <a href="dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"><small>06</small>DSpark Target verify、accept/finalize 与 KV commit/reclaim</a>
+                  <a href="dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"><small>07</small>DSpark folded fast path、capture/replay 与 overlap</a>
+                  <a href="boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"><small>08</small>Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a>
+              </div>
+            </nav>
+        </article>
+        <article class="sf-subsystem-map" id="subsystem-map-interactions" data-lens="interactions">
+          <header class="sf-subsystem-map__head">
+            <div>
+              <p>02 · Runtime injection points</p>
+              <h3>Spec 在 Scheduler、runner、Attention/KV、分布式与 overlap 哪里改写普通 decode</h3>
+            </div>
+            <p><b>这张图回答：</b>composite worker 取得哪些职责，又必须把哪些状态交还 Scheduler 与 BatchResultProcessor？</p>
+          </header>
+
+          <figure class="diagram-frame" data-diagram-frame data-diagram-kind="component">
+            <div class="diagram-toolbar">
+              <span class="diagram-toolbar__identity"><b>组件交互图</b><span>Spec 在 Scheduler、runner、Attention/KV、分布式与 overlap 哪里改写普通 decode</span></span>
+              <span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span>
+              <button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button>
+            </div>
+            <div class="diagram-legend" aria-label="图内语义色图例">
+              <span class="diagram-legend__item" data-tone="blue">入口 / 控制</span>
+              <span class="diagram-legend__item" data-tone="orange">调度 / 决策</span>
+              <span class="diagram-legend__item" data-tone="purple">模型 / 设备执行</span>
+              <span class="diagram-legend__item" data-tone="green">数据 / 持久状态</span>
+              <span class="diagram-legend__item" data-tone="cyan">进程 / 分布式交接</span>
+              <span class="diagram-legend__item" data-tone="pink">投机分支</span>
+              <span class="diagram-legend__item" data-tone="yellow">工程 / 证据</span>
+            </div>
+            <div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="Spec 在 Scheduler、runner、Attention/KV、分布式与 overlap 哪里改写普通 decode阅读区，可横向滚动">
+              <div class="diagram-frame__canvas"><pre class="mermaid" aria-label="Spec 在 Scheduler、runner、Attention/KV、分布式与 overlap 哪里改写普通 decode">flowchart TB
+  SCHED[Scheduler&lt;br/&gt;Req / ScheduleBatch / result queue] --&gt;|model_worker replaced| COMP[Spec composite worker]
+  SCHED --&gt;|spec_prepare / reserve / spec_info| KV[mapping + Target-Draft KV frontiers]
+  DRAFT[Draft model / CPU NGram] --&gt;|tokens / hidden / confidence| COMP
+  COMP --&gt;|TARGET_VERIFY ForwardBatch| TARGET[Target ModelRunner]
+  TARGET --&gt; ATTN[Attention backend&lt;br/&gt;custom mask / ragged metadata]
+  ATTN --&gt; KV
+  GRAM[Grammar + Sampler] --&gt;|mask / adjustment / fold guard| COMP
+  DIST[TP / DP / PP / PD] --&gt;|rank consistency / idle participation / tier sync| COMP
+  OVER[overlap streams + FutureMap] &lt;--&gt;|new_seq_lens / confidence relay| COMP
+  COMP --&gt;|GenerationBatchResult + accept_lens| RESULT[BatchResultProcessor]
+  RESULT --&gt;|Req commit / stream output| SCHED
+  OBS[metrics / traces] -. accept length / timing / boundary evidence .-&gt; COMP</pre></div>
+            </div>
+            <figcaption><b>读图结论：</b>Spec 通过替换 model_worker、准备 verify layout、调用 Target ModelRunner、维护双 frontier 并返回 accept_lens 改写 decode；Req 生命周期与最终输出 commit 仍回到 Scheduler 主线。</figcaption>
+          </figure>
+
+            <nav class="sf-subsystem-map__routes" aria-label="从跨子系统交互下钻机制章节">
+              <span>图中节点下钻</span>
+              <div>
+                  <a href="common-contract.html" data-course-link data-chapter-id="spec-common-contract"><small>01</small>Draft 只提案：共同 worker 合同与四个长度</a>
+                  <a href="eagle-tree.html" data-course-link data-chapter-id="eagle-tree"><small>02</small>EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a>
+                  <a href="dflash-block.html" data-course-link data-chapter-id="dflash-block"><small>03</small>DFlash fixed-block draft、hidden injection 与 compact cache</a>
+                  <a href="dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"><small>05</small>DSpark confidence、history、per-step budget 与 ragged layout</a>
+                  <a href="dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"><small>06</small>DSpark Target verify、accept/finalize 与 KV commit/reclaim</a>
+                  <a href="dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"><small>07</small>DSpark folded fast path、capture/replay 与 overlap</a>
+                  <a href="boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"><small>08</small>Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a>
+              </div>
+            </nav>
+        </article>
+        <article class="sf-subsystem-map" id="subsystem-map-hierarchy" data-lens="hierarchy">
+          <header class="sf-subsystem-map__head">
+            <div>
+              <p>03 · Shared contract vs algorithms</p>
+              <h3>真正共享的是哪一层合同，差异又从哪一个 concrete worker 开始</h3>
+            </div>
+            <p><b>这张图回答：</b>Algorithm registry、BaseSpecWorker、SpecInput、具体 worker、执行 substrate 与 KV state 分别拥有什么？</p>
+          </header>
+
+          <figure class="diagram-frame" data-diagram-frame data-diagram-kind="architecture">
+            <div class="diagram-toolbar">
+              <span class="diagram-toolbar__identity"><b>架构层级图</b><span>真正共享的是哪一层合同，差异又从哪一个 concrete worker 开始</span></span>
+              <span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span>
+              <button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button>
+            </div>
+            <div class="diagram-legend" aria-label="图内语义色图例">
+              <span class="diagram-legend__item" data-tone="blue">入口 / 控制</span>
+              <span class="diagram-legend__item" data-tone="orange">调度 / 决策</span>
+              <span class="diagram-legend__item" data-tone="purple">模型 / 设备执行</span>
+              <span class="diagram-legend__item" data-tone="green">数据 / 持久状态</span>
+              <span class="diagram-legend__item" data-tone="cyan">进程 / 分布式交接</span>
+              <span class="diagram-legend__item" data-tone="pink">投机分支</span>
+              <span class="diagram-legend__item" data-tone="yellow">工程 / 证据</span>
+            </div>
+            <div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="真正共享的是哪一层合同，差异又从哪一个 concrete worker 开始阅读区，可横向滚动">
+              <div class="diagram-frame__canvas"><pre class="mermaid" aria-label="真正共享的是哪一层合同，差异又从哪一个 concrete worker 开始">flowchart TB
+  FACT[L0 算法选择&lt;br/&gt;SpeculativeAlgorithm + create_worker] --&gt; ROOT[L1 Scheduler.model_worker&lt;br/&gt;BaseSpecWorker composite owner]
+  SCHED[Scheduler&lt;br/&gt;Req / ScheduleBatch / KV lifecycle] --&gt; ROOT
+  ROOT --&gt; CONTRACT[L2 共同合同&lt;br/&gt;SpecInput / verify layout / accept_lens / next_draft_input]
+  CONTRACT --&gt; E[L3 EAGLE / EAGLE3&lt;br/&gt;tree / retrieve / draft_extend]
+  CONTRACT --&gt; D[L3 DFlash&lt;br/&gt;fixed block / target hidden injection]
+  CONTRACT --&gt; S[L3 DSpark&lt;br/&gt;proposer / planner / verifier / injector]
+  CONTRACT --&gt; O[L3 Frozen / Standalone / NGram / Custom]
+  E --&gt; EXEC[L4 执行 substrate&lt;br/&gt;target-draft ModelRunner / attention backend]
+  D --&gt; EXEC
+  S --&gt; EXEC
+  O --&gt; EXEC
+  EXEC --&gt; STATE[L5 状态与内存&lt;br/&gt;req_to_token / Target-Draft KV / masks / relay]
+  STATE --&gt; RETURN[L6 返回与提交&lt;br/&gt;GenerationBatchResult → BatchResultProcessor]
+  RETURN --&gt; SCHED</pre></div>
+            </div>
+            <figcaption><b>读图结论：</b>Scheduler 持有 composite model_worker；共同层只约束 SpecInput、verify layout、accept_lens 与 next_draft_input。proposal 几何、Draft 修复和 KV 语义从具体算法 worker 开始分叉。</figcaption>
+          </figure>
+
+            <nav class="sf-subsystem-map__routes" aria-label="从架构层级 / 所有权下钻机制章节">
+              <span>图中节点下钻</span>
+              <div>
+                  <a href="common-contract.html" data-course-link data-chapter-id="spec-common-contract"><small>01</small>Draft 只提案：共同 worker 合同与四个长度</a>
+                  <a href="eagle-tree.html" data-course-link data-chapter-id="eagle-tree"><small>02</small>EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a>
+                  <a href="dflash-block.html" data-course-link data-chapter-id="dflash-block"><small>03</small>DFlash fixed-block draft、hidden injection 与 compact cache</a>
+                  <a href="dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"><small>04</small>DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a>
+                  <a href="dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"><small>05</small>DSpark confidence、history、per-step budget 与 ragged layout</a>
+                  <a href="dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"><small>06</small>DSpark Target verify、accept/finalize 与 KV commit/reclaim</a>
+                  <a href="dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"><small>07</small>DSpark folded fast path、capture/replay 与 overlap</a>
+                  <a href="boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"><small>08</small>Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a>
+              </div>
+            </nav>
+        </article>
+    </div>
+
+      <aside class="sf-subsystem-evidence" aria-label="总图源码证据入口">
+        <b>原核对快照的总图证据入口</b>
+        <ul>
+<li><code>python/sglang/srt/speculative/spec_info.py</code><span>SpeculativeAlgorithm / create_worker(...)</span><em>算法注册、能力 guard 与 concrete worker 工厂。</em></li><li><code>python/sglang/srt/speculative/base_spec_worker.py</code><span>BaseSpecWorker</span><em>Scheduler 持有的共同 composite worker 边界。</em></li><li><code>python/sglang/srt/speculative/eagle_worker_common.py</code><span>build_eagle_verify_input(...) / run_eagle_verify(...)</span><em>EAGLE verify 输入与 Target verify 的共享实现入口。</em></li><li><code>python/sglang/srt/speculative/dspark_components/dspark_verify.py</code><span>TargetVerifyExecutor / accept_and_finalize(...)</span><em>DSpark 的 Target verify、接受和 finalize 具体 owner。</em></li>        </ul>
+        <p>这里给定位入口；具体 guard、状态写入、返回对象与下一消费者在下方机制章逐一审计。</p>
+      </aside>
+  </section>
+
+    <section class="sf-overview-section" id="section-lessons">
+      <header class="sf-overview-head">
+        <p class="sf-overview-head__eyebrow">Mechanism lessons</p>
+        <h2>本子系统的机制路线</h2>
+        <p>每页负责一个完整状态交接；页面数量用于保存深度，具体机制可以拥有多个过程实验。</p>
+      </header>
+      <ol class="sf-syllabus">
+          <li class="sf-syllabus__item" style="--row-tone:var(--domain-speculative,var(--page-accent))">
+            <span class="sf-syllabus__number">01 · core</span>
+            <div><h3>Draft 只提案：共同 worker 合同与四个长度</h3></div>
+            <p>区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。</p>
+            <a href="common-contract.html" data-course-link data-chapter-id="spec-common-contract" data-search-title="Draft 只提案：共同 worker 合同与四个长度" data-search-section="Speculative Decoding 全家族" data-search-summary="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。">学习本章 →</a>
+          </li>
+          <li class="sf-syllabus__item" style="--row-tone:var(--domain-speculative,var(--page-accent))">
+            <span class="sf-syllabus__number">02 · core</span>
+            <div><h3>EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</h3></div>
+            <p>展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。</p>
+            <a href="eagle-tree.html" data-course-link data-chapter-id="eagle-tree" data-search-title="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask" data-search-section="Speculative Decoding 全家族" data-search-summary="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。">学习本章 →</a>
+          </li>
+          <li class="sf-syllabus__item" style="--row-tone:var(--domain-speculative,var(--page-accent))">
+            <span class="sf-syllabus__number">03 · core</span>
+            <div><h3>DFlash fixed-block draft、hidden injection 与 compact cache</h3></div>
+            <p>追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。</p>
+            <a href="dflash-block.html" data-course-link data-chapter-id="dflash-block" data-search-title="DFlash fixed-block draft、hidden injection 与 compact cache" data-search-section="Speculative Decoding 全家族" data-search-summary="追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。">学习本章 →</a>
+          </li>
+          <li class="sf-syllabus__item" style="--row-tone:var(--domain-speculative,var(--page-accent))">
+            <span class="sf-syllabus__number">04 · core</span>
+            <div><h3>DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</h3></div>
+            <p>解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。</p>
+            <a href="dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal" data-search-title="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer" data-search-section="Speculative Decoding 全家族" data-search-summary="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。">学习本章 →</a>
+          </li>
+          <li class="sf-syllabus__item" style="--row-tone:var(--domain-speculative,var(--page-accent))">
+            <span class="sf-syllabus__number">05 · core</span>
+            <div><h3>DSpark confidence、history、per-step budget 与 ragged layout</h3></div>
+            <p>用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。</p>
+            <a href="dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout" data-search-title="DSpark confidence、history、per-step budget 与 ragged layout" data-search-section="Speculative Decoding 全家族" data-search-summary="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。">学习本章 →</a>
+          </li>
+          <li class="sf-syllabus__item" style="--row-tone:var(--domain-speculative,var(--page-accent))">
+            <span class="sf-syllabus__number">06 · core</span>
+            <div><h3>DSpark Target verify、accept/finalize 与 KV commit/reclaim</h3></div>
+            <p>追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。</p>
+            <a href="dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv" data-search-title="DSpark Target verify、accept/finalize 与 KV commit/reclaim" data-search-section="Speculative Decoding 全家族" data-search-summary="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。">学习本章 →</a>
+          </li>
+          <li class="sf-syllabus__item" style="--row-tone:var(--domain-speculative,var(--page-accent))">
+            <span class="sf-syllabus__number">07 · core</span>
+            <div><h3>DSpark folded fast path、capture/replay 与 overlap</h3></div>
+            <p>展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。</p>
+            <a href="dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap" data-search-title="DSpark folded fast path、capture/replay 与 overlap" data-search-section="Speculative Decoding 全家族" data-search-summary="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。">学习本章 →</a>
+          </li>
+          <li class="sf-syllabus__item" style="--row-tone:var(--domain-speculative,var(--page-accent))">
+            <span class="sf-syllabus__number">08 · extended</span>
+            <div><h3>Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</h3></div>
+            <p>用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。</p>
+            <a href="boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix" data-search-title="Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec" data-search-section="Speculative Decoding 全家族" data-search-summary="用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。">学习本章 →</a>
+          </li>
+      </ol>
+    </section>
+
+
+            <footer class="sf-footer"><span>投机解码源码专题</span><span>源码快照 f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</span><span>纯静态 · 本地依赖 · 可离线分享</span></footer>
+            <p class="print-only">投机解码源码专题 · Speculative Decoding 全家族 · f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</p>
+          </div>
+
+          <aside class="sf-page-toc" aria-label="本页目录">
+            <p class="sf-page-toc__title">On this page</p>
+            <ol data-page-toc-list><li><a href="#subsystem-overview" data-level="2">子系统三视角总图</a></li><li><a href="#subsystem-map-flow" data-level="3">投机解码总流程</a></li><li><a href="#subsystem-map-interactions" data-level="3">跨子系统交互</a></li><li><a href="#subsystem-map-hierarchy" data-level="3">架构层级 / 所有权</a></li><li><a href="#section-lessons" data-level="2">机制路线</a></li></ol>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="search-dialog" id="course-search-dialog" data-search-dialog aria-labelledby="course-search-title">
+    <div class="search-dialog__head"><strong id="course-search-title">搜索课程</strong><button class="sf-icon-button" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+    <form class="search-dialog__form" data-search-form role="search"><label class="sr-only" for="course-search-input">搜索对象、方法、状态或章节</label><input id="course-search-input" type="search" data-search-input autocomplete="off" placeholder="例如：running_batch、ForwardBatch、TARGET_VERIFY"><button class="sf-button" type="submit">搜索</button></form>
+    <p class="search-dialog__status" data-search-status aria-live="polite"></p><ol class="search-results" data-search-results></ol>
+  </dialog>
+
+  <dialog class="diagram-viewer" id="diagram-viewer-dialog" data-diagram-dialog aria-labelledby="diagram-viewer-title">
+    <div class="diagram-viewer__head"><div><strong id="diagram-viewer-title" data-diagram-title>图解沉浸阅读</strong> <span class="diagram-viewer__zoom" data-diagram-zoom>100%</span></div><div class="diagram-viewer__tools"><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-in" aria-label="放大">＋</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-out" aria-label="缩小">−</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="fit">看全图</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="reset">100%</button><button class="sf-button" type="button" data-diagram-action="close">关闭 ×</button></div></div>
+    <div class="diagram-viewer__viewport" data-diagram-viewport><div class="diagram-viewer__canvas mermaid" data-diagram-canvas></div></div>
+  </dialog>
+
+<script src="assets/data/search-index.js" defer></script><script src="assets/vendor/mermaid.min.js" defer></script>  <script src="assets/js/site-shell.js" defer></script>
+  <script src="assets/js/toc-search.js" defer></script>
+  <script src="assets/js/diagram-viewer.js" defer></script>
+  <script src="assets/js/source-microscope.js" defer></script>
+  <script src="assets/js/labs.js" defer></script>
+  <script src="assets/js/lesson-components.js" defer></script>
+</body>
+</html>

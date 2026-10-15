@@ -1,0 +1,2736 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Draft proposal → Target verify → accept → KV commit">
+  <link rel="icon" href="data:,">
+  <title>SGLang dSpark 单轮 Decode：Draft → Target Verify → Accept → Rolling Anchor · 投机解码专题</title>
+  <link rel="stylesheet" href="course/assets/css/specforge-course.css">
+  <link rel="stylesheet" href="course/assets/css/labs.css">
+  <link rel="stylesheet" href="course/assets/css/print.css">
+  
+  <!-- Generated from notes/speculative/sglang-dspark-single-round-decode.md by notes/speculative/course/build.py. -->
+  <link rel="stylesheet" href="course/assets/notes/navigation.css">
+  <link rel="stylesheet" href="course/assets/notes/syntax.css">
+  
+
+</head>
+<body class="sf-course-page sf-note-page" data-root-url="visualizations/sglang-course-v2/index.html"
+      data-nav-open="false" data-nav-pinned="false"
+      data-page-id="note-sglang-dspark-single-round-decode" data-chapter-id="note-sglang-dspark-single-round-decode"
+      data-section-id="note"
+      
+      style="--page-accent: var(--domain-speculative, var(--domain-entry))">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+
+  <div class="sf-shell">
+    <div class="sf-navigation">
+      <nav class="sf-rail" aria-label="课程工具">
+        <button class="sf-rail__button sf-rail__menu" type="button" data-nav-toggle aria-controls="course-navigation" aria-expanded="false">
+          <span aria-hidden="true">☰</span><span class="sr-only">打开课程目录</span>
+        </button>
+        <a class="sf-rail__brand" href="visualizations/sglang-course-v2/index.html" aria-label="回到 SGLang 课程地图">S</a>
+        <div class="sf-rail__spacer"></div>
+        <button class="sf-rail__button" type="button" data-search-open aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span class="sr-only">搜索课程</span></button>
+        <button class="sf-rail__button" type="button" data-theme-toggle><span aria-hidden="true">◐</span><span class="sr-only" data-theme-label>深色</span></button>
+      </nav>
+
+      <aside class="sf-drawer" id="course-navigation" aria-label="全部课程目录">
+        <header class="sf-drawer__head">
+          <div><p class="sf-drawer__eyebrow">SGLang source course</p><a href="visualizations/sglang-course-v2/index.html">投机解码专题</a></div>
+          <button class="sf-icon-button" type="button" data-nav-close aria-label="关闭课程目录">×</button>
+        </header>
+        <div class="sf-drawer__tools">
+          <button class="sf-button sf-button--quiet" type="button" data-search-open><span aria-hidden="true">⌕</span> 搜索</button>
+          <button class="sf-button sf-button--quiet" type="button" data-theme-toggle><span aria-hidden="true">◐</span> <span data-theme-label>深色</span></button>
+          <button class="sf-button sf-button--quiet sf-drawer__pin" type="button" data-nav-pin aria-pressed="false"><span aria-hidden="true">⌖</span> <span data-nav-pin-label>固定目录</span></button>
+        </div>
+        <p class="sf-drawer__context"><b>深入源码笔记</b><span>SGLang dSpark 单轮 Decode：Draft → Target Verify → Accept → Rolling Anchor</span></p>
+        <nav class="sf-drawer__tree" aria-label="全部章节"><div class="sf-course-tree">
+    
+      <details class="sf-course-tree__section">
+        <summary><span class="sf-course-tree__number">01</span><span>Speculative Decoding 全家族</span></summary>
+        <ul class="sf-course-tree__children sf-course-tree__children--section">
+          <li class="sf-course-tree__overview"><a href="visualizations/sglang-course-v2/index.html" data-course-link data-chapter-id="speculative"
+     data-search-title="Speculative Decoding 全家族" data-search-section="Speculative Decoding 全家族"
+     
+     
+     >Speculative Decoding 全家族</a></li>
+          <li><a href="visualizations/sglang-course-v2/common-contract.html" data-course-link data-chapter-id="spec-common-contract"
+     data-search-title="Draft 只提案：共同 worker 合同与四个长度" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。"
+     
+     >Draft 只提案：共同 worker 合同与四个长度</a></li><li><a href="visualizations/sglang-course-v2/eagle-tree.html" data-course-link data-chapter-id="eagle-tree"
+     data-search-title="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。"
+     
+     >EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a></li><li><a href="visualizations/sglang-course-v2/dflash-block.html" data-course-link data-chapter-id="dflash-block"
+     data-search-title="DFlash fixed-block draft、hidden injection 与 compact cache" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。"
+     
+     >DFlash fixed-block draft、hidden injection 与 compact cache</a></li><li><a href="visualizations/sglang-course-v2/dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"
+     data-search-title="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。"
+     
+     >DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a></li><li><a href="visualizations/sglang-course-v2/dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"
+     data-search-title="DSpark confidence、history、per-step budget 与 ragged layout" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。"
+     
+     >DSpark confidence、history、per-step budget 与 ragged layout</a></li><li><a href="visualizations/sglang-course-v2/dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"
+     data-search-title="DSpark Target verify、accept/finalize 与 KV commit/reclaim" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。"
+     
+     >DSpark Target verify、accept/finalize 与 KV commit/reclaim</a></li><li><a href="visualizations/sglang-course-v2/dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"
+     data-search-title="DSpark folded fast path、capture/replay 与 overlap" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。"
+     
+     >DSpark folded fast path、capture/replay 与 overlap</a></li><li><a href="visualizations/sglang-course-v2/boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"
+     data-search-title="Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。"
+     
+     >Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a></li>
+          
+        </ul>
+      </details>
+    
+  </div></nav>
+      </aside>
+    </div>
+
+    <button class="sf-nav-backdrop" type="button" data-nav-backdrop aria-label="关闭课程目录"></button>
+
+    <div class="sf-main-frame">
+      <main class="sf-main sf-main--wide" id="main-content" tabindex="-1">
+        <div class="sf-page-grid">
+          <div class="sf-content-column">
+            
+              <nav aria-label="面包屑"><ol class="sf-breadcrumbs">
+                <li><a href="visualizations/sglang-course-v2/index.html">投机解码专题</a></li><li><a href="../index.html">SGLang 全景图</a></li><li><span aria-current="page">SGLang dSpark 单轮 Decode：Draft → Target Verify → Accept → Rolling Anchor</span></li>
+              </ol></nav>
+            
+
+            
+  <header class="sf-note-meta">
+    <p class="sf-hero__eyebrow">投机解码 · 深入源码与专题笔记</p>
+    <nav class="sf-hero__actions" aria-label="笔记操作"><a href="index.html">主题阅读顺序</a><a href="sglang-dspark-single-round-decode.md" download>下载 Markdown 源文</a></nav>
+  </header>
+
+
+            <nav class="sf-hero__actions" aria-label="关联阅读入口" data-repository-companion><a href="../index.html">SGLang 全景图</a></nav>
+            
+
+            
+
+            
+            <details class="sf-mobile-toc"><summary>本页目录</summary><ol><li><a href="#1-读完本文应先掌握的结论">1. 读完本文应先掌握的结论</a></li><li><a href="#2-先固定符号量纲和坐标">2. 先固定符号、量纲和坐标</a></li><li><a href="#3-组件架构关系">3. 组件架构关系</a></li><li><a href="#4-_forward_decode-的主调用链">4. _forward_decode() 的主调用链</a></li><li><a href="#5-本轮入口状态和-verifywindow">5. 本轮入口状态和 VerifyWindow</a></li><li><a href="#6-draftblockproposer一次并行-transformer--串行-markov-采样">6. DraftBlockProposer：一次并行 Transformer + 串行 Markov 采样</a></li><li><a href="#7-从-draftproposal-到-target-candidates">7. 从 DraftProposal 到 Target candidates</a></li><li><a href="#8-target-verify两条入口一个统一结果">8. Target Verify：两条入口，一个统一结果</a></li><li><a href="#9-accept从-target-logits-得到-correct_len-与-bonus">9. Accept：从 Target logits 得到 correct_len 与 bonus</a></li><li><a href="#10-finalize-与输出固定缓冲不等于有效-token">10. Finalize 与输出：固定缓冲不等于有效 token</a></li><li><a href="#11-kv-提交写入的是-ya不是-az">11. KV 提交：写入的是 [Y,a]，不是 [a,Z]</a></li><li><a href="#12-下一轮状态和-scheduler-交接">12. 下一轮状态和 Scheduler 交接</a></li><li><a href="#13-两轮连续时间线rolling-anchor-如何滚动">13. 两轮连续时间线：rolling anchor 如何滚动</a></li><li><a href="#14-模式与高级边界">14. 模式与高级边界</a></li><li><a href="#15-常见误解检查表">15. 常见误解检查表</a></li><li><a href="#16-源码动作--改变状态--为什么-总结">16. 源码动作 / 改变状态 / 为什么 总结</a></li><li><a href="#17-自测">17. 自测</a></li><li><a href="#18-当前源码索引">18. 当前源码索引</a></li></ol></details>
+
+            <article class="sf-article sf-note-article" data-toc-source><h1 id="sglang-dspark-单轮-decodedraft--target-verify--accept--rolling-anchor">SGLang dSpark 单轮 Decode：Draft → Target Verify → Accept → Rolling Anchor</h1>
+<blockquote>
+<p>用途：逐对象、逐 Tensor 记录当前 SGLang dSpark V2 一轮 Decode 的完整生命周期，重点解释
+<code>DraftProposal</code>、<code>TargetVerifyResult</code>、<code>AcceptOuts</code>、用户输出、Draft KV 提交和下一轮 anchor
+之间的关系。</p>
+<p>当前源码基线：本地 checkout <code>f01a0c7f97ec</code>，核对日期 2026-08-13。</p>
+<p>验证级别：source-verified、runtime-unvalidated。本文没有在 GPU 上做断点、Tensor dump 或
+性能测量；CUDA Graph、Stream 和 kernel 的描述来自当前静态源码。</p>
+<p>主线假设：CUDA dSpark V2、单请求、dense draft、普通 non-overlap、greedy、无 grammar、
+non-compact。Sampling、COMPACT、CAP_ACCEPT、folded CUDA Graph、DeepSeek-V4 和 DP
+Attention 在改变结论的位置单独标边界。第 7 节为了说明 batch-global confidence budget，
+单独切换到 <code>B=2、gamma=4</code>，并分别展开 overlap/non-overlap；第 8 节继续沿用这组多请求
+COMPACT 例子解释 Target Verify，第 9 节起再回到单请求主例。</p>
+<p>阅读顺序：先读通用外层的
+<a href="sglang-draft-target-verify-lifecycle.html"><code>sglang-draft-target-verify-lifecycle.md</code></a>；专题阅读路线见本目录 <a href="index.html"><code>README.md</code></a>；启动参数、环境变量与迁移约束见
+<a href="sglang-dflash-dspark-startup-args-and-migration.html"><code>sglang-dflash-dspark-startup-args-and-migration.md</code></a>。
+若希望先看图再回到源码证明，可配合
+<a href="sglang-dspark-verify-visual-guide.html"><code>sglang-dspark-verify-visual-guide.md</code></a> 阅读；也可以直接打开
+<a href="visualizations/dspark-verify-step-through.html"><code>dSpark Verify 源码逐步执行讲解器</code></a>，沿真实函数调用链逐步切换候选矩形、
+compact rails、Target forward、scatter、accept、KV commit 和下一轮 anchor。</p>
+</blockquote>
+<p>前置：<a href="sglang-draft-target-verify-lifecycle.html">投机外层生命周期</a>。</p>
+<p>本文是 dSpark 的源码主文：保留 proposal、budget/layout、verify/accept、KV 与两轮 anchor 的完整因果；<a href="sglang-dspark-verify-visual-guide.html">Verify 坐标练习</a> 和交互 HTML 使用这里的状态定义。</p>
+<h2 id="1-读完本文应先掌握的结论">1. 读完本文应先掌握的结论</h2>
+<p>一轮 dSpark Decode 不是“Draft 生成多个 token，Target 选几个，然后把选中的 token 全写入
+KV”这么简单。当前实现的核心是一个滚动 anchor：</p>
+<pre class="codehilite"><code class="language-text">本轮 Target verify 输入： [old_anchor, d1, d2, ..., d_gamma]
+本轮用户输出：            [accepted drafts, new_bonus]
+本轮 Draft KV 提交：       [old_anchor, accepted drafts]
+下一轮 anchor：            new_bonus
+</code></pre>
+<p>若连续接受 <code>k</code> 个 draft，则：</p>
+<pre class="codehilite"><code class="language-text">correct_len  = k
+commit_lens  = k + 1
+new_seq_lens = prefix_lens + k + 1
+</code></pre>
+<p>但 <code>commit_lens=k+1</code> 在两个消费者处代表的 token 内容不同：</p>
+<pre class="codehilite"><code class="language-text">用户有效输出长度 k+1： [d1, ..., dk, bonus]
+Draft KV 提交长度 k+1： [anchor, d1, ..., dk]
+</code></pre>
+<p>两者长度相同、内容错开一位。bonus 本轮只是 Target 预测结果，没有作为 Transformer 输入，
+因此本轮没有自己的 hidden/KV；它到下一轮才作为新 anchor 被处理。</p>
+<h2 id="2-先固定符号量纲和坐标">2. 先固定符号、量纲和坐标</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>符号/字段</th>
+<th>严格含义</th>
+<th style="text-align:right">本文例子</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>B</code></td>
+<td>batch size</td>
+<td style="text-align:right"><code>1</code></td>
+</tr>
+<tr>
+<td><code>gamma</code> / <code>G</code></td>
+<td>每请求 proposal 的 draft token 数</td>
+<td style="text-align:right"><code>4</code></td>
+</tr>
+<tr>
+<td><code>W</code></td>
+<td>Target verify 每请求完整宽度</td>
+<td style="text-align:right"><code>gamma + 1 = 5</code></td>
+</tr>
+<tr>
+<td><code>H_d</code></td>
+<td>dense Draft Transformer hidden size</td>
+<td style="text-align:right"><code>H_d</code></td>
+</tr>
+<tr>
+<td><code>H_aux</code></td>
+<td>Target <code>FULL</code> 捕获的辅助特征宽度，可能拼接多个 target layer</td>
+<td style="text-align:right"><code>H_aux</code></td>
+</tr>
+<tr>
+<td><code>V</code></td>
+<td>target 原始 vocab size</td>
+<td style="text-align:right"><code>V</code></td>
+</tr>
+<tr>
+<td><code>prefix_lens</code></td>
+<td>本轮开始前已经具有有效 KV 的逻辑前缀长度</td>
+<td style="text-align:right"><code>[22]</code></td>
+</tr>
+<tr>
+<td><code>anchor</code></td>
+<td>上一轮输出、但尚未作为输入写入 KV 的 bonus</td>
+<td style="text-align:right"><code>Y</code></td>
+</tr>
+<tr>
+<td><code>draft_tokens</code></td>
+<td>本轮 Draft 提议的 <code>gamma</code> 个 token</td>
+<td style="text-align:right"><code>[a,b,c,d]</code></td>
+</tr>
+<tr>
+<td><code>correct_len</code></td>
+<td>连续接受的 draft 数，不包含 anchor/bonus</td>
+<td style="text-align:right"><code>1</code></td>
+</tr>
+<tr>
+<td><code>commit_lens</code></td>
+<td><code>correct_len + 1</code></td>
+<td style="text-align:right"><code>2</code></td>
+</tr>
+<tr>
+<td><code>bonus</code></td>
+<td>接受前缀后由 Target 分布得到的下一个 token</td>
+<td style="text-align:right"><code>Z</code></td>
+</tr>
+<tr>
+<td><code>new_seq_lens</code></td>
+<td>下一轮开始前的有效 KV 逻辑长度</td>
+<td style="text-align:right"><code>[24]</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>必须始终保持以下量纲关系：</p>
+<pre class="codehilite"><code class="language-text">gamma = 4
+W = verify_num_draft_tokens = gamma + 1 = 5
+
+Draft Transformer block： [anchor, MASK, MASK, MASK]      宽度 4
+Target verify candidates： [anchor, d1, d2, d3, d4]      宽度 5
+</code></pre>
+<p>如果启用 confidence scheduling，还要注意坐标偏移：</p>
+<pre class="codehilite"><code class="language-text">confidence position p  ↔  draft d_(p+1)  ↔  verify column p+1
+verify column 0        ↔  anchor
+</code></pre>
+<p>因此 <code>min_verify_len=1</code> 只保底 anchor，不代表保底验证一个 draft。</p>
+<h2 id="3-组件架构关系">3. 组件架构关系</h2>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart LR
+    S[&quot;Scheduler&lt;br/&gt;ScheduleBatch&quot;] --&gt; W[&quot;DSparkWorkerV2&lt;br/&gt;一轮协调器&quot;]
+    W --&gt; VW[&quot;VerifyWindow&lt;br/&gt;位置与物理 KV slots&quot;]
+    W --&gt; DP[&quot;DraftBlockProposer&quot;]
+    DP --&gt; DM[&quot;Draft Transformer&lt;br/&gt;一次 block forward&quot;]
+    DM --&gt; MH[&quot;LM Head + Markov Head&lt;br/&gt;串行产生 drafts&quot;]
+    MH --&gt; P[&quot;DraftProposal&quot;]
+    P --&gt; PL[&quot;VerifyPlanner&lt;br/&gt;confidence / budget / layout&quot;]
+    PL --&gt; TV[&quot;TargetVerifyExecutor&quot;]
+    TV --&gt; TM[&quot;Target ModelRunner&lt;br/&gt;Eager 或 CUDA Graph&quot;]
+    TM --&gt; R[&quot;TargetVerifyResult&quot;]
+    R --&gt; A[&quot;AcceptGreedy / AcceptSampling&quot;]
+    A --&gt; F[&quot;FinalizeAcceptLens&lt;br/&gt;BuildOutTokens&quot;]
+    F --&gt; K[&quot;TargetHiddenKvInjector&lt;br/&gt;Target hidden → Draft KV&quot;]
+    F --&gt; O[&quot;GenerationBatchResult&lt;br/&gt;用户输出&quot;]
+    F --&gt; N[&quot;next_draft_input&lt;br/&gt;下一轮 anchor&quot;]
+    O --&gt; S
+    N --&gt; S
+">flowchart LR
+    S[&quot;Scheduler&lt;br/&gt;ScheduleBatch&quot;] --&gt; W[&quot;DSparkWorkerV2&lt;br/&gt;一轮协调器&quot;]
+    W --&gt; VW[&quot;VerifyWindow&lt;br/&gt;位置与物理 KV slots&quot;]
+    W --&gt; DP[&quot;DraftBlockProposer&quot;]
+    DP --&gt; DM[&quot;Draft Transformer&lt;br/&gt;一次 block forward&quot;]
+    DM --&gt; MH[&quot;LM Head + Markov Head&lt;br/&gt;串行产生 drafts&quot;]
+    MH --&gt; P[&quot;DraftProposal&quot;]
+    P --&gt; PL[&quot;VerifyPlanner&lt;br/&gt;confidence / budget / layout&quot;]
+    PL --&gt; TV[&quot;TargetVerifyExecutor&quot;]
+    TV --&gt; TM[&quot;Target ModelRunner&lt;br/&gt;Eager 或 CUDA Graph&quot;]
+    TM --&gt; R[&quot;TargetVerifyResult&quot;]
+    R --&gt; A[&quot;AcceptGreedy / AcceptSampling&quot;]
+    A --&gt; F[&quot;FinalizeAcceptLens&lt;br/&gt;BuildOutTokens&quot;]
+    F --&gt; K[&quot;TargetHiddenKvInjector&lt;br/&gt;Target hidden → Draft KV&quot;]
+    F --&gt; O[&quot;GenerationBatchResult&lt;br/&gt;用户输出&quot;]
+    F --&gt; N[&quot;next_draft_input&lt;br/&gt;下一轮 anchor&quot;]
+    O --&gt; S
+    N --&gt; S
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart LR
+    S[&quot;Scheduler&lt;br/&gt;ScheduleBatch&quot;] --&gt; W[&quot;DSparkWorkerV2&lt;br/&gt;一轮协调器&quot;]
+    W --&gt; VW[&quot;VerifyWindow&lt;br/&gt;位置与物理 KV slots&quot;]
+    W --&gt; DP[&quot;DraftBlockProposer&quot;]
+    DP --&gt; DM[&quot;Draft Transformer&lt;br/&gt;一次 block forward&quot;]
+    DM --&gt; MH[&quot;LM Head + Markov Head&lt;br/&gt;串行产生 drafts&quot;]
+    MH --&gt; P[&quot;DraftProposal&quot;]
+    P --&gt; PL[&quot;VerifyPlanner&lt;br/&gt;confidence / budget / layout&quot;]
+    PL --&gt; TV[&quot;TargetVerifyExecutor&quot;]
+    TV --&gt; TM[&quot;Target ModelRunner&lt;br/&gt;Eager 或 CUDA Graph&quot;]
+    TM --&gt; R[&quot;TargetVerifyResult&quot;]
+    R --&gt; A[&quot;AcceptGreedy / AcceptSampling&quot;]
+    A --&gt; F[&quot;FinalizeAcceptLens&lt;br/&gt;BuildOutTokens&quot;]
+    F --&gt; K[&quot;TargetHiddenKvInjector&lt;br/&gt;Target hidden → Draft KV&quot;]
+    F --&gt; O[&quot;GenerationBatchResult&lt;br/&gt;用户输出&quot;]
+    F --&gt; N[&quot;next_draft_input&lt;br/&gt;下一轮 anchor&quot;]
+    O --&gt; S
+    N --&gt; S
+</code></pre></details></figcaption></figure>
+<p>这里有三类不同所有权：</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>对象</th>
+<th>所有者/创建者</th>
+<th>生命周期</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ScheduleBatch</code></td>
+<td>Scheduler</td>
+<td>跨多轮存在；worker 可临时 rebind 字段</td>
+</tr>
+<tr>
+<td><code>DraftProposal</code>、<code>TargetVerifyResult</code>、<code>AcceptOuts</code></td>
+<td><code>DSparkWorkerV2</code> 内部组件</td>
+<td>单轮临时对象</td>
+</tr>
+<tr>
+<td><code>next_draft_input</code>、<code>new_seq_lens</code></td>
+<td>Worker 返回，Scheduler 写回</td>
+<td>必须跨轮保存</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="4-_forward_decode-的主调用链">4. <code>_forward_decode()</code> 的主调用链</h2>
+<p>主方法位于
+<code>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:482-700</code>。</p>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart TD
+    A[&quot;读取 batch.spec_info&lt;br/&gt;得到上一轮 bonus/new_seq_lens&quot;] --&gt; B[&quot;prefix_lens = batch.seq_lens&quot;]
+    B --&gt; C[&quot;alloc_verify_window()&quot;]
+    C --&gt; D[&quot;DraftBlockProposer.propose()&quot;]
+    D --&gt; E[&quot;DraftProposal&quot;]
+    E --&gt; CF[&quot;proposal.confidence&lt;br/&gt;或 compute_confidence_tensor()&quot;]
+    CF --&gt; VB[&quot;resolve_verify_token_budget()&quot;]
+    VB --&gt; F[&quot;schedule_layout() / should_run_compact()&quot;]
+    F --&gt; G[&quot;verify_ids_2d = cat(anchor, drafts)&quot;]
+    G --&gt; H{&quot;should_run_compact?&quot;}
+    H --&gt;|否| I[&quot;run_non_compact()&quot;]
+    H --&gt;|是| J[&quot;run_compact()&quot;]
+    I --&gt; K[&quot;TargetVerifyResult&quot;]
+    J --&gt; K
+    J --&gt; HS[&quot;hidden_strided&lt;br/&gt;compact commit side channel&quot;]
+    K --&gt; L[&quot;可选 grammar mask&quot;]
+    L --&gt; M[&quot;accept_and_finalize()&quot;]
+    M --&gt; N[&quot;AcceptOuts&quot;]
+    N --&gt; O[&quot;commit_hidden()&quot;]
+    HS --&gt; O
+    N --&gt; P[&quot;make_next_draft_input()&quot;]
+    O --&gt; Q[&quot;GenerationBatchResult&quot;]
+    P --&gt; Q
+">flowchart TD
+    A[&quot;读取 batch.spec_info&lt;br/&gt;得到上一轮 bonus/new_seq_lens&quot;] --&gt; B[&quot;prefix_lens = batch.seq_lens&quot;]
+    B --&gt; C[&quot;alloc_verify_window()&quot;]
+    C --&gt; D[&quot;DraftBlockProposer.propose()&quot;]
+    D --&gt; E[&quot;DraftProposal&quot;]
+    E --&gt; CF[&quot;proposal.confidence&lt;br/&gt;或 compute_confidence_tensor()&quot;]
+    CF --&gt; VB[&quot;resolve_verify_token_budget()&quot;]
+    VB --&gt; F[&quot;schedule_layout() / should_run_compact()&quot;]
+    F --&gt; G[&quot;verify_ids_2d = cat(anchor, drafts)&quot;]
+    G --&gt; H{&quot;should_run_compact?&quot;}
+    H --&gt;|否| I[&quot;run_non_compact()&quot;]
+    H --&gt;|是| J[&quot;run_compact()&quot;]
+    I --&gt; K[&quot;TargetVerifyResult&quot;]
+    J --&gt; K
+    J --&gt; HS[&quot;hidden_strided&lt;br/&gt;compact commit side channel&quot;]
+    K --&gt; L[&quot;可选 grammar mask&quot;]
+    L --&gt; M[&quot;accept_and_finalize()&quot;]
+    M --&gt; N[&quot;AcceptOuts&quot;]
+    N --&gt; O[&quot;commit_hidden()&quot;]
+    HS --&gt; O
+    N --&gt; P[&quot;make_next_draft_input()&quot;]
+    O --&gt; Q[&quot;GenerationBatchResult&quot;]
+    P --&gt; Q
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart TD
+    A[&quot;读取 batch.spec_info&lt;br/&gt;得到上一轮 bonus/new_seq_lens&quot;] --&gt; B[&quot;prefix_lens = batch.seq_lens&quot;]
+    B --&gt; C[&quot;alloc_verify_window()&quot;]
+    C --&gt; D[&quot;DraftBlockProposer.propose()&quot;]
+    D --&gt; E[&quot;DraftProposal&quot;]
+    E --&gt; CF[&quot;proposal.confidence&lt;br/&gt;或 compute_confidence_tensor()&quot;]
+    CF --&gt; VB[&quot;resolve_verify_token_budget()&quot;]
+    VB --&gt; F[&quot;schedule_layout() / should_run_compact()&quot;]
+    F --&gt; G[&quot;verify_ids_2d = cat(anchor, drafts)&quot;]
+    G --&gt; H{&quot;should_run_compact?&quot;}
+    H --&gt;|否| I[&quot;run_non_compact()&quot;]
+    H --&gt;|是| J[&quot;run_compact()&quot;]
+    I --&gt; K[&quot;TargetVerifyResult&quot;]
+    J --&gt; K
+    J --&gt; HS[&quot;hidden_strided&lt;br/&gt;compact commit side channel&quot;]
+    K --&gt; L[&quot;可选 grammar mask&quot;]
+    L --&gt; M[&quot;accept_and_finalize()&quot;]
+    M --&gt; N[&quot;AcceptOuts&quot;]
+    N --&gt; O[&quot;commit_hidden()&quot;]
+    HS --&gt; O
+    N --&gt; P[&quot;make_next_draft_input()&quot;]
+    O --&gt; Q[&quot;GenerationBatchResult&quot;]
+    P --&gt; Q
+</code></pre></details></figcaption></figure>
+<p>主线源码动作顺序：</p>
+<pre class="codehilite"><code class="language-text">alloc_verify_window                 worker_v2.py:514-521
+proposer.propose                    worker_v2.py:523-536
+confidence                         worker_v2.py:538-545
+resolve verify-token budget        worker_v2.py:547-552
+schedule layout / compact decision worker_v2.py:554-570
+verify_ids_2d                      worker_v2.py:572-574
+run_compact / run_non_compact      worker_v2.py:590-610
+TargetVerifyResult 消费            worker_v2.py:611-640
+commit_hidden                      worker_v2.py:647-659
+next_draft_input / result          worker_v2.py:684-700
+</code></pre>
+<h2 id="5-本轮入口状态和-verifywindow">5. 本轮入口状态和 VerifyWindow</h2>
+<h3 id="51-prefix_lens22-不包含-anchor-y">5.1 <code>prefix_lens=[22]</code> 不包含 anchor <code>Y</code></h3>
+<p>本轮开始前：</p>
+<pre class="codehilite"><code class="language-text">有效 KV positions： 0 ... 21
+prefix_lens：        22
+待处理 anchor：      Y @ position 22
+</code></pre>
+<p><code>Y</code> 在上一轮已经作为 bonus 输出给用户，但上一轮没有把 <code>Y</code> 当作 Transformer 输入，因此
+它还没有自己的 hidden/KV。本轮必须先以 <code>Y</code> 为 anchor。</p>
+<h3 id="52-alloc_verify_window-先为完整宽度预留位置">5.2 <code>alloc_verify_window()</code> 先为完整宽度预留位置</h3>
+<p>实现位于
+<code>python/sglang/srt/speculative/dspark_components/dspark_planner.py:844-870</code>：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">positions_2d</span> <span class="o">=</span> <span class="n">prefix_lens</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">block_pos_offsets</span>
+<span class="n">verify_cache_loc</span> <span class="o">=</span> <span class="n">assign_extend_cache_locs_func</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="n">verify_cache_loc_2d</span> <span class="o">=</span> <span class="n">verify_cache_loc</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">bs</span><span class="p">,</span> <span class="n">verify_w</span><span class="p">)</span>
+</code></pre>
+<p>本文例子：</p>
+<pre class="codehilite"><code class="language-text">W = 5
+
+positions_2d = [[22,23,24,25,26]]           shape [1,5]
+cache_loc_2d = [[L22,L23,L24,L25,L26]]      shape [1,5]
+</code></pre>
+<p><code>position</code> 是逻辑位置；<code>L22...L26</code> 是 token-to-KV pool 中的物理写地址，二者不能混为一谈。</p>
+<h2 id="6-draftblockproposer一次并行-transformer--串行-markov-采样">6. DraftBlockProposer：一次并行 Transformer + 串行 Markov 采样</h2>
+<h3 id="61-draft-transformer-的输入不是-yabcd">6.1 Draft Transformer 的输入不是 <code>[Y,a,b,c,d]</code></h3>
+<p><code>DraftBlockProposer._run_forward()</code> 位于
+<code>python/sglang/srt/speculative/dspark_components/dspark_draft.py:361-426</code>。</p>
+<p>它构造：</p>
+<pre class="codehilite"><code class="language-text">draft_block_ids = [Y,MASK,MASK,MASK]        shape [1,4]
+draft_positions = [22,23,24,25]             shape [4]
+draft_cache_loc = [L22,L23,L24,L25]         shape [4]
+</code></pre>
+<p>Draft 只取完整 VerifyWindow 每行的前 <code>gamma=4</code> 个槽。Target verify 才使用宽度
+<code>W=5</code> 的 <code>[Y,a,b,c,d]</code>。</p>
+<h3 id="62-实际构造的-draft_forward_batch">6.2 实际构造的 <code>draft_forward_batch</code></h3>
+<p>本文例子中的字段是：</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th><code>ForwardBatch</code> 字段</th>
+<th>实际值</th>
+<th>语义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>forward_mode</code></td>
+<td><code>TARGET_VERIFY</code></td>
+<td>块状多 token forward 形态，不表示 receiver 是 Target</td>
+</tr>
+<tr>
+<td><code>batch_size</code></td>
+<td><code>1</code></td>
+<td>一个请求</td>
+</tr>
+<tr>
+<td><code>input_ids</code></td>
+<td><code>[Y,M,M,M]</code>，shape <code>[4]</code></td>
+<td>anchor + <code>G-1</code> 个 mask</td>
+</tr>
+<tr>
+<td><code>req_pool_indices</code></td>
+<td><code>[R0_POOL_ROW]</code></td>
+<td>历史 KV 映射所在请求行</td>
+</tr>
+<tr>
+<td><code>seq_lens</code></td>
+<td><code>[22]</code></td>
+<td>进入本轮前的 committed prefix，不含当前 block</td>
+</tr>
+<tr>
+<td><code>seq_lens_cpu</code></td>
+<td><code>[26]</code></td>
+<td>host planner 使用的 <code>prefix + G</code> 长度</td>
+</tr>
+<tr>
+<td><code>seq_lens_sum</code></td>
+<td><code>26</code></td>
+<td>此手工 batch 的 host planning sum</td>
+</tr>
+<tr>
+<td><code>positions</code></td>
+<td><code>[22,23,24,25]</code></td>
+<td>当前四个输入位置</td>
+</tr>
+<tr>
+<td><code>out_cache_loc</code></td>
+<td><code>[L22,L23,L24,L25]</code></td>
+<td>当前四行 Draft KV 物理地址</td>
+</tr>
+<tr>
+<td><code>input_embeds</code></td>
+<td>当前主路径为 <code>None</code></td>
+<td>embedding 在 draft model 的 <code>forward_embed</code> 中完成</td>
+</tr>
+<tr>
+<td><code>spec_algorithm</code></td>
+<td><code>DSPARK</code></td>
+<td>投机算法标识</td>
+</tr>
+<tr>
+<td><code>spec_info.draft_token_num</code></td>
+<td><code>4</code></td>
+<td>Draft block 的宽度是 <code>G</code></td>
+</tr>
+<tr>
+<td><code>capture_hidden_mode</code></td>
+<td><code>NULL</code></td>
+<td>不要求额外 target-style 捕获；draft model 仍返回自身 hidden</td>
+</tr>
+</tbody>
+</table></div>
+<p>这里最容易误读的是：</p>
+<pre class="codehilite"><code class="language-text">seq_lens      = [22]
+seq_lens_cpu  = [26]
+</code></pre>
+<p>在这个手工构造的 speculative <code>ForwardBatch</code> 中，两者不是逐值镜像：GPU rail 保存进入 block 前的
+prefix；CPU rail已经加上本次规划的 <code>G</code> 行。<code>batch.seq_lens_cpu + gamma</code> 创建新 Tensor，不会把
+Scheduler 持久的 CPU length 原地改成 26。</p>
+<h3 id="63-为什么四个输入位置能产生四个-draft">6.3 为什么四个输入位置能产生四个 draft</h3>
+<p>Draft Transformer 一次并行 forward：</p>
+<pre class="codehilite"><code class="language-text">[Y,M1,M2,M3]
+   │
+   ▼
+draft_hidden = [h0,h1,h2,h3]                shape [1,4,H_d]
+   │
+   ▼ shared Target LM Head
+base_logits = [l0,l1,l2,l3]                 shape [1,4,V]
+</code></pre>
+<p>然后 Markov head 串行注入真实的前一 token：</p>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart LR
+    A[&quot;head(l0, prev=Y, h0, state0)&quot;] --&gt; D1[&quot;sample d1=a&quot;]
+    D1 --&gt; B[&quot;head(l1, prev=a, h1, state1)&quot;]
+    B --&gt; D2[&quot;sample d2=b&quot;]
+    D2 --&gt; C[&quot;head(l2, prev=b, h2, state2)&quot;]
+    C --&gt; D3[&quot;sample d3=c&quot;]
+    D3 --&gt; D[&quot;head(l3, prev=c, h3, state3)&quot;]
+    D --&gt; D4[&quot;sample d4=d&quot;]
+">flowchart LR
+    A[&quot;head(l0, prev=Y, h0, state0)&quot;] --&gt; D1[&quot;sample d1=a&quot;]
+    D1 --&gt; B[&quot;head(l1, prev=a, h1, state1)&quot;]
+    B --&gt; D2[&quot;sample d2=b&quot;]
+    D2 --&gt; C[&quot;head(l2, prev=b, h2, state2)&quot;]
+    C --&gt; D3[&quot;sample d3=c&quot;]
+    D3 --&gt; D[&quot;head(l3, prev=c, h3, state3)&quot;]
+    D --&gt; D4[&quot;sample d4=d&quot;]
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart LR
+    A[&quot;head(l0, prev=Y, h0, state0)&quot;] --&gt; D1[&quot;sample d1=a&quot;]
+    D1 --&gt; B[&quot;head(l1, prev=a, h1, state1)&quot;]
+    B --&gt; D2[&quot;sample d2=b&quot;]
+    D2 --&gt; C[&quot;head(l2, prev=b, h2, state2)&quot;]
+    C --&gt; D3[&quot;sample d3=c&quot;]
+    D3 --&gt; D[&quot;head(l3, prev=c, h3, state3)&quot;]
+    D --&gt; D4[&quot;sample d4=d&quot;]
+</code></pre></details></figcaption></figure>
+<p>上图使用统一通式；具体 Markov head 有边界差异：vanilla 主要加入 previous-token bias，gated
+还读取当前 <code>draft_hidden_i</code>，RNN 还携带跨位置 recurrent state。它们共同保持“Transformer
+一次、Markov logits 修正/采样串行”的主结论。</p>
+<p>因此：</p>
+<ul>
+<li>Draft Transformer 只跑一次；</li>
+<li>后置 Transformer hidden 看到的是 causal prefix 加 MASK 占位符，不是刚采样出的 <code>a/b/c</code>；</li>
+<li>串行的是 Markov logits 修正与采样，不是四次 Transformer forward；</li>
+<li>Markov 不会回头改写已经算完的后置 hidden/KV。</li>
+</ul>
+<h3 id="64-draftproposal-包含什么">6.4 <code>DraftProposal</code> 包含什么</h3>
+<p>定义位于 <code>dspark_draft.py:51-71</code>：</p>
+<pre class="codehilite"><code class="language-text">DraftProposal
+├── draft_block_ids      [Y,M,M,M]
+├── draft_block
+│   ├── draft_tokens     [a,b,c,d]
+│   ├── corrected_logits [1,4,V]，folded greedy 时可为 None
+│   ├── greedy_mask      [1]
+│   └── temperatures     [1]
+├── draft_hidden         [1,4,H_d]
+├── confidence           可选
+├── confidence_tap       可选
+└── folded               sampler tail 是否折入 Draft CUDA Graph
+</code></pre>
+<p><code>corrected_logits</code> 是实际 proposal 分布 <code>q</code> 的未除温 logits。Sampling verify 后续用它重建
+<code>q</code>；greedy 不需要概率修正，folded greedy 因而可以不返回这块大 Tensor。</p>
+<h3 id="65-greedy-与-sampling-的-draft-边界">6.5 greedy 与 sampling 的 Draft 边界</h3>
+<p><code>resolve_greedy_mask()</code> 以 <code>top_k &lt;= 1</code> 判断每个请求是否 greedy，见
+<code>dspark_draft.py:166-238</code>：</p>
+<pre class="codehilite"><code class="language-text">greedy：   每步 argmax，不随机抽样
+sampling：softmax(corrected_logits / temperature) 后随机抽样
+mixed：    同一 batch 内按请求 greedy_mask 选择
+</code></pre>
+<p>Draft proposal 侧 sampling 不应用 Target 的 top-k/top-p 截断；这是允许的，因为 Target 接受阶段
+会使用实际 <code>q</code> 做拒绝采样修正。Target 的 temperature/top-k/top-p 决定目标分布 <code>p</code>。</p>
+<p><a id="verify-layout"></a></p>
+<h2 id="7-从-draftproposal-到-target-candidates">7. 从 DraftProposal 到 Target candidates</h2>
+<h3 id="71-先建立-planner-的组件边界">7.1 先建立 Planner 的组件边界</h3>
+<p>Worker 在 <code>worker_v2.py:538-570</code> 依次处理：</p>
+<pre class="codehilite"><code class="language-text">confidence
+→ resolve_verify_token_budget()
+→ schedule_layout()
+→ should_run_compact()
+</code></pre>
+<p>这条链涉及 Draft graph、Worker、Host planner、Scheduler/FutureMap 和下一步 layout 分配，不能把
+它们压成一个“按 confidence 裁剪”的动作：</p>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart LR
+    P[&quot;DraftProposal&quot;] --&gt; C[&quot;当前 confidence C_t&lt;br/&gt;shape [B,G]&quot;]
+    C --&gt; W[&quot;DSparkWorkerV2&quot;]
+
+    H[&quot;历史 confidence&lt;br/&gt;默认 C_(t-2)&quot;] --&gt; BP[&quot;HostConfidenceBudgetPlanner&lt;br/&gt;cumprod + SPS cost&quot;]
+    BP --&gt; B[&quot;raw budget_t&lt;br/&gt;batch-global scalar&quot;]
+
+    W --&gt; SL[&quot;schedule_layout()&quot;]
+    B --&gt; SL
+    C --&gt; SL
+    SL --&gt; L[&quot;verify_lens[B] / layout&lt;br/&gt;下一学习阶段&quot;]
+
+    FM[&quot;overlap: FutureMap relay&quot;] -. &quot;提供历史值&quot; .-&gt; H
+    CR[&quot;non-overlap: Host carry ring&quot;] -. &quot;提供历史值&quot; .-&gt; H
+">flowchart LR
+    P[&quot;DraftProposal&quot;] --&gt; C[&quot;当前 confidence C_t&lt;br/&gt;shape [B,G]&quot;]
+    C --&gt; W[&quot;DSparkWorkerV2&quot;]
+
+    H[&quot;历史 confidence&lt;br/&gt;默认 C_(t-2)&quot;] --&gt; BP[&quot;HostConfidenceBudgetPlanner&lt;br/&gt;cumprod + SPS cost&quot;]
+    BP --&gt; B[&quot;raw budget_t&lt;br/&gt;batch-global scalar&quot;]
+
+    W --&gt; SL[&quot;schedule_layout()&quot;]
+    B --&gt; SL
+    C --&gt; SL
+    SL --&gt; L[&quot;verify_lens[B] / layout&lt;br/&gt;下一学习阶段&quot;]
+
+    FM[&quot;overlap: FutureMap relay&quot;] -. &quot;提供历史值&quot; .-&gt; H
+    CR[&quot;non-overlap: Host carry ring&quot;] -. &quot;提供历史值&quot; .-&gt; H
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart LR
+    P[&quot;DraftProposal&quot;] --&gt; C[&quot;当前 confidence C_t&lt;br/&gt;shape [B,G]&quot;]
+    C --&gt; W[&quot;DSparkWorkerV2&quot;]
+
+    H[&quot;历史 confidence&lt;br/&gt;默认 C_(t-2)&quot;] --&gt; BP[&quot;HostConfidenceBudgetPlanner&lt;br/&gt;cumprod + SPS cost&quot;]
+    BP --&gt; B[&quot;raw budget_t&lt;br/&gt;batch-global scalar&quot;]
+
+    W --&gt; SL[&quot;schedule_layout()&quot;]
+    B --&gt; SL
+    C --&gt; SL
+    SL --&gt; L[&quot;verify_lens[B] / layout&lt;br/&gt;下一学习阶段&quot;]
+
+    FM[&quot;overlap: FutureMap relay&quot;] -. &quot;提供历史值&quot; .-&gt; H
+    CR[&quot;non-overlap: Host carry ring&quot;] -. &quot;提供历史值&quot; .-&gt; H
+</code></pre></details></figcaption></figure>
+<p>这几个量必须始终分开：</p>
+<pre class="codehilite"><code class="language-text">当前 confidence C_t：       本轮各 draft 位置的条件置信分数
+历史 survival S_(t-2)：     历史 confidence 沿 draft 前缀的累计乘积
+budget_t：                  整个 batch 在 mandatory floor 外可分配多少个额外槽
+verify_lens_t[B]：          当前 confidence 将 budget 分配给各请求后的长度，包含 anchor
+</code></pre>
+<p>因此默认稳态职责是：</p>
+<pre class="codehilite"><code class="language-text">历史 C_(t-2) 决定“选多少”
+当前 C_t     决定“分给谁”
+</code></pre>
+<p>confidence/budget/layout 都不改变 Draft proposal 分布 <code>q</code>，也不替代后续 greedy matching 或
+rejection sampling；在后续确实产生 non-<code>None</code> layout 时，它们决定 Target 本轮值得验证到多深，
+以及 COMPACT 是否有机会减少有效候选行。STATIC、预算/relay 尚未就绪或 captured-grid fallback
+都可能不产生 layout。</p>
+<h3 id="72-compute_confidence_tensor得到当前-c_tbg">7.2 <code>compute_confidence_tensor()</code>：得到当前 <code>C_t[B,G]</code></h3>
+<p>Worker 先复用 proposal 中可能已经存在的结果，见 <code>dspark_worker_v2.py:538-545</code>：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">confidence</span> <span class="o">=</span> <span class="n">proposal</span><span class="o">.</span><span class="n">confidence</span>
+<span class="k">if</span> <span class="n">confidence</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">confidence</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verify_planner</span><span class="o">.</span><span class="n">compute_confidence_tensor</span><span class="p">(</span>
+        <span class="n">draft_hidden</span><span class="o">=</span><span class="n">proposal</span><span class="o">.</span><span class="n">draft_hidden</span><span class="p">,</span>
+        <span class="n">anchor_tokens</span><span class="o">=</span><span class="n">draft_block_ids</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="n">draft_tokens</span><span class="o">=</span><span class="n">draft_tokens</span><span class="p">,</span>
+        <span class="n">confidence_tap</span><span class="o">=</span><span class="n">proposal</span><span class="o">.</span><span class="n">confidence_tap</span><span class="p">,</span>
+    <span class="p">)</span>
+</code></pre>
+<p><code>proposal.confidence</code> 非空表示 folded greedy Draft CUDA Graph 已在 sampler tail 中算完 confidence；
+Worker 直接复用，避免重复计算。普通 eager/sampling 路径通常为 <code>None</code>，再进入
+<code>DSparkVerifyPlanner.compute_confidence_tensor()</code>，见 <code>dspark_planner.py:264-293</code>：</p>
+<pre class="codehilite"><code class="language-text">confidence_head 不存在： 返回 None（正常 STATIC 路径）
+模型有 compute_confidence hook：使用 confidence_tap（DeepSeek-V4）
+否则：使用 dense 通用 compute_confidence()
+</code></pre>
+<p>下面固定一个 multi-request 教学例：</p>
+<pre class="codehilite"><code class="language-text">B = 2
+G = 4
+
+anchor_tokens = [Y0,Y1]                              shape [2]
+draft_tokens  = [[a,b,c,d], [e,f,g,h]]               shape [2,4]
+draft_hidden                                              [2,4,H_d]
+</code></pre>
+<p>dense 通用 helper 位于 <code>dspark_planner.py:888-923</code>。它先构造每个 draft 位置的真实前驱 token：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">prev_seq</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span>
+    <span class="p">[</span><span class="n">anchor_tokens</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">draft_tokens</span><span class="p">[:,</span> <span class="p">:</span> <span class="n">gamma</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]],</span>
+    <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">markov_embed_stack</span> <span class="o">=</span> <span class="n">markov_head</span><span class="o">.</span><span class="n">get_prev_embeddings</span><span class="p">(</span><span class="n">prev_seq</span><span class="p">)</span>
+</code></pre>
+<p>代入数据：</p>
+<pre class="codehilite"><code class="language-text">prev_seq = [[Y0,a,b,c],
+            [Y1,e,f,g]]                              shape [2,4]
+
+markov_embed_stack                                  shape [2,4,R]
+</code></pre>
+<p>坐标含义是：</p>
+<pre class="codehilite"><code class="language-text">confidence[:,0] 评估 d1，前驱是 anchor
+confidence[:,1] 评估 d2，前驱是 d1
+confidence[:,2] 评估 d3，前驱是 d2
+confidence[:,3] 评估 d4，前驱是 d3
+</code></pre>
+<p>默认 <code>with_markov=True</code> 时，<code>DSparkConfidenceHead.forward()</code> 在 <code>models/dspark.py:289-330</code>
+执行：</p>
+<pre class="codehilite"><code class="language-text">draft_hidden                                  [2,4,H_d]
+markov_embed_stack                            [2,4,R]
+cat(..., dim=-1)                              [2,4,H_d+R]
+Linear(H_d+R → 1)                             [2,4,1]
+squeeze(-1) = confidence_raw                  [2,4]
+</code></pre>
+<p>随后 STS calibration：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">confidence</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span>
+    <span class="n">confidence_raw</span><span class="o">.</span><span class="n">float</span><span class="p">()</span> <span class="o">/</span> <span class="n">sts_temperatures</span>
+<span class="p">)</span>
+</code></pre>
+<p><code>sts_temperatures</code> 是 confidence 的标量或逐位置 <code>[G]</code> 校准温度，不是生成 sampling
+temperature。最终 <code>confidence[B,G]</code> 每项在 <code>[0,1]</code>，但四列不需要和为 1；它不是 vocab
+分布、不是 proposal <code>P_D</code>，也还不是累计 survival。</p>
+<p>本节后续使用一组教学输出：</p>
+<pre class="codehilite"><code class="language-text">C_t = current confidence =
+req0 [0.95, 0.90, 0.70, 0.20]
+req1 [0.99, 0.95, 0.92, 0.85]                 shape [2,4]
+</code></pre>
+<p>三条模式边界：</p>
+<ul>
+<li><code>STATIC</code> 在模型构造阶段就不创建 confidence head，全链返回 <code>None</code>；正确性不受影响，只是不做
+自适应验证深度调度。</li>
+<li>folded greedy graph 在 <code>dspark_draft.py:79-118,290-315</code> 内计算并写入
+<code>confidence_out[max_bs,G]</code>，Worker 只取 live batch slice；<code>proposal.folded=True</code> 不代表 Target
+accept/commit 也 folded。</li>
+<li>DeepSeek-V4 在 <code>deepseek_v4_dspark.py:714-758</code> 使用 collapse 后的 <code>confidence_tap</code>，不能把
+dense <code>[B,G,H_d]</code> 形状直接套过去；最终输出仍为 <code>[B,G]</code>。</li>
+</ul>
+<h3 id="73-resolve_verify_token_budget只决定-batch-global-数量">7.3 <code>resolve_verify_token_budget()</code>：只决定 batch-global 数量</h3>
+<p>Worker 立即调用 <code>dspark_worker_v2.py:547-552</code>：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">verify_token_budget</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verify_planner</span><span class="o">.</span><span class="n">resolve_verify_token_budget</span><span class="p">(</span>
+    <span class="n">draft_input</span><span class="o">=</span><span class="n">draft_input</span><span class="p">,</span>
+    <span class="n">confidence</span><span class="o">=</span><span class="n">confidence</span><span class="p">,</span>
+    <span class="n">prefix_lens</span><span class="o">=</span><span class="n">prefix_lens</span><span class="p">,</span>
+    <span class="n">req_pool_indices</span><span class="o">=</span><span class="n">batch</span><span class="o">.</span><span class="n">req_pool_indices</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre>
+<p>方法定义见 <code>dspark_planner.py:373-391</code>：</p>
+<pre class="codehilite"><code class="language-python"><span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">schedules_verify_budget</span> <span class="ow">or</span> <span class="n">confidence</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="kc">None</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">server_args</span><span class="o">.</span><span class="n">disable_overlap_schedule</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">draft_input</span><span class="o">.</span><span class="n">verify_token_budget</span>
+<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_budget_sync</span><span class="p">(</span>
+    <span class="n">confidence</span><span class="o">=</span><span class="n">confidence</span><span class="p">,</span>
+    <span class="n">prefix_lens</span><span class="o">=</span><span class="n">prefix_lens</span><span class="p">,</span>
+    <span class="n">req_pool_indices</span><span class="o">=</span><span class="n">req_pool_indices</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre>
+<p>它返回 <code>Optional[int]</code>，不是每请求 Tensor。继续固定：</p>
+<pre class="codehilite"><code class="language-text">B = 2
+G = 4
+W = G + 1 = 5
+min_verify_len = 1
+</code></pre>
+<p>量纲如下：</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>数量</th>
+<th style="text-align:right">本例</th>
+<th>是否属于 budget</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mandatory anchor floor</td>
+<td style="text-align:right"><code>B×1=2</code></td>
+<td>否，另算</td>
+</tr>
+<tr>
+<td>可选 draft positions</td>
+<td style="text-align:right"><code>B×G=8</code></td>
+<td>是，构成候选池</td>
+</tr>
+<tr>
+<td>完整 Target verify 上限</td>
+<td style="text-align:right"><code>B×W=10</code></td>
+<td>floor 与全部 extra 之和</td>
+</tr>
+</tbody>
+</table></div>
+<p>因此 <code>budget=5</code> 的严格含义是：</p>
+<pre class="codehilite"><code class="language-text">两个 anchor 之外，整个 batch 最多再分配 5 个 draft verify 槽
+逻辑 allowance 上限 = floor 2 + budget 5 = 7 行
+</code></pre>
+<p>它不表示“每请求 5 行”，也不能直接推出 <code>verify_lens=[3,4]</code>；下一步还必须使用当前 <code>C_t</code>
+分配这 5 个名额。</p>
+<h3 id="74-non-overlap当前-c_t-入参历史-c_t-2-参与-optimizer">7.4 non-overlap：当前 <code>C_t</code> 入参，历史 <code>C_(t-2)</code> 参与 optimizer</h3>
+<p>non-overlap 时 <code>resolve_verify_token_budget()</code> 进入 <code>compute_budget_sync()</code>，见
+<code>dspark_planner.py:351-371</code>：</p>
+<pre class="codehilite"><code class="language-text">当前 C_t [B,G] GPU
+→ C_t.to(&quot;cpu&quot;)
+→ 读取 req_pool_indices 对应的 generation
+→ ResolvedConfidence(C_t, generation)
+→ HostConfidenceBudgetPlanner.compute_budget()
+</code></pre>
+<p>因此只看外层会误以为当前 <code>C_t</code> 立即参与 budget；真正的轮次选择在
+<code>HostConfidenceBudgetPlanner._shift_to_lag()</code>。初始化代码是：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">relay_lag_steps</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">disable_overlap_schedule</span> <span class="k">else</span> <span class="n">CONFIDENCE_RELAY_RING_LAG</span>
+
+<span class="bp">self</span><span class="o">.</span><span class="n">lag_steps</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span>
+    <span class="n">SGLANG_DSPARK_CONFIDENCE_RELAY_LAG_STEPS</span><span class="p">,</span>
+    <span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">carry_steps</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lag_steps</span> <span class="o">-</span> <span class="n">relay_lag_steps</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</code></pre>
+<p>当前默认：</p>
+<pre class="codehilite"><code class="language-text">lag_steps       = 2
+relay_lag_steps = 0       # non-overlap 没有 FutureMap confidence relay
+carry_steps     = 2
+</code></pre>
+<p><code>_shift_to_lag()</code> 在 <code>dspark_planner.py:1087-1104</code> 的关键顺序是“先读旧值，再写当前值”：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">lagged_confidence</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_carry_confidence</span><span class="p">[</span><span class="n">slot</span><span class="p">,</span> <span class="n">rows</span><span class="p">]</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+<span class="n">lagged_generation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_carry_generation</span><span class="p">[</span><span class="n">slot</span><span class="p">,</span> <span class="n">rows</span><span class="p">]</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">_carry_confidence</span><span class="p">[</span><span class="n">slot</span><span class="p">,</span> <span class="n">rows</span><span class="p">]</span> <span class="o">=</span> <span class="n">confidence</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">_carry_generation</span><span class="p">[</span><span class="n">slot</span><span class="p">,</span> <span class="n">rows</span><span class="p">]</span> <span class="o">=</span> <span class="n">generation</span>
+<span class="k">return</span> <span class="n">lagged_confidence</span><span class="p">,</span> <span class="n">lagged_generation</span>
+</code></pre>
+<p>同一请求连续出现时：</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th style="text-align:right">当前调用</th>
+<th>当前传入</th>
+<th>optimizer 实际读取</th>
+<th>写回 carry</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:right"><code>t=0</code></td>
+<td><code>C0</code></td>
+<td>初始空槽 → freshness fallback</td>
+<td><code>C0</code></td>
+</tr>
+<tr>
+<td style="text-align:right"><code>t=1</code></td>
+<td><code>C1</code></td>
+<td>初始空槽 → freshness fallback</td>
+<td><code>C1</code></td>
+</tr>
+<tr>
+<td style="text-align:right"><code>t=2</code></td>
+<td><code>C2</code></td>
+<td><code>C0</code></td>
+<td><code>C2</code></td>
+</tr>
+<tr>
+<td style="text-align:right"><code>t=3</code></td>
+<td><code>C3</code></td>
+<td><code>C1</code></td>
+<td><code>C3</code></td>
+</tr>
+<tr>
+<td style="text-align:right"><code>t=4</code></td>
+<td><code>C4</code></td>
+<td><code>C2</code></td>
+<td><code>C4</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>所以默认稳态：</p>
+<pre class="codehilite"><code class="language-text">budget_t = optimizer(cumprod(C_(t-2)), SPS cost)
+</code></pre>
+<p>当前 <code>C_t</code> 一方面写入 carry 供未来 budget 使用，另一方面在本轮后续直接交给
+<code>schedule_layout()</code>，用于决定“名额分给谁”。</p>
+<p><code>req_pool_indices</code> 还会配合 <code>req_generation</code> 防止 request-pool row 复用：旧历史 generation 与
+当前请求不匹配时，<code>_two_steps_prior_survival()</code> 使用全 1 survival，而不是把旧请求的低
+confidence 应用给新请求。<code>prefix_lens</code> 当前在 <code>compute_budget_sync()</code> 中被明确 <code>del</code>，所以这个
+optimizer 并不直接按上下文长度决定 budget。</p>
+<h3 id="75-overlap两轮延迟由-futuremapconfidencerelay-实现">7.5 overlap：两轮延迟由 <code>FutureMap/ConfidenceRelay</code> 实现</h3>
+<p>overlap 下 Worker 不现场调用 <code>compute_budget_sync()</code>，只读取
+<code>draft_input.verify_token_budget</code>。这个字段定义于 <code>dflash_info_v2.py:35-57</code>，由 Scheduler 在
+Worker forward 之前调用 <code>prepare_verify_budget()</code> 写入：</p>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="sequenceDiagram
+    participant W0 as &quot;Worker 第 t-2 轮 / forward stream&quot;
+    participant FM as &quot;FutureMap / ConfidenceRelay&quot;
+    participant D2H as &quot;private D2H stream&quot;
+    participant S as &quot;Scheduler 第 t 轮 / schedule stream&quot;
+    participant DI as &quot;DFlashDraftInputV2&quot;
+    participant W1 as &quot;Worker 第 t 轮&quot;
+
+    W0-&gt;&gt;FM: &quot;on_publish(new_seq_lens, confidence=C_(t-2))&quot;
+    FM-&gt;&gt;FM: &quot;按 req_pool_index scatter&quot;
+    FM-&gt;&gt;D2H: &quot;等待 publish event 后复制到 pinned ring&quot;
+    S-&gt;&gt;FM: &quot;resolve_confidence_cpu(batch)&quot;
+    FM--&gt;&gt;S: &quot;C_(t-2) + generation&quot;
+    S-&gt;&gt;S: &quot;_budget_from_resolved()&quot;
+    S-&gt;&gt;DI: &quot;verify_token_budget = budget_t&quot;
+    S-&gt;&gt;W1: &quot;启动第 t 轮 Worker forward&quot;
+    W1-&gt;&gt;DI: &quot;resolve_verify_token_budget()&quot;
+    DI--&gt;&gt;W1: &quot;直接返回 budget_t&quot;
+    Note over W1: &quot;当前 C_t 本轮用于 layout，并发布供未来 budget 使用&quot;
+">sequenceDiagram
+    participant W0 as &quot;Worker 第 t-2 轮 / forward stream&quot;
+    participant FM as &quot;FutureMap / ConfidenceRelay&quot;
+    participant D2H as &quot;private D2H stream&quot;
+    participant S as &quot;Scheduler 第 t 轮 / schedule stream&quot;
+    participant DI as &quot;DFlashDraftInputV2&quot;
+    participant W1 as &quot;Worker 第 t 轮&quot;
+
+    W0-&gt;&gt;FM: &quot;on_publish(new_seq_lens, confidence=C_(t-2))&quot;
+    FM-&gt;&gt;FM: &quot;按 req_pool_index scatter&quot;
+    FM-&gt;&gt;D2H: &quot;等待 publish event 后复制到 pinned ring&quot;
+    S-&gt;&gt;FM: &quot;resolve_confidence_cpu(batch)&quot;
+    FM--&gt;&gt;S: &quot;C_(t-2) + generation&quot;
+    S-&gt;&gt;S: &quot;_budget_from_resolved()&quot;
+    S-&gt;&gt;DI: &quot;verify_token_budget = budget_t&quot;
+    S-&gt;&gt;W1: &quot;启动第 t 轮 Worker forward&quot;
+    W1-&gt;&gt;DI: &quot;resolve_verify_token_budget()&quot;
+    DI--&gt;&gt;W1: &quot;直接返回 budget_t&quot;
+    Note over W1: &quot;当前 C_t 本轮用于 layout，并发布供未来 budget 使用&quot;
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>sequenceDiagram
+    participant W0 as &quot;Worker 第 t-2 轮 / forward stream&quot;
+    participant FM as &quot;FutureMap / ConfidenceRelay&quot;
+    participant D2H as &quot;private D2H stream&quot;
+    participant S as &quot;Scheduler 第 t 轮 / schedule stream&quot;
+    participant DI as &quot;DFlashDraftInputV2&quot;
+    participant W1 as &quot;Worker 第 t 轮&quot;
+
+    W0-&gt;&gt;FM: &quot;on_publish(new_seq_lens, confidence=C_(t-2))&quot;
+    FM-&gt;&gt;FM: &quot;按 req_pool_index scatter&quot;
+    FM-&gt;&gt;D2H: &quot;等待 publish event 后复制到 pinned ring&quot;
+    S-&gt;&gt;FM: &quot;resolve_confidence_cpu(batch)&quot;
+    FM--&gt;&gt;S: &quot;C_(t-2) + generation&quot;
+    S-&gt;&gt;S: &quot;_budget_from_resolved()&quot;
+    S-&gt;&gt;DI: &quot;verify_token_budget = budget_t&quot;
+    S-&gt;&gt;W1: &quot;启动第 t 轮 Worker forward&quot;
+    W1-&gt;&gt;DI: &quot;resolve_verify_token_budget()&quot;
+    DI--&gt;&gt;W1: &quot;直接返回 budget_t&quot;
+    Note over W1: &quot;当前 C_t 本轮用于 layout，并发布供未来 budget 使用&quot;
+</code></pre></details></figcaption></figure>
+<p>Scheduler 调用点在 <code>scheduler.py:3398-3425</code>；本轮 Worker 在接受后通过
+<code>dspark_worker_v2.py:641-645</code> 发布 <code>C_t</code>，<code>FutureMap.publish()</code> 再写 confidence relay。</p>
+<p>默认 overlap 参数：</p>
+<pre class="codehilite"><code class="language-text">lag_steps       = 2
+relay_lag_steps = CONFIDENCE_RELAY_RING_LAG = 2
+carry_steps     = max(2 - 2, 0) = 0
+</code></pre>
+<p>因此默认稳态下，两种执行模式使用同样历史年龄：</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>模式</th>
+<th>两轮延迟在哪里实现</th>
+<th style="text-align:right">Host 额外 carry</th>
+<th>budget 使用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>overlap</td>
+<td><code>FutureMap/ConfidenceRelay</code> D2H ring</td>
+<td style="text-align:right"><code>0</code></td>
+<td><code>C_(t-2)</code></td>
+</tr>
+<tr>
+<td>non-overlap</td>
+<td><code>HostConfidenceBudgetPlanner</code> carry ring</td>
+<td style="text-align:right"><code>2</code></td>
+<td><code>C_(t-2)</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>两者的区别不是“一个用当前、一个用历史”，而是两轮延迟由哪个组件承担。warm-up 行为则不同：</p>
+<ul>
+<li>overlap ring 尚未积累两轮或 copy event 未完成时，resolved confidence 可能为 <code>None</code>，budget
+也为 <code>None</code>；</li>
+<li>non-overlap 初始 carry generation 不匹配，survival 回退为全 1，再结合 SPS table 计算
+budget。</li>
+</ul>
+<p>上述 <code>C_(t-2)</code> 是同一请求连续 decode、generation 匹配时的稳态说法；batch 交错、非 decode
+step、request-pool row 复用或 relay 未就绪时，要按上述 fallback 理解，不能机械地把每个请求
+都标成严格的物理“前两轮”。</p>
+<h3 id="76-compute_verify_token_budget历史收益与-sps-成本的折中">7.6 <code>compute_verify_token_budget()</code>：历史收益与 SPS 成本的折中</h3>
+<p>Host planner 先计算：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">history_survival</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cumprod</span><span class="p">(</span><span class="n">lagged_confidence</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</code></pre>
+<p>使用另一组明确标为历史的教学数据，避免和当前 <code>C_t</code> 混淆：</p>
+<pre class="codehilite"><code class="language-text">C_(t-2) =
+req0 [0.90, 0.80, 0.50, 0.20]
+req1 [0.70, 0.60, 0.50, 0.40]
+
+S_(t-2) = cumprod(C_(t-2)) =
+req0 [0.900, 0.720, 0.360, 0.072]
+req1 [0.700, 0.420, 0.210, 0.084]
+</code></pre>
+<p><code>compute_verify_token_budget()</code> 位于 <code>dspark_planner.py:954-991</code>，依次执行：</p>
+<pre class="codehilite"><code class="language-text">flatten 全 batch survival
+→ 删除低于 survival_eps 的候选
+→ survival 降序排序
+→ prefix_sum
+→ 对每个 k=0..N 估算收益与成本
+→ 取 objective 最大的 k 作为 budget
+</code></pre>
+<p>排序结果：</p>
+<pre class="codehilite"><code class="language-text">[0.900, 0.720, 0.700, 0.420, 0.360, 0.210, 0.084, 0.072]
+</code></pre>
+<p>对于 budget 候选 <code>k</code>，预期每 step 进度是：</p>
+<pre class="codehilite"><code class="language-text">tau_star(k) = B + sum(top-k historical survival)
+</code></pre>
+<p>其中基础项 <code>B=2</code> 表示每个请求即使一个 draft 都不接受，也至少由 anchor 的 Target logits
+产生一个 bonus 输出。假设教学用 <code>SpsCostTable</code> 是：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">SpsCostTable</span><span class="p">(</span>
+    <span class="n">sample_batch_tokens</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span>
+    <span class="n">sample_steps_per_sec</span><span class="o">=</span><span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">],</span>
+    <span class="n">max_batch_tokens</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre>
+<p>该表按 floor probe 查询：<code>B+k&lt;5</code> 时 SPS 为 <code>1.0</code>，从 5 tokens 起为 <code>0.5</code>。于是：</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th style="text-align:right"><code>k</code></th>
+<th style="text-align:right"><code>B+k</code></th>
+<th style="text-align:right"><code>tau_star(k)</code></th>
+<th style="text-align:right">SPS</th>
+<th style="text-align:right"><code>theta=tau_star×SPS</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:right">0</td>
+<td style="text-align:right">2</td>
+<td style="text-align:right">2.000</td>
+<td style="text-align:right">1.0</td>
+<td style="text-align:right">2.000</td>
+</tr>
+<tr>
+<td style="text-align:right">1</td>
+<td style="text-align:right">3</td>
+<td style="text-align:right">2.900</td>
+<td style="text-align:right">1.0</td>
+<td style="text-align:right">2.900</td>
+</tr>
+<tr>
+<td style="text-align:right">2</td>
+<td style="text-align:right">4</td>
+<td style="text-align:right">3.620</td>
+<td style="text-align:right">1.0</td>
+<td style="text-align:right"><strong>3.620</strong></td>
+</tr>
+<tr>
+<td style="text-align:right">3</td>
+<td style="text-align:right">5</td>
+<td style="text-align:right">4.320</td>
+<td style="text-align:right">0.5</td>
+<td style="text-align:right">2.160</td>
+</tr>
+<tr>
+<td style="text-align:right">4</td>
+<td style="text-align:right">6</td>
+<td style="text-align:right">4.740</td>
+<td style="text-align:right">0.5</td>
+<td style="text-align:right">2.370</td>
+</tr>
+<tr>
+<td style="text-align:right">5</td>
+<td style="text-align:right">7</td>
+<td style="text-align:right">5.100</td>
+<td style="text-align:right">0.5</td>
+<td style="text-align:right">2.550</td>
+</tr>
+<tr>
+<td style="text-align:right">6</td>
+<td style="text-align:right">8</td>
+<td style="text-align:right">5.310</td>
+<td style="text-align:right">0.5</td>
+<td style="text-align:right">2.655</td>
+</tr>
+<tr>
+<td style="text-align:right">7</td>
+<td style="text-align:right">9</td>
+<td style="text-align:right">5.394</td>
+<td style="text-align:right">0.5</td>
+<td style="text-align:right">2.697</td>
+</tr>
+<tr>
+<td style="text-align:right">8</td>
+<td style="text-align:right">10</td>
+<td style="text-align:right">5.466</td>
+<td style="text-align:right">0.5</td>
+<td style="text-align:right">2.733</td>
+</tr>
+</tbody>
+</table></div>
+<p>最大值位于 <code>k=2</code>，所以：</p>
+<pre class="codehilite"><code class="language-text">VerifyBudgetDecision.budget = 2
+resolve_verify_token_budget() = 2
+</code></pre>
+<p>这仍只表示“两个 anchor 之外，整个 batch 额外开放两个 draft 槽”。下一节才会使用当前
+<code>C_t</code> 决定这两个槽给 req0、req1 的哪些位置。</p>
+<p>普通 <code>SpsCostTable</code> 的目标是 <code>tau_star × steps_per_sec</code>；<code>SpsAdditiveCostTable</code> 则使用
+<code>tau_star / step_time(B,k)</code>，但最终都返回 batch-global scalar <code>budget=argmax_k objective(k)</code>。
+完整 <code>VerifyBudgetDecision</code> 还保存预测 step time 和 objective，<code>resolve_verify_token_budget()</code>
+只返回其中的 Python <code>int</code>。</p>
+<p>没有 profile SPS 文件时，源码构造 constant-SPS flat table。因为 survival 非负，prefix sum 和
+<code>tau_star</code> 单调不减，optimizer 通常选择全部高于 <code>survival_eps</code> 的候选，退化为 verify-all；
+不是 <code>budget=None</code>。<code>min_verify_len</code> 的 floor 也不在这个 optimizer 中扣除，而由后续
+verify-lens scheduler 保证。</p>
+<h3 id="77-raw-budget-尚不是-layout">7.7 raw budget 尚不是 layout</h3>
+<p>到这里的状态是：</p>
+<pre class="codehilite"><code class="language-text">current confidence C_t [2,4]
+raw verify_token_budget = 2
+verify_lens              尚未产生
+RaggedVerifyLayout       尚未产生
+Target forward           尚未执行
+</code></pre>
+<p>原始 budget 的直接消费者是 <code>schedule_layout()</code>。它内部还可能在显式开启
+<code>--speculative-dspark-align-verify-tokens-to-graph-tier</code> 时扩大给 top-k allocator 的局部 allowance；
+该开关默认关闭，不能把 graph-tier 对齐后的数值写成 <code>resolve_verify_token_budget()</code> 的原始返回。
+DP compact 也只协调 graph tier，总体 budget 数学仍相同。下面继续沿真实调用顺序，把当前
+<code>C_t + raw budget</code> 变成 <code>verify_lens</code> 与 <code>RaggedVerifyLayout</code>。</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>源码动作</th>
+<th>改变的状态</th>
+<th>为什么在这里做</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>compute_confidence_tensor()</code></td>
+<td>产生当前 <code>C_t[B,G]</code></td>
+<td>Draft tokens/hidden 已存在，Target 尚未启动</td>
+</tr>
+<tr>
+<td><code>_shift_to_lag()</code></td>
+<td>读取历史 confidence，并保存当前值</td>
+<td>将 budget 数量与当前 forward 解耦</td>
+</tr>
+<tr>
+<td><code>cumprod()</code></td>
+<td>历史 confidence → survival</td>
+<td>更深位置依赖前缀持续存活</td>
+</tr>
+<tr>
+<td>SPS optimizer</td>
+<td>产生 batch-global raw budget</td>
+<td>平衡预期 token 进度与 step cost</td>
+</tr>
+<tr>
+<td><code>schedule_layout()</code></td>
+<td>当前 <code>C_t + budget_t → verify_lens</code></td>
+<td>数量确定后再决定每请求分配</td>
+</tr>
+</tbody>
+</table></div>
+<p>检查点：</p>
+<ol>
+<li><code>B=2、G=4、budget=5</code> 时，budget 是否包含两个 anchor？逻辑 allowance 上限是多少？</li>
+<li>默认稳态下 overlap 与 non-overlap 分别由谁实现两轮 confidence lag？</li>
+<li>为什么可以同时说“non-overlap 把当前 <code>C_t</code> 传进 <code>compute_budget_sync()</code>”和“本轮 optimizer
+使用 <code>C_(t-2)</code>”？</li>
+<li>没有 SPS profile 时为什么通常 verify-all，而不是 <code>budget=None</code>？</li>
+<li>得到 raw budget 后，为什么还不能断言具体的 <code>verify_lens</code>？</li>
+</ol>
+<h3 id="78-schedule_layout当前-survival-把-raw-budget-分给请求">7.8 <code>schedule_layout()</code>：当前 survival 把 raw budget 分给请求</h3>
+<p>调用点在 <code>dspark_worker_v2.py:561-569</code>，实现位于
+<code>dspark_planner.py:419-522</code>：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">layout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verify_planner</span><span class="o">.</span><span class="n">schedule_layout</span><span class="p">(</span>
+    <span class="n">req_pool_indices</span><span class="o">=</span><span class="n">batch</span><span class="o">.</span><span class="n">req_pool_indices</span><span class="p">,</span>
+    <span class="n">prefix_lens</span><span class="o">=</span><span class="n">prefix_lens</span><span class="p">,</span>
+    <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
+    <span class="n">confidence</span><span class="o">=</span><span class="n">confidence</span><span class="p">,</span>
+    <span class="n">budget</span><span class="o">=</span><span class="n">verify_token_budget</span><span class="p">,</span>
+    <span class="o">...</span>
+<span class="p">)</span>
+</code></pre>
+<p>默认 <code>--speculative-dspark-align-verify-tokens-to-graph-tier</code> 关闭，所以
+<code>_budget_aligned_to_graph_tier()</code> 原样返回前面求出的 <code>budget=2</code>。随后
+<code>_schedule_verify_lens()</code> 调用 <code>ScheduleVerifyLensTopk.execute()</code>；Torch 参考实现位于
+<code>dspark_schedule.py:49-115</code>，CUDA 路径在同文件 <code>134-261</code> 用 Triton 完成相同工作：</p>
+<pre class="codehilite"><code class="language-text">当前 confidence C_t
+→ 每请求沿 draft 深度做 cumprod
+→ 得到当前 survival
+→ 把所有请求/位置展平并全局降序
+→ 选择前 budget 个有效位置
+→ 按 request 统计 selected_extra
+→ verify_lens = mandatory floor + selected_extra
+</code></pre>
+<p>继续使用 7.2 节当前 confidence：</p>
+<pre class="codehilite"><code class="language-text">C_t =
+req0 [0.95, 0.90, 0.70, 0.20]
+req1 [0.99, 0.95, 0.92, 0.85]
+
+current survival = cumprod(C_t) =
+req0 [0.95000, 0.85500, 0.59850, 0.11970]
+req1 [0.99000, 0.94050, 0.86526, 0.73547]
+</code></pre>
+<p>注意，这次 <code>cumprod</code> 使用的是<strong>当前</strong> <code>C_t</code>，用途是分配本轮名额；7.6 节 Host budget
+optimizer 对历史 <code>C_(t-2)</code> 的 <code>cumprod</code> 则用于决定名额总数。两次计算公式相同，时间和职责
+不同。</p>
+<p>全局 top-2 是：</p>
+<pre class="codehilite"><code class="language-text">1. req1 position 0：0.99000
+2. req0 position 0：0.95000
+</code></pre>
+<p>所以：</p>
+<pre class="codehilite"><code class="language-text">selected_extra = [1,1]
+mandatory floor = [1,1]       # 每请求至少验证 anchor
+verify_lens     = [2,2]
+</code></pre>
+<p>每个 <code>verify_len=2</code> 的含义都是“anchor + 第一个 draft”，不是两个 draft：</p>
+<pre class="codehilite"><code class="language-text">req0 逻辑验证前缀 = [Y0,a]
+req1 逻辑验证前缀 = [Y1,e]
+</code></pre>
+<p><code>survival_eps</code> 还会过滤低于阈值的候选，因此一般只保证：</p>
+<pre class="codehilite"><code class="language-text">sum(verify_lens - floor) &lt;= budget
+</code></pre>
+<p>不保证每次都花完 budget。TP 大于 1 时，<code>verify_lens</code> 还会从 TP group-local rank 0 broadcast；
+TP=1 时跳过。这里产生的是 CUDA <code>int32 [B]</code> Tensor，尚未构造 compact token buffer。</p>
+<p>显式打开 graph-tier alignment 会改变分配结果。本例 raw budget 为 2、下一 graph tier 为 5，
+allocator allowance 会扩大到：</p>
+<pre class="codehilite"><code class="language-text">aligned budget = graph_num_tokens - B = 5 - 2 = 3
+</code></pre>
+<p>第三个候选是 <code>req1 position 1 = 0.94050</code>，因此变成：</p>
+<pre class="codehilite"><code class="language-text">verify_lens = [2,3]
+</code></pre>
+<p>即把原本会成为 padding 的一个物理槽换成真实验证；默认关闭时仍是本文主线 <code>[2,2]</code>。</p>
+<h3 id="79-raggedverifylayout逻辑-4-行与-graph-tier-5">7.9 <code>RaggedVerifyLayout</code>：逻辑 4 行与 graph tier 5</h3>
+<p>non-DP、dynamic graph tier 下，planner 用<strong>原始</strong> raw budget 估算本轮 token tier：</p>
+<pre class="codehilite"><code class="language-text">tier token floor
+  = B × max(min_verify_len,1) + raw budget
+  = 2 × 1 + 2
+  = 4
+</code></pre>
+<p>完整上限是 <code>B×W=10</code>。假设 capture token grid 从 <code>[5,10,15,...]</code> 开始，
+<code>round_up_grid(4)</code> 选择 5，于是 <code>RaggedVerifyLayout.from_verify_lens_device()</code> 得到：</p>
+<pre class="codehilite"><code class="language-text">verify_lens        = [2,2]       CUDA int32 [2]
+qo_indptr_device   = [0,2,4]     CUDA int32 [3]
+extend_start_loc   = [0,2]       CUDA int32 [2]
+graph_num_tokens   = 5           Python int
+
+verify_lens_cpu    = None
+total_verify_tokens= None
+</code></pre>
+<p>构造逻辑位于 <code>ragged_verify.py:84-134</code>；<code>BuildQoIndptr</code> 根据 <code>[2,2]</code> 生成 exclusive start 与
+prefix-sum indptr。三个关键量分别表示：</p>
+<pre class="codehilite"><code class="language-text">qo_indptr=[0,2,4]： req0 占 compact rows [0,2)，req1 占 [2,4)
+extend_start=[0,2]：每请求在 compact flat rail 中的起点
+graph_num_tokens=5：物理执行/graph bucket 容量，不属于某个真实请求的额外一行
+</code></pre>
+<p>所以此刻必须区分：</p>
+<pre class="codehilite"><code class="language-text">真实请求数                  = 2
+逻辑 verify query rows       = qo_indptr[-1] = 4
+物理 graph-tier token rows   = graph_num_tokens = 5
+完整矩形 rows                = B × W = 10
+</code></pre>
+<p>device-fast 构造没有把 layout 搬回 CPU；但后面的 <code>_run_ragged()</code> 若仍需要维护
+<code>ScheduleBatch.seq_lens_cpu</code>，会单独执行 <code>layout.verify_lens.cpu().tolist()</code>。不能把“layout
+构造阶段 device-only”扩大成“整个 verify 生命周期没有 D2H”。</p>
+<p>如果请求槽数或 tier hint 超过 captured grid，<code>schedule_layout()</code> 在构造 layout 前返回 <code>None</code>。
+COMPACT 随后令 <code>run_compact=False</code>，退回 full-width non-compact；<code>None</code> 不是“不运行 Target
+Verify”。</p>
+<h3 id="710-target-candidates-明确包含-anchor">7.10 Target candidates 明确包含 anchor</h3>
+<p><code>worker_v2.py:572-574</code>：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">verify_ids_2d</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span>
+    <span class="p">[</span><span class="n">draft_block_ids</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">1</span><span class="p">],</span> <span class="n">draft_tokens</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span>
+<span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">()</span>
+</code></pre>
+<p>回到本文单请求主例：</p>
+<pre class="codehilite"><code class="language-text">draft_block_ids[:, :1] = [Y]
+draft_tokens            = [a,b,c,d]
+verify_ids_2d           = [Y,a,b,c,d]       shape [1,5]
+</code></pre>
+<p>anchor 不是被验证的 draft；它是 Target 产生 <code>d1</code> 验证分布所必需的输入。</p>
+<h3 id="711-staticcap_acceptcompact-必须分开">7.11 STATIC、CAP_ACCEPT、COMPACT 必须分开</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>模式</th>
+<th>layout/<code>verify_lens</code></th>
+<th>Target forward</th>
+<th>接受阶段</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>STATIC</code></td>
+<td>始终 <code>layout=None</code></td>
+<td>完整 <code>B×W</code></td>
+<td>按真实匹配/拒绝采样</td>
+</tr>
+<tr>
+<td><code>CAP_ACCEPT</code></td>
+<td>有 confidence/budget 时可有；否则可为 <code>None</code></td>
+<td>始终完整 <code>B×W</code></td>
+<td>有 layout 时将 <code>correct_len</code> 截到 <code>verify_len-1</code></td>
+</tr>
+<tr>
+<td><code>COMPACT</code></td>
+<td>通常有；超出 captured grid 等情况可返回 <code>None</code></td>
+<td>有 layout 时构造 compact buffer；无 layout 时 fallback 到 full-width non-compact</td>
+<td>再按相同 accept/cutoff 规则处理</td>
+</tr>
+</tbody>
+</table></div>
+<p>只有 <code>COMPACT</code> 有能力在 Target Transformer 前裁掉未选择的候选；<code>CAP_ACCEPT</code> 即使有
+<code>verify_lens</code>，也不节省本轮 Target forward 计算。但 COMPACT 的物理输入长度是
+<code>layout.graph_num_tokens</code>，可能大于 <code>sum(verify_lens)</code>，其中包含 CUDA Graph tier padding；若
+verify-all、padding 填满完整 tier，或 layout fallback 为 <code>None</code>，本轮也可能没有实际计算节省。</p>
+<p>决定分支的精确条件是：</p>
+<pre class="codehilite"><code class="language-text">run_compact = (mode == COMPACT) and (layout is not None)
+</code></pre>
+<p>COMPACT 配置下若 <code>schedule_layout()</code> 返回 <code>None</code>，Worker 改走完整宽度 non-compact；当前
+compact-configured graph runner 对 <code>TARGET_VERIFY + 无 ragged layout</code> 也不会强行 replay ragged
+graph，而是落到 full-width eager fallback。</p>
+<p><a id="target-verify"></a></p>
+<h2 id="8-target-verify两条入口一个统一结果">8. Target Verify：两条入口，一个统一结果</h2>
+<h3 id="81-run_non_compact">8.1 <code>run_non_compact()</code></h3>
+<p>定义位于
+<code>python/sglang/srt/speculative/dspark_components/dspark_verify.py:215-260</code>。</p>
+<p>它构造完整线性验证输入：</p>
+<pre class="codehilite"><code class="language-text">Target input_ids = [Y,a,b,c,d]              shape [5]
+positions        = [22,23,24,25,26]         shape [5]
+out_cache_loc    = [L22,L23,L24,L25,L26]   shape [5]
+capture_hidden_mode = FULL
+</code></pre>
+<p>对应源码对象是：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">verify_input</span> <span class="o">=</span> <span class="n">DFlashVerifyInput</span><span class="p">(</span>
+    <span class="n">draft_token</span><span class="o">=</span><span class="n">verify_ids_2d</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">positions</span><span class="o">=</span><span class="n">positions_2d</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">draft_token_num</span><span class="o">=</span><span class="n">W</span><span class="p">,</span>
+    <span class="n">custom_mask</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">capture_hidden_mode</span><span class="o">=</span><span class="n">CaptureHiddenMode</span><span class="o">.</span><span class="n">FULL</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre>
+<p>随后 <code>verify_input.prepare_for_verify(batch, self.target_worker)</code> 才把这组线性 candidates 准备成
+真正交给 Target worker 的 <code>ForwardBatch</code>。因此 <code>DFlashVerifyInput</code> 是 verify 输入描述对象，
+<code>TargetVerifyResult</code> 是 Target forward 之后的结果对象，两者不能混为一个阶段。</p>
+<h3 id="82-run_compact">8.2 <code>run_compact()</code></h3>
+<p>定义位于 <code>dspark_verify.py:357-425</code>。它先按 <code>verify_lens</code> gather 每请求前缀，再运行 Target。</p>
+<p>下面不再切回单请求，直接沿用第 7 节已经得到的多请求 layout：</p>
+<pre class="codehilite"><code class="language-text">B = 2, W = 5
+prefix_lens = [22,10]
+verify_lens = [2,2]
+graph_num_tokens = 5
+
+完整 candidates [B,W]：
+req0 [Y0,a,b,c,d]
+req1 [Y1,e,f,g,h]
+
+逻辑有效前缀：
+req0 [Y0,a]
+req1 [Y1,e]
+</code></pre>
+<h4 id="821-buildraggedverifywindow三条-compact-flat-rail">8.2.1 <code>BuildRaggedVerifyWindow</code>：三条 compact flat rail</h4>
+<p><code>BuildRaggedVerifyWindow.execute()</code> 位于
+<code>dspark_verify_window.py:20-216</code>；CUDA 输入走 Triton，其他情况走 Torch 参考实现。它没有创建一个
+名字就叫 <code>compact_flat_buffer</code> 的大对象，而是创建三条逐行严格对齐的 Tensor rail：</p>
+<pre class="codehilite"><code class="language-text">token rail：       verify_ids       = [Y0,a,Y1,e,0]
+position rail：    positions        = [22,23,10,11,0]
+KV-location rail： verify_cache_loc = [L0_22,L0_23,L1_10,L1_11,0]
+                                      └── 4 个逻辑行 ──┘ padding
+</code></pre>
+<p><code>extend_start_loc=[0,2]</code> 和 <code>qo_indptr=[0,2,4]</code> 正是这三条 flat rail 的请求分段信息：req0
+从 row 0 开始，占两行；req1 从 row 2 开始，占两行。最后一行是 graph tier padding，不属于
+任何真实请求的<strong>原始逻辑 layout</strong>。</p>
+<p>进入 CUDA Graph replay metadata 时，backend 还要为静态 capture slots 构造临时 padded layout。
+通常 capture slots 为 5 时：</p>
+<pre class="codehilite"><code class="language-text">原始 logical verify_lens = [2,2]
+临时 physical verify_lens = [2,2,1,0,0]
+临时 physical qo_indptr   = [0,2,4,5,5,5]
+</code></pre>
+<p>因此 padding row 会在物理 attention geometry 中归入 synthetic padding slot，以满足固定 5-row
+shape，但不会改写原始 <code>layout=[2,2]</code>，也没有真实请求语义。</p>
+<h4 id="822-_run_ragged从-rail-到-dflashverifyinput">8.2.2 <code>_run_ragged()</code>：从 rail 到 <code>DFlashVerifyInput</code></h4>
+<p><code>_run_ragged()</code> 位于 <code>dspark_verify.py:320-355</code>：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">verify_input</span> <span class="o">=</span> <span class="n">DFlashVerifyInput</span><span class="p">(</span>
+    <span class="n">draft_token</span><span class="o">=</span><span class="n">ragged_window</span><span class="o">.</span><span class="n">verify_ids</span><span class="p">,</span>
+    <span class="n">positions</span><span class="o">=</span><span class="n">ragged_window</span><span class="o">.</span><span class="n">positions</span><span class="p">,</span>
+    <span class="n">draft_token_num</span><span class="o">=</span><span class="n">W</span><span class="p">,</span>
+    <span class="n">capture_hidden_mode</span><span class="o">=</span><span class="n">CaptureHiddenMode</span><span class="o">.</span><span class="n">FULL</span><span class="p">,</span>
+    <span class="n">ragged_verify_layout</span><span class="o">=</span><span class="n">layout</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">batch</span><span class="o">.</span><span class="n">out_cache_loc</span> <span class="o">=</span> <span class="n">ragged_window</span><span class="o">.</span><span class="n">verify_cache_loc</span>
+</code></pre>
+<p>这里 <code>draft_token_num=W=5</code> 与 <code>num_tokens_per_req=5</code> 表示 dSpark 的名义最大 verify 宽度，不表示
+本轮每请求真的验证 5 行；实际长度仍由 <code>[2,2]</code> 控制。</p>
+<p>若进入本方法时：</p>
+<pre class="codehilite"><code class="language-text">batch.seq_lens     = [22,10]       # GPU committed prefix
+batch.seq_lens_cpu = [22,10]
+batch.seq_lens_sum = 32
+</code></pre>
+<p>则 <code>_run_ragged()</code> 为 host planner 临时计算：</p>
+<pre class="codehilite"><code class="language-text">verify_lens.cpu().tolist() = [2,2]
+batch.seq_lens_cpu          = [24,12]
+batch.seq_lens_sum          = 36
+</code></pre>
+<p><code>prepare_for_verify()</code> 构造 <code>ForwardBatch</code> 后，<code>_forward_prepared_verify()</code> 立即把
+<code>ScheduleBatch.seq_lens_cpu/sum</code> 恢复成 <code>[22,10]/32</code>。但已经构造出的 <code>ForwardBatch</code> 保留
+<code>[24,12]/36</code> 这一 planner 视图；GPU <code>seq_lens</code> 始终是 <code>[22,10]</code>，支持 ragged 的 attention
+backend 自己通过 layout 加上 verify lengths。</p>
+<p>以 FlashAttention 风格的逻辑 ragged geometry 表达，本例对应：</p>
+<pre class="codehilite"><code class="language-text">cache_seqlens = prefix_lens + verify_lens = [24,12]
+cu_seqlens_q  = [0,2,4]
+cu_seqlens_k  = [0,24,36]
+</code></pre>
+<p>这是 4 个真实 query rows 的逻辑 geometry；Decode CUDA Graph replay 为 5 个物理 rows 构造的
+padded metadata 是另一层对象，不能拿 <code>[0,2,4]</code> 直接解释 padding row。</p>
+<h4 id="823-实际-forwardbatch请求数不等于-token-行数">8.2.3 实际 <code>ForwardBatch</code>：请求数不等于 token 行数</h4>
+<p><code>DFlashVerifyInput.prepare_for_verify()</code> 位于 <code>dflash_info.py:53-94</code>。它先写：</p>
+<pre class="codehilite"><code class="language-text">batch.input_ids   = [Y0,a,Y1,e,0]
+batch.spec_info   = DFlashVerifyInput(..., ragged_verify_layout=layout)
+batch.forward_mode= TARGET_VERIFY
+</code></pre>
+<p>随后 <code>ForwardBatch.init_new()</code>（<code>forward_batch_info.py:684-942</code>）得到：</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>本例值</th>
+<th>严格含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>batch_size</code></td>
+<td><code>2</code></td>
+<td><code>len(batch.seq_lens)</code>，真实请求数</td>
+</tr>
+<tr>
+<td><code>input_ids</code></td>
+<td><code>[Y0,a,Y1,e,0]</code>，shape <code>[5]</code></td>
+<td>物理 Target token rail</td>
+</tr>
+<tr>
+<td><code>positions</code></td>
+<td><code>[22,23,10,11,0]</code>，shape <code>[5]</code></td>
+<td>直接来自 <code>spec_info.positions</code></td>
+</tr>
+<tr>
+<td><code>out_cache_loc</code></td>
+<td><code>[L0_22,L0_23,L1_10,L1_11,0]</code>，shape <code>[5]</code></td>
+<td>物理 KV 写地址 rail</td>
+</tr>
+<tr>
+<td><code>req_pool_indices</code></td>
+<td>shape <code>[2]</code></td>
+<td>两个真实请求</td>
+</tr>
+<tr>
+<td><code>seq_lens</code></td>
+<td><code>[22,10]</code></td>
+<td>未加 verify block 的 GPU committed prefix</td>
+</tr>
+<tr>
+<td><code>seq_lens_cpu</code></td>
+<td><code>[24,12]</code></td>
+<td>host planner 的临时扩展视图</td>
+</tr>
+<tr>
+<td><code>seq_lens_sum</code></td>
+<td><code>36</code></td>
+<td><code>24+12</code></td>
+</tr>
+<tr>
+<td><code>capture_hidden_mode</code></td>
+<td><code>FULL</code></td>
+<td>后续 Draft KV 注入需要 Target hidden</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>ForwardBatch.num_token_non_padded_cpu</code> 在这里机械等于 <code>len(input_ids)=5</code>，也不能拿它表示逻辑
+有效行数 4。</p>
+<p>Target 返回后，compact 路径把真实结果 scatter 回统一的 <code>[B×W,...]</code> strided 布局，供公共
+accept 接口使用；同时单独返回 <code>hidden_strided</code>，供后面的 compact KV commit 分支消费：</p>
+<pre class="codehilite"><code class="language-text">run_compact() -&gt; (TargetVerifyResult, hidden_strided)
+</code></pre>
+<h3 id="83-真正的-target-forward-与-runner-边界">8.3 真正的 Target forward 与 runner 边界</h3>
+<p>两条入口最终都调用：</p>
+<pre class="codehilite"><code class="language-python"><span class="bp">self</span><span class="o">.</span><span class="n">target_worker</span><span class="o">.</span><span class="n">forward_batch_generation</span><span class="p">(</span>
+    <span class="n">batch</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">forward_batch</span><span class="o">=</span><span class="n">verify_forward_batch</span><span class="p">,</span>
+    <span class="n">is_verify</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">skip_attn_backend_init</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre>
+<p>调用点在 <code>dspark_verify.py:262-285</code>。</p>
+<p><code>TARGET_VERIFY</code> 不等于必然 Eager。<code>prepare_for_verify()</code> 先做 execution pre-plan：decode CUDA
+Graph 可运行时调用 graph runner 的第一次 <code>load_batch()</code>；否则调用 Target attention backend
+的 <code>init_forward_metadata()</code> 规划 eager metadata。第一次 graph <code>load_batch()</code> 在本例记录：</p>
+<pre class="codehilite"><code class="language-text">raw_bs          = 2
+raw_num_token   = graph_num_tokens = 5
+graph key       = 5              # ragged graph 按 token tier key
+capture slots   = 5              # 通常 min(graph_num_tokens,max_bs)
+</code></pre>
+<p>随后 <code>target_worker.forward_batch_generation(..., is_verify=True, skip_attn_backend_init=True)</code> 把 <code>ForwardBatch</code> 标为 metadata-ready。进入
+<code>ModelRunner._forward_raw()</code> 后，若 graph 仍可用，<code>execute()</code> 内会第二次调用 <code>load_batch()</code>；这次
+只刷新静态 <code>input_ids[:5]</code>、<code>positions[:5]</code> 与 graph key，复用第一次计划的 metadata，再 replay。</p>
+<p>所以两次 <code>load_batch()</code> 不是重复工作：</p>
+<pre class="codehilite"><code class="language-text">第一次：完整 pre-plan + static rail copy + attention metadata + graph key
+第二次：replay 前轻量刷新 ids/positions + 复用既有 plan
+</code></pre>
+<p>graph 不可用时，<code>ModelRunner</code> 准备 eager batch，最终进入 <code>EagerRunner._execute_extend()</code>；虽然
+通用 extend 分支还会检查 prefill graph，但 <code>PrefillCudaGraphRunner.can_run_graph()</code> 对
+<code>TARGET_VERIFY</code> 明确返回 <code>False</code>，所以当前不会进入 piecewise Prefill CUDA Graph。更重要的是：</p>
+<pre class="codehilite"><code class="language-text">COMPACT + decode graph 失败 = eager compact，仍 forward 5 个物理 rows
+</code></pre>
+<p>它不会在这里重新变成完整矩形 10 行；只有更早的 <code>layout=None → run_compact=False</code> 才走
+full-width non-compact。</p>
+<p>这里的 <code>skip_attn_backend_init=True</code> 也不表示 metadata 从未初始化；它表示 pre-plan 已完成，
+正式 forward 不应再次规划并覆盖它。</p>
+<p>不同 backend 对请求分段的消费字段不同：FlashAttention/TRT-LLM MHA 主要把
+<code>qo_indptr_device</code> 用作 <code>cu_seqlens_q</code>；DeepSeek-V4 会直接消费 <code>extend_start_loc</code> 展开其
+prefill/causal metadata。普通 FlashInfer 当前没有 opt-in ragged graph，device-only layout 的 eager
+helper 也需要非空 host total；这是静态源码暴露出的兼容性边界，本文未做对应 GPU 配置验证。</p>
+<h3 id="84-targetverifyresult-还没有接受结果">8.4 <code>TargetVerifyResult</code> 还没有接受结果</h3>
+<p>定义位于 <code>dspark_verify.py:64-66</code>：</p>
+<pre class="codehilite"><code class="language-python"><span class="k">class</span><span class="w"> </span><span class="nc">TargetVerifyResult</span><span class="p">(</span><span class="n">msgspec</span><span class="o">.</span><span class="n">Struct</span><span class="p">,</span> <span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="n">logits_output</span><span class="p">:</span> <span class="nb">object</span>
+    <span class="n">can_run_cuda_graph</span><span class="p">:</span> <span class="nb">bool</span>
+</code></pre>
+<p>non-compact 单请求例子可以理解为：</p>
+<pre class="codehilite"><code class="language-text">next_token_logits： [5,V]，对应输入 [Y,a,b,c,d]
+hidden_states：     [5,H_aux]，对应 [hY,ha,hb,hc,hd]
+can_run_cuda_graph：本次 Target verify 的 graph 状态
+</code></pre>
+<p>这里不能把 <code>H_aux</code> 与 Draft hidden 的 <code>H_d</code> 机械视为同一维度。Target <code>FULL</code> capture 可以把
+多个被选 target layer 的 feature 拼接起来；后续 <code>project_target_hidden()</code> 再把 <code>H_aux</code> 投影到
+Draft 模型需要的表示空间。</p>
+<p><code>TargetVerifyResult</code> 中没有 <code>correct_len</code>、<code>bonus</code> 或 <code>commit_lens</code>。这些字段必须等 Target
+forward 返回后，由接受阶段产生。</p>
+<p>compact 路径还要区分三个观察点：</p>
+<pre class="codehilite"><code class="language-text">1. _run_ragged() 刚返回：
+   compact/padded logits [5,V]
+   compact/padded hidden [5,H_aux]
+
+2. run_compact() 返回 Worker 前：
+   strided logits [B×W,V] = [10,V]
+   strided hidden [B×W,H_aux] = [10,H_aux]
+
+3. accept_and_finalize() 后：
+   才产生 correct_len / bonus / commit_lens / new_seq_lens
+</code></pre>
+<p>第 2 步的普通路径由 <code>ScatterCompactToStrided</code> 完成：</p>
+<pre class="codehilite"><code class="language-text">compact rows 0,1 → strided req0 columns 0,1
+compact rows 2,3 → strided req1 columns 0,1
+compact padding row 4 → sink，不进入真实请求
+
+strided req0 = [row(Y0), row(a), 0, 0, 0]
+strided req1 = [row(Y1), row(e),  0, 0, 0]
+</code></pre>
+<p>这里的 <code>0</code> 表示 logits/hidden 的 fill value，不是一个被 Target 计算并接受的 token id。<code>5→10</code>
+只是恢复公共 accept 接口所需的请求主序布局，不是 Target 又 forward 了 10 行。若 graph epilogue
+已捕获这段 scatter，则 <code>run_compact()</code> 直接读取预写的 strided buffers，数据语义相同、执行位置
+不同。</p>
+<p><code>TargetVerifyResult</code> 外壳是 frozen，但其 <code>logits_output</code> 内部对象可变；<code>run_compact()</code> 会将
+<code>logits_output.next_token_logits/hidden_states</code> 替换成 strided Tensor。因此“TargetVerifyResult
+是 compact 还是 strided”必须附带上述观察时刻。</p>
+<p>若有 grammar，Worker 会在 <code>worker_v2.py:614-625</code> 对 Target logits 应用 grammar mask，然后
+才进入接受阶段。Sampling 的温度、top-k、top-p 需要再拆成两层：verify 路径会先对 strided
+logits 应用可直接表达为 logits adjustment 的部分；真正进入 <code>AcceptSampling</code> 后，再由
+<code>build_dflash_verify_target_probs()</code> 按 temperature → top-k → top-p 构造每个验证位置的目标分布
+<code>P_T</code>，供拒绝采样使用。不能把这两层都概括成“普通 sampler 已经采完”；<code>is_verify=True</code> 正是
+跳过普通生成 sampler，最终 token 由后续 speculative accept 产生。</p>
+<h3 id="85-2--4--5--10-四种数量不可混用">8.5 <code>2 / 4 / 5 / 10</code> 四种数量不可混用</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>数量</th>
+<th style="text-align:right">本例值</th>
+<th>由谁表达</th>
+<th>是否代表真实请求</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>请求数</td>
+<td style="text-align:right"><code>2</code></td>
+<td><code>ForwardBatch.batch_size</code></td>
+<td>是</td>
+</tr>
+<tr>
+<td>逻辑 compact rows</td>
+<td style="text-align:right"><code>4</code></td>
+<td><code>sum(verify_lens)</code> / <code>qo_indptr[-1]</code></td>
+<td>是，属于两条真实请求</td>
+</tr>
+<tr>
+<td>物理 Target rows</td>
+<td style="text-align:right"><code>5</code></td>
+<td><code>graph_num_tokens</code> / <code>input_ids.numel()</code></td>
+<td>前 4 行是，最后 1 行是 padding</td>
+</tr>
+<tr>
+<td>公共 strided rows</td>
+<td style="text-align:right"><code>10</code></td>
+<td><code>B×W</code></td>
+<td>是固定接口容量，不等于实算行数</td>
+</tr>
+</tbody>
+</table></div>
+<p>这四个量也是 compact verify 最重要的审计不变量：<code>2</code> 个请求可以对应 <code>5</code> 行 Target 输入；
+<code>TargetVerifyResult</code> 可以暂时有 <code>5</code> 行；公共 accept 最终看到 <code>10</code> 行固定布局，但 Target 从未因此
+计算 10 行。</p>
+<p><a id="accept"></a></p>
+<h2 id="9-accept从-target-logits-得到-correct_len-与-bonus">9. Accept：从 Target logits 得到 <code>correct_len</code> 与 bonus</h2>
+<h3 id="91-对齐关系">9.1 对齐关系</h3>
+<p>假设 Target 各输入行的 next-token 预测是：</p>
+<pre class="codehilite"><code class="language-text">Target 输入：       Y   a   b   c   d
+Target next 预测：  a   Z   ?   ?   ?
+</code></pre>
+<p>真正比较的是：</p>
+<pre class="codehilite"><code class="language-text">draft candidates：      a   b   c   d
+Target 对齐预测：       a   Z   ?   ?
+                        ✓   ✗
+</code></pre>
+<p>因此：</p>
+<pre class="codehilite"><code class="language-text">correct_len = 1
+bonus       = Z
+</code></pre>
+<p><code>Z</code> 来自输入 <code>a</code> 那一行的 Target 分布；它不是输入 <code>b</code> 后得到的结果。</p>
+<h3 id="92-greedy">9.2 greedy</h3>
+<p><code>accept_and_finalize()</code> 位于 <code>dspark_verify.py:91-149</code>，它先调用
+<code>accept_draft_tokens()</code>；全 greedy 分支进入 <code>AcceptGreedy</code>，见
+<code>dspark_verify.py:658-678</code>。</p>
+<p>greedy 的含义是：</p>
+<pre class="codehilite"><code class="language-text">连续从 d1 开始与 Target argmax 比较
+遇到第一个不匹配立即停止
+bonus = 停止位置对应的 Target argmax
+</code></pre>
+<p>本例接受 <code>a</code>，拒绝 <code>b</code>。即使后面某个 <code>c/d</code> 恰好等于某行 Target argmax，也不能继续提交，
+因为那些 Target 行的 causal context 已经包含未接受的 <code>b</code>，不再对应真实生成历史。</p>
+<p>greedy 不需要概率修正：Target 分布和 Draft proposal 都退化成单点选择；相等就接受，不相等就
+使用 Target token。</p>
+<h3 id="93-sampling">9.3 sampling</h3>
+<p>非 greedy 路径在 <code>dspark_verify.py:679-722</code> 使用 <code>corrected_logits/temperature</code> 重建实际
+proposal 分布 <code>q</code>，再由 <code>AcceptSampling</code> 使用 Target 分布 <code>p</code> 做链式拒绝采样：</p>
+<pre class="codehilite"><code class="language-text">接受 draft d 的概率 = min(1, p(d) / q(d))
+第一次拒绝后的 bonus ~ normalize(max(p - q, 0))
+若全部 draft 接受，最终 bonus ~ p
+</code></pre>
+<p>如果残差分布中多个 token 概率为正，kernel 会按 CDF 随机采出一个 bonus，不会取 argmax，
+也不会把多个候选一起返回。因此 sampling 模式的 bonus 不一定等于 Target argmax。</p>
+<h3 id="94-acceptouts">9.4 <code>AcceptOuts</code></h3>
+<p>普通非 folded 路径依次执行：</p>
+<pre class="codehilite"><code class="language-text">accept_draft_tokens()
+→ correct_len / bonus / cap_trim_lens
+→ FinalizeAcceptLens
+→ BuildOutTokens
+→ AcceptOuts
+</code></pre>
+<p><code>AcceptOuts</code> 定义在 <code>dspark_verify.py:444-450</code>：</p>
+<pre class="codehilite"><code class="language-text">correct_len
+bonus
+cap_trim_lens
+commit_lens
+new_seq_lens
+out_tokens
+</code></pre>
+<p>本例：</p>
+<pre class="codehilite"><code class="language-text">correct_len   = [1]
+bonus         = [Z]
+cap_trim_lens = [0]
+</code></pre>
+<p><code>cap_trim_lens</code> 记录任意 cutoff layout 将原始接受长度额外裁掉多少，不只属于 CAP_ACCEPT：
+CAP_ACCEPT 和 COMPACT 都可能传入 <code>verify_lens</code>；STATIC/no-layout 为 0。裁剪公式是：</p>
+<pre class="codehilite"><code class="language-text">capped_correct_len = min(raw_correct_len, verify_len - 1)
+cap_trim_lens      = raw_correct_len - capped_correct_len
+</code></pre>
+<p>裁剪后还必须按新的 <code>correct_len</code> 重新选择 bonus，不能沿用原始更深位置的 bonus。例如
+<code>raw_correct_len=3、verify_len=2</code> 时，最终 <code>correct_len=1、cap_trim_lens=2</code>，bonus 必须来自
+截断边界 index 1 对应的 Target/residual 结果。</p>
+<h2 id="10-finalize-与输出固定缓冲不等于有效-token">10. Finalize 与输出：固定缓冲不等于有效 token</h2>
+<h3 id="101-长度收尾">10.1 长度收尾</h3>
+<p><code>finalize_accept_lens()</code> 位于
+<code>python/sglang/kernels/ops/speculative/dspark/dspark_accept.py:718-730</code>：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">commit_lens</span> <span class="o">=</span> <span class="n">correct_len</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="n">new_seq_lens</span> <span class="o">=</span> <span class="n">prefix_lens</span> <span class="o">+</span> <span class="n">commit_lens</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">prefix_lens</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+</code></pre>
+<p>本文例子：</p>
+<pre class="codehilite"><code class="language-text">correct_len  = 1
+commit_lens  = 2
+new_seq_lens = 22 + 2 = 24
+</code></pre>
+<p>这里必须等接受结果出来后才能执行；提前无法知道本轮逻辑前缀能推进多少。</p>
+<h3 id="102-buildouttokens">10.2 <code>BuildOutTokens</code></h3>
+<p>实现位于
+<code>python/sglang/kernels/ops/speculative/dspark/dspark_verify_window.py:766-875</code>。</p>
+<p>它先创建固定宽度 <code>W=5</code> 的工作缓冲：</p>
+<pre class="codehilite"><code class="language-text">[a,b,c,d,0]
+</code></pre>
+<p>然后在 <code>column=correct_len=1</code> 写入 bonus，覆盖 <code>b</code>：</p>
+<pre class="codehilite"><code class="language-text">out_tokens = [a,Z,c,d,0]                    shape [1,5]
+</code></pre>
+<p>Worker 返回时同时设置：</p>
+<pre class="codehilite"><code class="language-text">accept_lens = commit_lens = [2]
+</code></pre>
+<p>所以结果处理只消费前两项：</p>
+<pre class="codehilite"><code class="language-text">用户有效输出 = [a,Z]
+无效工作缓冲尾部 = [c,d,0]
+</code></pre>
+<p>固定 shape 是为了批处理/kernel 接口；不能把整块 <code>out_tokens</code> 当成全部有效输出。</p>
+<p><a id="kv-commit"></a></p>
+<h2 id="11-kv-提交写入的是-ya不是-az">11. KV 提交：写入的是 <code>[Y,a]</code>，不是 <code>[a,Z]</code></h2>
+<h3 id="111-target-hidden-与输入行对齐">11.1 Target hidden 与输入行对齐</h3>
+<p>Target forward 的 hidden 是：</p>
+<pre class="codehilite"><code class="language-text">Target inputs： [Y, a, b, c, d]
+Target hidden： [hY,ha,hb,hc,hd]
+</code></pre>
+<p>non-compact 的 <code>commit_hidden()</code> 位于 <code>dspark_verify.py:287-318</code>。它将 hidden reshape 为
+<code>[B,W,H_aux]</code>，再把完整位置/物理 slot 和 <code>commit_lens</code> 交给
+<code>TargetHiddenKvInjector.inject_target_hidden()</code>。</p>
+<p>本例：</p>
+<pre class="codehilite"><code class="language-text">commit_lens = 2
+有效 target hidden prefix = [hY,ha]
+</code></pre>
+<h3 id="112-compact-与-non-compact-的注入路径不同">11.2 compact 与 non-compact 的注入路径不同</h3>
+<p>两条路径提交的逻辑 token 都是 <code>[anchor, accepted drafts]</code>，但位置/cache layout 的来源不同：</p>
+<pre class="codehilite"><code class="language-text">non-compact:
+  logits_output.hidden_states + VerifyWindow
+  → inject_target_hidden(..., commit_lens)
+
+compact:
+  run_compact() 返回的 hidden_strided
+  → inject_ragged(..., commit_lens)
+  → 重建 compact commit 所需的 positions/cache layout
+</code></pre>
+<p>compact 不能只靠 <code>TargetVerifyResult</code> 描述完整后处理；<code>hidden_strided</code> 是 Worker 单独保存并交给
+<code>commit_hidden(run_compact=True)</code> 的 side channel。若 <code>folded_commit=True</code>，graph epilogue/pool
+已经完成融合写入，Python 两条 <code>commit_hidden</code> 分支都跳过。</p>
+<h3 id="113-为什么要把-target-hidden-注入-draft-kv">11.3 为什么要把 Target hidden 注入 Draft KV</h3>
+<p>Draft 模型拥有自己的 KV cache。下一轮 Draft 不能只知道 token id，还要拥有已确认历史在 Draft
+层中的 K/V 表示。当前 dense dSpark 通过：</p>
+<pre class="codehilite"><code class="language-text">Target hidden
+→ draft_model.project_target_hidden()
+→ draft 各层 K/V projection + RoPE
+→ Draft token_to_kv_pool
+</code></pre>
+<p>入口在
+<code>python/sglang/srt/speculative/dspark_components/dspark_kv_inject.py:31-78</code>；dense 写入实现位于
+<code>python/sglang/srt/models/dspark.py:505-550</code>。</p>
+<h4 id="1131-一个-token-一个-hidden要加上层坐标">11.3.1 “一个 token 一个 hidden”要加上层坐标</h4>
+<p>对 Target 的某一层而言，一个 token 确实只有一个 hidden vector：</p>
+<pre class="codehilite"><code class="language-text">h_t^(layer_i) ∈ R^H_target
+</code></pre>
+<p>Target 正常生成 logits 通常消费最后一层 hidden：</p>
+<pre class="codehilite"><code class="language-text">h_t^(final) → norm → target lm_head → logits_t
+</code></pre>
+<p>dSpark 另开一条 auxiliary capture 路径。Target runner 根据 Draft 配置选择一个或多个 Target
+layer；如果选择 <code>K</code> 层，同一 token 会得到 <code>K</code> 个带层坐标的 feature：</p>
+<pre class="codehilite"><code class="language-text">h_t^(l1), h_t^(l2), ..., h_t^(lK)
+              ↓ 按 feature 维拼接
+target_hidden_t = [h_t^(l1) | h_t^(l2) | ... | h_t^(lK)]
+</code></pre>
+<p>因此对 <code>N</code> 个 Target 输入行，capture 输出概念形状是：</p>
+<pre class="codehilite"><code class="language-text">target_hidden [N, H_aux]
+H_aux = K × H_target
+</code></pre>
+<p>若配置只选择一层，<code>K=1</code>，这里就退化为每 token 一个 vector。选择规则在
+<code>python/sglang/srt/model_executor/model_runner_components/spec_aux_hidden_state.py:97-165</code>；
+<code>CaptureHiddenMode.FULL</code> 的含义是捕获本轮所有输入 token 的这些 feature，而不是“捕获所有
+Target 层”。</p>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart LR
+    T1[&quot;token t 的 Target layer l1 hidden&quot;] --&gt; C[&quot;concat selected features&quot;]
+    T2[&quot;token t 的 Target layer l2 hidden&quot;] --&gt; C
+    TK[&quot;token t 的 Target layer lK hidden&quot;] --&gt; C
+    TF[&quot;token t 的 final hidden&quot;] --&gt; LM[&quot;Target norm + lm_head&quot;]
+    LM --&gt; LOG[&quot;Target logits_t&quot;]
+    C --&gt; AUX[&quot;target_hidden_t [H_aux]&quot;]
+">flowchart LR
+    T1[&quot;token t 的 Target layer l1 hidden&quot;] --&gt; C[&quot;concat selected features&quot;]
+    T2[&quot;token t 的 Target layer l2 hidden&quot;] --&gt; C
+    TK[&quot;token t 的 Target layer lK hidden&quot;] --&gt; C
+    TF[&quot;token t 的 final hidden&quot;] --&gt; LM[&quot;Target norm + lm_head&quot;]
+    LM --&gt; LOG[&quot;Target logits_t&quot;]
+    C --&gt; AUX[&quot;target_hidden_t [H_aux]&quot;]
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart LR
+    T1[&quot;token t 的 Target layer l1 hidden&quot;] --&gt; C[&quot;concat selected features&quot;]
+    T2[&quot;token t 的 Target layer l2 hidden&quot;] --&gt; C
+    TK[&quot;token t 的 Target layer lK hidden&quot;] --&gt; C
+    TF[&quot;token t 的 final hidden&quot;] --&gt; LM[&quot;Target norm + lm_head&quot;]
+    LM --&gt; LOG[&quot;Target logits_t&quot;]
+    C --&gt; AUX[&quot;target_hidden_t [H_aux]&quot;]
+</code></pre></details></figcaption></figure>
+<p>两条箭头不能混为一谈：logits 分支决定 Target 分布；aux hidden 分支负责构造 Draft 历史 KV。</p>
+<h4 id="1132-多个-target-feature-先融合成一个-draft-context-vector">11.3.2 多个 Target feature 先融合成一个 Draft context vector</h4>
+<p><code>DFlashDraftModel.project_target_hidden()</code> 位于
+<code>python/sglang/srt/models/dflash.py:388-400</code>。它不是直接生成 KV，而是先做一次融合：</p>
+<pre class="codehilite"><code class="language-text">u_t = RMSNorm(FC(target_hidden_t))
+
+target_hidden_t [H_aux]
+        ↓
+u_t             [H_d]
+</code></pre>
+<p>对完整 batch：</p>
+<pre class="codehilite"><code class="language-text">target_hidden [N,H_aux]
+→ project_target_hidden()
+→ ctx_hidden  [N,H_d]
+</code></pre>
+<p>所以“捕获了多个 Target 层”不表示 Target layer 与 Draft layer 一一对应。多个 Target feature
+先融合为每 token <strong>一个</strong> <code>ctx_hidden</code>，再进入下一阶段。</p>
+<h4 id="1133-一个-ctx_hidden_t-如何展开成-draft-各层-kv">11.3.3 一个 <code>ctx_hidden_t</code> 如何展开成 Draft 各层 K/V</h4>
+<p>这里确实是一对多关系。Draft 有 <code>L_d</code> 层，每层拥有不同的 KV projection 权重：</p>
+<pre class="codehilite"><code class="language-text">Draft layer 0: (K_t^0, V_t^0)         = KVProj_0(ctx_hidden_t)
+Draft layer 1: (K_t^1, V_t^1)         = KVProj_1(ctx_hidden_t)
+...
+Draft layer L_d-1: (K_t^(L_d-1), V_t^(L_d-1)) = KVProj_(L_d-1)(ctx_hidden_t)
+</code></pre>
+<p>概念 shape 是：</p>
+<pre class="codehilite"><code class="language-text">ctx_hidden [N,H_d]
+    ↓ 每个 Draft layer 各自投影
+K/V [L_d,N,num_kv_heads,head_dim]
+</code></pre>
+<p>这不是把同一份 K/V 复制 <code>L_d</code> 次：每层的 projection 权重不同，所以每层产生不同的
+<code>K_t^j/V_t^j</code>。dense 实现见 <code>python/sglang/srt/models/dspark.py:505-550</code>；其中 stacked
+优化把各层 projection weight 拼成一次大矩阵乘法，但数学结果仍等价于逐 Draft layer 投影。</p>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart LR
+    U[&quot;token t: ctx_hidden_t [H_d]&quot;] --&gt; W0[&quot;Draft layer 0 KVProj&quot;]
+    U --&gt; W1[&quot;Draft layer 1 KVProj&quot;]
+    U --&gt; WN[&quot;Draft layer L_d-1 KVProj&quot;]
+    W0 --&gt; KV0[&quot;K_t^0 / V_t^0&quot;]
+    W1 --&gt; KV1[&quot;K_t^1 / V_t^1&quot;]
+    WN --&gt; KVN[&quot;K_t^(L_d-1) / V_t^(L_d-1)&quot;]
+">flowchart LR
+    U[&quot;token t: ctx_hidden_t [H_d]&quot;] --&gt; W0[&quot;Draft layer 0 KVProj&quot;]
+    U --&gt; W1[&quot;Draft layer 1 KVProj&quot;]
+    U --&gt; WN[&quot;Draft layer L_d-1 KVProj&quot;]
+    W0 --&gt; KV0[&quot;K_t^0 / V_t^0&quot;]
+    W1 --&gt; KV1[&quot;K_t^1 / V_t^1&quot;]
+    WN --&gt; KVN[&quot;K_t^(L_d-1) / V_t^(L_d-1)&quot;]
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart LR
+    U[&quot;token t: ctx_hidden_t [H_d]&quot;] --&gt; W0[&quot;Draft layer 0 KVProj&quot;]
+    U --&gt; W1[&quot;Draft layer 1 KVProj&quot;]
+    U --&gt; WN[&quot;Draft layer L_d-1 KVProj&quot;]
+    W0 --&gt; KV0[&quot;K_t^0 / V_t^0&quot;]
+    W1 --&gt; KV1[&quot;K_t^1 / V_t^1&quot;]
+    WN --&gt; KVN[&quot;K_t^(L_d-1) / V_t^(L_d-1)&quot;]
+</code></pre></details></figcaption></figure>
+<p>随后 K 还会经过该 Draft 层的 K-Norm 和对应 <code>position</code> 的 RoPE，再写入 Draft 自己的 KV
+pool。Target/Draft 可以使用对齐的物理 slot index，但写入内容不是复制 Target K/V，而是由
+Target hidden 经 Draft projection 新计算出的 Draft-side K/V。</p>
+<h4 id="1134-是否每个-token-都写到-draft-对应位置">11.3.4 是否每个 token 都写到 Draft 对应位置</h4>
+<p>结论是：<strong>每个需要 commit 的 Target 输入 token，都会在每个 Draft layer 的对应 slot 写入一份
+layer-specific K/V；Target 虽已计算但未提交的候选不会成为 Draft 有效历史。</strong></p>
+<p>对 token <code>t</code>：</p>
+<pre class="codehilite"><code class="language-text">logical position = positions[t]      # 用于 RoPE
+physical slot    = cache_loc[t]      # Draft KV pool 写地址
+
+Draft layer j, slot cache_loc[t] ← (K_t^j, V_t^j)
+</code></pre>
+<p>两种阶段的范围不同：</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>Target hidden 覆盖</th>
+<th>写入 Draft KV 的 token</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Prefill/Extend</td>
+<td>本次新增 prompt token</td>
+<td>本次新增且有效的所有 token</td>
+</tr>
+<tr>
+<td>Decode Target Verify</td>
+<td><code>[anchor,d1,...,dG]</code> 中本轮实际 forward 的候选行</td>
+<td>仅 <code>[anchor, accepted drafts]</code>，由 <code>commit_lens</code> 限制</td>
+</tr>
+</tbody>
+</table></div>
+<p>仍用本节示例：</p>
+<pre class="codehilite"><code class="language-text">Target 输入：       [Y, a, b, c, d]
+Target hidden：     [hY,ha,hb,hc,hd]
+correct_len：       1
+commit_lens：       2
+
+Draft 每一层写入： position 22 / slot L22 ← Y 对应的 K/V
+                  position 23 / slot L23 ← a 对应的 K/V
+Draft 每一层不写： b、c、d 对应的未提交候选位置
+</code></pre>
+<p><code>set_kv_buffer_prefix_valid(..., commit_lens, ...)</code> 在每个请求的 verify row 中只开放前
+<code>commit_lens</code> 列。compact 路径虽然先把 hidden scatter 成 strided layout，再由 <code>inject_ragged()</code>
+重建写入几何，但遵守同一个 commit mask。</p>
+<h4 id="1135-prefill-与-decode-的完整调用入口">11.3.5 Prefill 与 Decode 的完整调用入口</h4>
+<pre class="codehilite"><code class="language-text">Prefill:
+DSparkWorkerV2._forward_prefill()
+→ target forward(capture_hidden_mode=FULL)
+→ logits_output.hidden_states
+→ TargetHiddenKvInjector.inject_target_hidden()
+→ Draft KV pool
+
+Decode Verify:
+TargetVerifyExecutor.run_non_compact()/run_compact()
+→ target forward(capture_hidden_mode=FULL)
+→ accept 得到 commit_lens
+→ commit_hidden()
+→ inject_target_hidden()/inject_ragged()
+→ Draft KV pool
+</code></pre>
+<p>项目内交互图解见
+<a href="visualizations/dspark-target-hidden-kv-explainer.html"><code>dSpark Target Hidden → Draft KV 逐步讲解器</code></a>。</p>
+<p><code>set_kv_buffer_prefix_valid(..., commit_lens, ...)</code> 只提交每请求前 <code>commit_lens</code> 行：</p>
+<pre class="codehilite"><code class="language-text">Draft KV 新增：
+position 22 → Y
+position 23 → a
+</code></pre>
+<p><code>b/c/d</code> 即使在完整 Target verify 中被计算过，也不属于下一轮逻辑有效前缀。Target 侧同样只把
+逻辑 <code>new_seq_lens</code> 推进到 24；超出接受前缀的候选物理写入不能被当成 committed history。</p>
+<h3 id="114-为什么-z-本轮没有-kv">11.4 为什么 <code>Z</code> 本轮没有 KV</h3>
+<p>自回归对齐是：</p>
+<pre class="codehilite"><code class="language-text">输入 a
+→ 得到 ha
+→ lm_head(ha)
+→ 采样/argmax 得到 Z
+</code></pre>
+<p><code>Z</code> 是输出，不是本轮输入，因此当前没有 <code>hZ/KZ/VZ</code>。如果直接把 <code>Z</code> 当成已写入 KV，下一轮
+会错误地跳过对 <code>Z</code> 的 Transformer 计算。</p>
+<h2 id="12-下一轮状态和-scheduler-交接">12. 下一轮状态和 Scheduler 交接</h2>
+<h3 id="121-next_draft_input">12.1 <code>next_draft_input</code></h3>
+<p>Worker 在 <code>worker_v2.py:684-687</code> 构造：</p>
+<pre class="codehilite"><code class="language-text">next_draft_input = {
+    bonus_tokens: [Z],
+    new_seq_lens: [24]
+}
+</code></pre>
+<p>构造函数位于
+<code>python/sglang/srt/speculative/draft_worker_common.py:122-135</code>。下一轮 proposer 把 <code>Z</code> 放到
+<code>draft_block_ids[:,0]</code>，因此：</p>
+<pre class="codehilite"><code class="language-text">下一轮 anchor = Z @ position 24
+</code></pre>
+<h3 id="122-generationbatchresult">12.2 <code>GenerationBatchResult</code></h3>
+<p>Worker 在 <code>worker_v2.py:688-700</code> 返回：</p>
+<pre class="codehilite"><code class="language-text">next_token_ids   = flatten([a,Z,c,d,0])
+accept_lens      = [2]
+block_accept_lens = commit_lens + cap_trim_lens = [2]
+cap_lens         = layout.verify_lens；无 layout 时为 None
+new_seq_lens     = [24]
+next_draft_input = {bonus_tokens:[Z], new_seq_lens:[24]}
+</code></pre>
+<p>结果处理依据 <code>accept_lens</code> 只消费 <code>[a,Z]</code>。</p>
+<h3 id="123-non-overlap-scheduler-交接">12.3 non-overlap Scheduler 交接</h3>
+<h4 id="1231-resolve_forward_inputs-没有被跳过">12.3.1 <code>resolve_forward_inputs()</code> 没有被跳过</h4>
+<p>non-overlap speculative 分支在
+<code>python/sglang/srt/managers/scheduler.py:3500-3521</code> 中仍然真实调用：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">resolve_forward_inputs</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">future_map</span><span class="p">)</span>
+<span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forward_isolation</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">overlap</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="n">batch_result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_worker</span><span class="o">.</span><span class="n">forward_batch_generation</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+</code></pre>
+<p>因此，准确结论不是“non-overlap dSpark 跳过了 <code>resolve_forward_inputs()</code>”，而是：</p>
+<blockquote>
+<p>普通 non-overlap dSpark <strong>pure decode</strong> 会进入该函数；只是三个可能修改状态的 guard
+都没有命中，所以函数作为一次 <strong>guard-only no-op</strong> 返回。</p>
+</blockquote>
+<p>函数位于 <code>python/sglang/srt/managers/overlap_utils.py:84-115</code>。固定 pure decode 状态逐项代入：</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th><code>resolve_forward_inputs()</code> 内的修改路径</th>
+<th>本例关键条件</th>
+<th>是否执行</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Prefill CPU staging → GPU</td>
+<td><code>batch.prefill_input_ids_cpu is not None</code> 为 <code>False</code></td>
+<td>否，不做 H2D，也不拼 mixed decode token</td>
+</tr>
+<tr>
+<td>ordinary non-spec Decode gather</td>
+<td><code>batch.input_ids is None</code> 为 <code>True</code>，但 <code>future_map.spec_algo.is_none()</code> 为 <code>False</code></td>
+<td>否，不从 <code>output_tokens_buf</code> gather</td>
+</tr>
+<tr>
+<td>overlap speculative extras</td>
+<td><code>batch.enable_overlap</code> 为 <code>False</code></td>
+<td>否，不调用 <code>_resolve_spec_extras()</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>第二个 guard 检查的是 <strong><code>future_map.spec_algo</code></strong>，不是
+<code>batch.spec_algorithm</code>。dSpark FutureMap 的算法不是 <code>NONE</code>，所以即使
+<code>batch.input_ids is None</code>，整个 <code>elif</code> 条件仍为假。</p>
+<p>这个 no-op 结论有严格边界：它只描述本文固定的 pure decode 状态。若
+<code>prefill_input_ids_cpu</code> 非空，即使仍处于 non-overlap speculative 路径，第一个分支也会把 CPU
+staging 输入搬到设备；Mixed batch 还会从 FutureMap 取 running decode token，再和 prefill
+token 拼接。换句话说，<strong>non-overlap 决定不了该函数是否改状态，三个运行时 guard 才决定。</strong></p>
+<h4 id="1232-resolverisolation-与显式提交的先后顺序">12.3.2 resolver、isolation 与显式提交的先后顺序</h4>
+<p><code>resolve_forward_inputs()</code> 在 <code>_forward_isolation()</code> <strong>外部且之前</strong>执行；resolver 返回后，
+context manager 才对 <code>ScheduleBatch</code> 字段做浅快照。Worker 返回时，isolation 恢复进入 context
+时的字段绑定，Scheduler 再从 <code>GenerationBatchResult</code> 显式提交真正需要跨轮保存的结果：</p>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="sequenceDiagram
+    participant S as Scheduler.run_batch
+    participant R as resolve_forward_inputs
+    participant I as _forward_isolation
+    participant W as DSparkWorkerV2
+    participant B as ScheduleBatch
+
+    S-&gt;&gt;R: resolve_forward_inputs(B, future_map)
+    R--&gt;&gt;S: pure decode: 三个 guard 均未命中
+    S-&gt;&gt;I: snapshot 当前 ScheduleBatch 字段绑定
+    I-&gt;&gt;W: forward_batch_generation(B)
+    W--&gt;&gt;I: GenerationBatchResult
+    I-&gt;&gt;B: restore worker 内的临时字段 rebind
+    S-&gt;&gt;B: spec_info = next_draft_input
+    S-&gt;&gt;B: seq_lens = new_seq_lens
+    S-&gt;&gt;B: input_ids = None
+">sequenceDiagram
+    participant S as Scheduler.run_batch
+    participant R as resolve_forward_inputs
+    participant I as _forward_isolation
+    participant W as DSparkWorkerV2
+    participant B as ScheduleBatch
+
+    S-&gt;&gt;R: resolve_forward_inputs(B, future_map)
+    R--&gt;&gt;S: pure decode: 三个 guard 均未命中
+    S-&gt;&gt;I: snapshot 当前 ScheduleBatch 字段绑定
+    I-&gt;&gt;W: forward_batch_generation(B)
+    W--&gt;&gt;I: GenerationBatchResult
+    I-&gt;&gt;B: restore worker 内的临时字段 rebind
+    S-&gt;&gt;B: spec_info = next_draft_input
+    S-&gt;&gt;B: seq_lens = new_seq_lens
+    S-&gt;&gt;B: input_ids = None
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>sequenceDiagram
+    participant S as Scheduler.run_batch
+    participant R as resolve_forward_inputs
+    participant I as _forward_isolation
+    participant W as DSparkWorkerV2
+    participant B as ScheduleBatch
+
+    S-&gt;&gt;R: resolve_forward_inputs(B, future_map)
+    R--&gt;&gt;S: pure decode: 三个 guard 均未命中
+    S-&gt;&gt;I: snapshot 当前 ScheduleBatch 字段绑定
+    I-&gt;&gt;W: forward_batch_generation(B)
+    W--&gt;&gt;I: GenerationBatchResult
+    I-&gt;&gt;B: restore worker 内的临时字段 rebind
+    S-&gt;&gt;B: spec_info = next_draft_input
+    S-&gt;&gt;B: seq_lens = new_seq_lens
+    S-&gt;&gt;B: input_ids = None
+</code></pre></details></figcaption></figure>
+<p><code>_forward_isolation()</code> 的当前实现位于
+<code>python/sglang/srt/managers/scheduler.py:3325-3367</code>。对 spec V2，它先保存 dataclass 的字段引用，
+再让 Worker 临时改写 <code>forward_mode/input_ids/seq_lens/spec_info/...</code>，最后逐字段恢复。它隔离的是
+Worker forward 期间的临时 rebind；不能把它解释成“回滚 resolver”：</p>
+<ul>
+<li>pure dSpark Decode 中 resolver 本来就是 no-op；</li>
+<li>speculative Prefill 中，resolver 若先物化了 <code>input_ids</code>，这个结果会成为随后 snapshot 的基线；</li>
+<li>Worker 内部的临时 rebind 被 restore 后，真正跨轮状态必须由返回值再次提交。</li>
+</ul>
+<p>因此 non-overlap Scheduler 在 isolation 退出后明确执行：</p>
+<pre class="codehilite"><code class="language-text">batch.spec_info = batch_result.next_draft_input
+batch.seq_lens  = batch_result.new_seq_lens
+batch.input_ids = None
+</code></pre>
+<p>这不是重复工作，而是一次“选择性 commit”：保留下一轮需要的 bonus/new length，丢弃本轮只为
+Draft/Target Verify 临时构造的 <code>ScheduleBatch</code> 字段绑定。</p>
+<h4 id="1233-schedulebatchinput_idsnone-为什么仍有-draft-输入">12.3.3 <code>ScheduleBatch.input_ids=None</code> 为什么仍有 Draft 输入</h4>
+<p>这里必须区分三个对象，不能只看同名的 <code>input_ids</code>：</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>对象/字段</th>
+<th>第 N 轮结束后的值</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ScheduleBatch.input_ids</code></td>
+<td><code>None</code></td>
+<td>Scheduler 通用入口字段；清空以免复用本轮临时 Tensor</td>
+</tr>
+<tr>
+<td><code>DFlashDraftInputV2.bonus_tokens</code></td>
+<td><code>[Z,Q]</code></td>
+<td>non-overlap 下一轮 anchor 的直接 carrier，保存在 <code>batch.spec_info</code></td>
+</tr>
+<tr>
+<td>下一轮 Draft <code>ForwardBatch.input_ids</code></td>
+<td><code>[Z,M,M,M,Q,M,M,M]</code></td>
+<td>proposer 根据 bonus 重新构造的真实模型输入</td>
+</tr>
+</tbody>
+</table></div>
+<p>沿用 <code>B=2、gamma=4</code> 的具体数据，第 N 轮 Worker 返回：</p>
+<pre class="codehilite"><code class="language-text">next_draft_input.bonus_tokens = [Z,Q]
+new_seq_lens                  = [24,11]
+</code></pre>
+<p>Scheduler 直接把两者写回 <code>batch.spec_info/seq_lens</code>，同时令
+<code>ScheduleBatch.input_ids=None</code>。第 N+1 轮开始时：</p>
+<pre class="codehilite"><code class="language-text">resolve_forward_inputs(...)                       # pure decode：no-op
+draft_input = batch.spec_info                     # 取回 [Z,Q]
+draft_block_ids = full([B,G], MASK)
+draft_block_ids[:,0] = draft_input.bonus_tokens   # 两条请求的新 anchor
+
+Draft ForwardBatch.input_ids = flatten([
+    [Z,M,M,M],
+    [Q,M,M,M],
+])
+</code></pre>
+<p>重建入口见
+<code>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:482-488</code> 和
+<code>python/sglang/srt/speculative/dspark_components/dspark_draft.py:361-415</code>。完整 carrier 链是：</p>
+<pre class="codehilite"><code class="language-text">accept.bonus
+→ make_next_draft_input()
+→ GenerationBatchResult.next_draft_input
+→ Scheduler: batch.spec_info = next_draft_input
+→ 下一轮 draft_input = batch.spec_info
+→ draft_block_ids[:,0] = draft_input.bonus_tokens
+→ Draft ForwardBatch.input_ids
+</code></pre>
+<p>所以：</p>
+<pre class="codehilite"><code class="language-text">ScheduleBatch.input_ids = None
+≠ Draft model 没有 input_ids
+</code></pre>
+<p>它只说明通用 Scheduler 输入 rail 没有被拿来跨轮携带 dSpark anchor；non-overlap dSpark 使用
+<code>next_draft_input → batch.spec_info</code> 这条直接 carrier。</p>
+<h4 id="1234-本段的-源码动作--改变状态--为什么">12.3.4 本段的 <code>源码动作 / 改变状态 / 为什么</code></h4>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>源码动作</th>
+<th>改变的状态</th>
+<th>为什么在这里做</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>resolve_forward_inputs()</code></td>
+<td>pure decode 中无变化</td>
+<td>统一入口仍检查 Prefill staging、ordinary gather 和 overlap spec extras</td>
+</tr>
+<tr>
+<td><code>_forward_isolation()</code> 进入</td>
+<td>保存 resolver 之后的字段绑定</td>
+<td>允许 Worker 临时把同一 <code>ScheduleBatch</code> 改造成多个 ForwardBatch 输入</td>
+</tr>
+<tr>
+<td><code>_forward_isolation()</code> 退出</td>
+<td>恢复 Worker 之前的字段绑定</td>
+<td>防止 Draft/Target Verify 临时状态泄漏回 Scheduler</td>
+</tr>
+<tr>
+<td>Scheduler 显式写回</td>
+<td><code>spec_info/seq_lens/input_ids</code></td>
+<td>从 <code>GenerationBatchResult</code> 只提交下一轮真正需要的状态</td>
+</tr>
+<tr>
+<td>下一轮 proposer 重建</td>
+<td>Draft <code>ForwardBatch.input_ids</code></td>
+<td>bonus 此时才成为 <code>[anchor,MASK,...]</code> 的第 0 列</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="1235-与-budget-路径不要混淆">12.3.5 与 budget 路径不要混淆</h4>
+<p><code>resolve_forward_inputs()</code> 在 pure decode 中 no-op，不代表 non-overlap dSpark 不计算 verify
+budget，也不代表 budget 必须来自 FutureMap。第 7.4 节已经证明：non-overlap Worker 在
+<code>resolve_verify_token_budget()</code> 中进入同步 <code>compute_budget_sync()</code>；默认稳态仍由 Host carry 提供
+<code>C_(t-2)</code>。这是 Worker 内的 confidence/budget 规划链，和 Scheduler 入口的 input resolver 是两条
+不同路径。</p>
+<h3 id="124-overlap-的-futuremap-relay-边界">12.4 overlap 的 FutureMap relay 边界</h3>
+<p>两种模式最终都要让 bonus 成为下一轮 anchor，但 transport owner 不同：</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>模式</th>
+<th>下一轮 dSpark 状态的 carrier</th>
+<th>Scheduler 侧交接</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>non-overlap</td>
+<td><code>GenerationBatchResult.next_draft_input</code></td>
+<td>同步返回后直接写 <code>batch.spec_info</code>；无需 <code>future_indices</code></td>
+</tr>
+<tr>
+<td>overlap</td>
+<td><code>FutureMap</code> relay + <code>next_draft_input.future_indices</code></td>
+<td><code>on_publish</code> 提前发布，Scheduler 收到结果后再附加 indices，下一轮 resolver 解析</td>
+</tr>
+</tbody>
+</table></div>
+<p>overlap 中 <code>new_seq_lens</code> 通过 <code>on_publish/FutureMap</code> 提前发布。Worker 构造的
+<code>next_draft_input</code> 起初只有 bonus/new length 等状态；Scheduler 收到结果后才把
+<code>future_indices</code> 附加到 <code>batch.spec_info</code>，下一轮再 resolve。不要用 non-overlap 的同步赋值时序
+解释 overlap 的设备 Stream 完成时刻；也不要反向说“non-overlap 没有 FutureMap 对象”——对象
+仍存在，当前 pure decode 只是没有通过它 relay dSpark extras。</p>
+<p><a id="two-rounds"></a></p>
+<h2 id="13-两轮连续时间线rolling-anchor-如何滚动">13. 两轮连续时间线：rolling anchor 如何滚动</h2>
+<p>单轮快照不足以证明 bonus 如何成为下一轮输入。下面连续走两轮。</p>
+<h3 id="131-第-n-轮">13.1 第 N 轮</h3>
+<pre class="codehilite"><code class="language-text">轮前有效 KV： positions 0..21
+prefix_lens： 22
+anchor：      Y @ 22
+drafts：      [a,b,c,d]
+Target 输入： [Y,a,b,c,d]
+接受：        [a]
+bonus：       Z
+
+用户输出：    [a,Z]
+Draft KV 提交：[Y@22,a@23]
+new_seq_len： 24
+下一 anchor： Z@24
+</code></pre>
+<h3 id="132-第-n1-轮">13.2 第 N+1 轮</h3>
+<p>假设 Draft 再提出 <code>[e,f,g,h]</code>，Target 接受 <code>e,f</code>，产生 bonus <code>Q</code>：</p>
+<pre class="codehilite"><code class="language-text">轮前有效 KV： positions 0..23
+prefix_lens： 24
+anchor：      Z @ 24
+drafts：      [e,f,g,h]
+Target 输入： [Z,e,f,g,h]
+correct_len： 2
+commit_lens： 3
+
+用户输出：    [e,f,Q]
+Draft KV 提交：[Z@24,e@25,f@26]
+new_seq_len： 27
+下一 anchor： Q@27
+</code></pre>
+<p>两轮连起来：</p>
+<pre class="codehilite"><code class="language-text">第 N 轮输出尾部 Z
+        │
+        ▼
+第 N+1 轮 Target/Draft 输入头部 Z
+        │
+        ▼
+第 N+1 轮提交 Z 的 hidden/KV
+</code></pre>
+<p>所以 bonus 的生命周期是：</p>
+<pre class="codehilite"><code class="language-text">本轮被预测并输出
+→ 跨轮保存在 next_draft_input
+→ 下一轮成为 anchor/input
+→ 下一轮才产生并提交自己的 hidden/KV
+</code></pre>
+<p><a id="mode-boundaries"></a></p>
+<h2 id="14-模式与高级边界">14. 模式与高级边界</h2>
+<h3 id="141-folded-proposal-不等于-folded-accept">14.1 folded proposal 不等于 folded accept</h3>
+<p><code>proposal.folded=True</code> 只表示 Draft CUDA Graph 已经包含 <code>LM Head + Markov greedy sampler</code>
+等 tail；并不表示 Target accept 或 KV commit 也已折叠。</p>
+<p>Worker 在 <code>worker_v2.py:581-640</code> 还要求：</p>
+<pre class="codehilite"><code class="language-text">verify epilogue 存在
++ proposal.folded
++ Target logits 调整为 no-op
++ 未启用模拟接受长度
++ 无 grammar
++ COMPACT
++ 本轮 Target 成功走 CUDA Graph
+</code></pre>
+<p>才令 <code>folded_accept=True</code>。此时 graph epilogue 已完成 greedy accept/finalize/build-output，Python
+侧 <code>accept_and_finalize()</code> 只读取缓冲。</p>
+<p><code>folded_accept</code> 仍不必然等于 <code>folded_commit</code>。只有 epilogue/pool 支持融合 KV 写入时才跳过
+<code>commit_hidden()</code>；普通 dense 路径仍需注入 Target hidden。</p>
+<h3 id="142-compact-与-cuda-graph-也是两个维度">14.2 COMPACT 与 CUDA Graph 也是两个维度</h3>
+<pre class="codehilite"><code class="language-text">COMPACT：决定是否在 Target 前裁掉未选 candidates，并选择 graph_num_tokens 容量
+CUDA Graph：决定这组 shape/key 是否可 replay
+</code></pre>
+<p>COMPACT 可以走 eager；CUDA Graph 下还可能包含 tier padding；layout fallback 时也会回到
+full-width non-compact。有 CUDA Graph 不自动意味着 accept/commit 都 folded。</p>
+<h3 id="143-deepseek-v4">14.3 DeepSeek-V4</h3>
+<p>本文的 <code>[B,G,H_d]</code> 是 dense 主线教学形状。DeepSeek-V4 draft hidden 带 <code>hc_mult</code> 维度，需要
+collapse 后再进共享 LM Head，并使用专用 attention backend；MLA pool 还可能支持 folded
+commit。不要把 dense hidden shape 和 KV 注入路径硬套到 V4。</p>
+<h3 id="144-硬件与并行限制">14.4 硬件与并行限制</h3>
+<p>当前 dSpark 参数处理要求 CUDA 设备字符串并限制 <code>PP=1</code>；DP Attention 还有 LM Head、MoE、
+CP 等额外准入条件。本文没有把 generic CUDA/ROCm worker 外层能力错误外推为 dSpark 的
+ROCm 支持。相关入口见
+<code>python/sglang/srt/arg_groups/speculative_hook.py:278-308</code>。</p>
+<h2 id="15-常见误解检查表">15. 常见误解检查表</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>误解</th>
+<th>当前源码结论</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gamma=4</code> 时 Target verify 宽度也是 4</td>
+<td>错；<code>W=gamma+1=5</code></td>
+</tr>
+<tr>
+<td>Draft Transformer 输入 <code>[Y,a,b,c,d]</code></td>
+<td>错；它输入 <code>[Y,M,M,M]</code>，Target 才输入五行 candidates</td>
+</tr>
+<tr>
+<td>Markov head 串行重跑四次 Transformer</td>
+<td>错；Transformer 一次，串行的是 logits 修正/采样</td>
+</tr>
+<tr>
+<td>confidence 四列是一个和为 1 的概率分布</td>
+<td>错；它是逐 draft 位置的条件置信分数，STS 后各自在 <code>[0,1]</code></td>
+</tr>
+<tr>
+<td>scalar budget 已经包含每请求 mandatory anchor</td>
+<td>错；budget 只计 floor 之外的 extra draft slots</td>
+</tr>
+<tr>
+<td>non-overlap 直接用当前 confidence 计算本轮 budget</td>
+<td>默认稳态下错；当前值先写 Host carry，本轮 optimizer 使用 <code>C_(t-2)</code></td>
+</tr>
+<tr>
+<td>overlap 与 non-overlap 使用不同历史年龄</td>
+<td>默认稳态下错；两者都用 <code>C_(t-2)</code>，只是 relay ring 与 Host carry 分别承担延迟</td>
+</tr>
+<tr>
+<td>non-overlap dSpark 会跳过 <code>resolve_forward_inputs()</code></td>
+<td>错；调用真实发生，只是 ordinary pure decode 中三个 mutation guard 均不命中；Prefill/Mixed 边界仍可能物化输入</td>
+</tr>
+<tr>
+<td><code>ScheduleBatch.input_ids=None</code> 表示下一轮 Draft 没有输入</td>
+<td>错；bonus 由 <code>next_draft_input → batch.spec_info</code> 跨轮携带，proposer 再构造 Draft <code>ForwardBatch.input_ids</code></td>
+</tr>
+<tr>
+<td>raw budget 已经决定每请求 <code>verify_lens</code></td>
+<td>错；历史 confidence 决定数量，当前 confidence 的后续 top-k 才决定分配</td>
+</tr>
+<tr>
+<td><code>layout=None</code> 表示不运行 Target Verify</td>
+<td>错；它表示本轮没有 ragged/cutoff layout，Worker 仍走完整 <code>B×W</code> non-compact Target Verify</td>
+</tr>
+<tr>
+<td><code>ForwardBatch.batch_size=2</code> 表示 Target 只输入 2 行</td>
+<td>错；它是请求数；本例 compact token rail 有 5 个物理 rows，其中 4 个属于真实请求</td>
+</tr>
+<tr>
+<td>compact 输出从 5 行 scatter 到 10 行表示 Target 又 forward 一次</td>
+<td>错；这是公共 accept 接口的布局恢复，没有第二次 Transformer forward</td>
+</tr>
+<tr>
+<td>一个 token 只有一个 Target hidden，所以只能写一个 Draft layer</td>
+<td>错；每个被选 Target layer 各有一个 feature，先融合成一个 <code>ctx_hidden_t</code>，再经各 Draft layer 不同的 KV projection 一对多展开</td>
+</tr>
+<tr>
+<td>Target Verify 计算过的每个候选 hidden 都会写入 Draft KV</td>
+<td>错；只有 <code>[anchor, accepted drafts]</code> 受 <code>commit_lens</code> 保护后成为 Draft 有效历史</td>
+</tr>
+<tr>
+<td><code>TARGET_VERIFY</code> 一定由 Target 模型执行</td>
+<td>错；Draft block 也复用该 ForwardMode，要看 receiver</td>
+</tr>
+<tr>
+<td><code>TargetVerifyResult</code> 已经含 <code>correct_len</code></td>
+<td>错；它只有 logits/hidden 容器和 graph flag</td>
+</tr>
+<tr>
+<td>sampling 拒绝后 bonus 取 Target argmax</td>
+<td>错；按残差分布随机采样</td>
+</tr>
+<tr>
+<td><code>CAP_ACCEPT</code> 会缩短 Target forward</td>
+<td>错；只有 <code>COMPACT</code> 能在 forward 前裁候选，但 graph padding/fallback 可能抵消实际节省</td>
+</tr>
+<tr>
+<td><code>commit_lens=2</code> 表示 <code>[a,Z]</code> 被写进 KV</td>
+<td>错；输出是 <code>[a,Z]</code>，Draft KV 是 <code>[Y,a]</code></td>
+</tr>
+<tr>
+<td>bonus 本轮已经有 KV</td>
+<td>错；下一轮作为 anchor 输入后才有</td>
+</tr>
+<tr>
+<td><code>proposal.folded=True</code> 表示整轮都 folded</td>
+<td>错；accept 和 commit 还有额外条件</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="16-源码动作--改变状态--为什么-总结">16. <code>源码动作 / 改变状态 / 为什么</code> 总结</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>源码动作</th>
+<th>改变的状态</th>
+<th>为什么必须在这里做</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>alloc_verify_window()</code></td>
+<td>为 <code>B×W</code> 建 positions/physical slots</td>
+<td>Draft/Target 共用同一轮位置规划</td>
+</tr>
+<tr>
+<td><code>DraftBlockProposer._run_forward()</code></td>
+<td>产生 block hidden</td>
+<td>一次并行 Transformer 建 base features</td>
+</tr>
+<tr>
+<td>Markov <code>sample_block()</code></td>
+<td>产生 drafts 和实际 proposal logits</td>
+<td>注入真实前 token 的串行依赖</td>
+</tr>
+<tr>
+<td><code>compute_confidence_tensor()</code></td>
+<td>产生当前逐位置 <code>C_t[B,G]</code></td>
+<td>Draft hidden/token 已存在，layout 尚未开始</td>
+</tr>
+<tr>
+<td><code>resolve_verify_token_budget()</code></td>
+<td>产生 batch-global raw budget</td>
+<td>用历史 survival 与 SPS cost 决定 extra-slot 数量</td>
+</tr>
+<tr>
+<td><code>schedule_layout()</code></td>
+<td>产生可选 verify_lens/layout</td>
+<td>决定验证深度与 compact 输入</td>
+</tr>
+<tr>
+<td><code>run_non_compact/run_compact()</code></td>
+<td>产生 Target logits/hidden；compact 额外返回 <code>hidden_strided</code></td>
+<td>Target 对候选链评分，并保留对应 KV commit 布局</td>
+</tr>
+<tr>
+<td><code>accept_draft_tokens()</code></td>
+<td>产生 <code>correct_len/bonus</code></td>
+<td>只有 Target 分布和 proposal 分布都可用后才能验收</td>
+</tr>
+<tr>
+<td><code>FinalizeAcceptLens</code></td>
+<td>产生 <code>commit_lens/new_seq_lens</code></td>
+<td>接受长度确定后才能推进逻辑前缀</td>
+</tr>
+<tr>
+<td><code>BuildOutTokens</code></td>
+<td>构造固定宽度输出缓冲</td>
+<td>kernel/batch 需要固定 shape，另用 accept_lens 标有效前缀</td>
+</tr>
+<tr>
+<td><code>commit_hidden()</code></td>
+<td>non-compact/compact 分别经普通或 ragged injector 写入 <code>[anchor,accepted drafts]</code></td>
+<td>下一轮 Draft 需要正确历史表示</td>
+</tr>
+<tr>
+<td><code>make_next_draft_input()</code></td>
+<td>保存 bonus/new length</td>
+<td>bonus 下一轮才作为 input/anchor</td>
+</tr>
+<tr>
+<td><code>resolve_forward_inputs()</code></td>
+<td>pure non-overlap dSpark Decode 中通常无变化</td>
+<td>统一检查 staging、ordinary gather 与 overlap extras，本路径只经过 guards</td>
+</tr>
+<tr>
+<td><code>_forward_isolation()</code> restore</td>
+<td>撤销 Worker 内 <code>ScheduleBatch</code> 临时 rebind</td>
+<td>Scheduler 不应继承 Draft/Target Verify 的临时输入布局</td>
+</tr>
+<tr>
+<td>Scheduler 显式写回</td>
+<td>更新 <code>batch.spec_info/seq_lens</code>，清空 <code>input_ids</code></td>
+<td>从返回值选择性提交下一轮状态，再由 proposer 从 bonus 重建模型输入</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="17-自测">17. 自测</h2>
+<p>仍使用：</p>
+<pre class="codehilite"><code class="language-text">prefix_len = 22
+anchor = Y
+drafts = [a,b,c,d]
+</code></pre>
+<ol>
+<li>若 <code>correct_len=2</code>、<code>bonus=Q</code>，<code>commit_lens/new_seq_lens</code> 分别是多少？</li>
+<li>此时用户有效输出、Draft KV 新提交、下一轮 anchor 分别是什么？</li>
+<li>若四个 draft 全部接受，最大有效输出长度是多少，最后一个 bonus 来自哪一行 Target logits？</li>
+<li>为什么本轮不能直接把 <code>Q</code> 写入 Draft KV？</li>
+<li>若 <code>CAP_ACCEPT</code> 给出 <code>verify_len=2</code>，它最多允许接受几个 draft？Target 是否只 forward 两行？</li>
+<li>ordinary non-overlap dSpark pure decode 会不会调用 <code>resolve_forward_inputs()</code>？为什么通常没有状态变化？</li>
+<li>Scheduler 把 <code>batch.input_ids</code> 清成 <code>None</code> 后，下一轮 Draft <code>ForwardBatch.input_ids</code> 从哪里来？</li>
+<li>一个 token 的多个 Target layer feature，怎样变成多个 Draft layer 的 K/V？这些 K/V 是否相同？</li>
+</ol>
+<details>
+<summary>参考答案</summary>
+<ol>
+<li><code>commit_lens=3</code>，<code>new_seq_lens=25</code>。</li>
+<li>输出 <code>[a,b,Q]</code>；Draft KV 新提交 <code>[Y@22,a@23,b@24]</code>；下一轮 anchor 是 <code>Q@25</code>。</li>
+<li>最大长度 <code>gamma+1=5</code>，输出 <code>[a,b,c,d,bonus]</code>；bonus 来自输入 <code>d</code> 那一行的 Target
+next-token 分布。</li>
+<li><code>Q</code> 只是由输入 <code>b</code> 的 logits 得到的输出，本轮没有作为 Transformer 输入，尚无自己的
+hidden/KV。</li>
+<li>最多接受 <code>verify_len-1=1</code> 个 draft；CAP_ACCEPT 仍 forward 完整五行。COMPACT 的逻辑有效
+candidates 才是 <code>[Y,a]</code>，物理 forward 长度仍是 <code>graph_num_tokens</code>，可能带 tier padding。</li>
+<li>会真实调用；只是 prefill staging、ordinary non-spec gather、overlap spec-extras 三条修改路径的
+guard 在该状态下都不满足，所以是 guard-only no-op。Prefill/Mixed 边界不能套用此结论。</li>
+<li><code>GenerationBatchResult.next_draft_input</code> 被同步写入 <code>batch.spec_info</code>；下一轮 proposer 取出
+<code>bonus_tokens</code>，写入 <code>draft_block_ids[:,0]</code>，再 flatten 成 Draft <code>ForwardBatch.input_ids</code>。</li>
+<li>多个 Target feature 先拼接并经 <code>project_target_hidden()</code> 融合成一个 <code>ctx_hidden_t</code>；同一个
+<code>ctx_hidden_t</code> 再进入各 Draft layer 不同的 KV projection，得到每层不同的 K/V。只有
+<code>commit_lens</code> 覆盖的 token/位置会写入 Draft KV。</li>
+</ol>
+</details>
+<h2 id="18-当前源码索引">18. 当前源码索引</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>主题</th>
+<th>当前源码位置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>dSpark Decode 总协调</td>
+<td><code>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:482-700</code></td>
+</tr>
+<tr>
+<td>VerifyWindow 分配</td>
+<td><code>python/sglang/srt/speculative/dspark_components/dspark_planner.py:844-870</code></td>
+</tr>
+<tr>
+<td>mode/layout/fallback</td>
+<td><code>python/sglang/srt/speculative/dspark_components/dspark_planner.py:259-262,419-522</code></td>
+</tr>
+<tr>
+<td>Draft ForwardBatch</td>
+<td><code>python/sglang/srt/speculative/dspark_components/dspark_draft.py:361-426</code></td>
+</tr>
+<tr>
+<td>Draft sampling / proposal</td>
+<td><code>python/sglang/srt/speculative/dspark_components/dspark_draft.py:166-334</code></td>
+</tr>
+<tr>
+<td>Markov head</td>
+<td><code>python/sglang/srt/models/dspark.py:34-263</code></td>
+</tr>
+<tr>
+<td>confidence 入口与 dense helper</td>
+<td><code>python/sglang/srt/speculative/dspark_components/dspark_planner.py:264-293,888-923</code></td>
+</tr>
+<tr>
+<td>confidence head / STS</td>
+<td><code>python/sglang/srt/models/dspark.py:289-353</code></td>
+</tr>
+<tr>
+<td>budget 入口、overlap prepare 与同步路径</td>
+<td><code>python/sglang/srt/speculative/dspark_components/dspark_planner.py:295-417</code></td>
+</tr>
+<tr>
+<td>budget optimizer / Host carry</td>
+<td><code>python/sglang/srt/speculative/dspark_components/dspark_planner.py:926-1130</code></td>
+</tr>
+<tr>
+<td>SPS cost table</td>
+<td><code>python/sglang/srt/speculative/dspark_components/dspark_sps.py:14-164</code></td>
+</tr>
+<tr>
+<td>overlap confidence relay</td>
+<td><code>python/sglang/srt/managers/overlap_utils.py:118-229,352-361,470-499</code></td>
+</tr>
+<tr>
+<td>当前 survival / Top-k verify-lens</td>
+<td><code>python/sglang/kernels/ops/speculative/dspark/dspark_schedule.py:49-261</code></td>
+</tr>
+<tr>
+<td><code>RaggedVerifyLayout</code> / attention geometry</td>
+<td><code>python/sglang/srt/speculative/ragged_verify.py:34-231</code></td>
+</tr>
+<tr>
+<td>Target verify 两条入口</td>
+<td><code>python/sglang/srt/speculative/dspark_components/dspark_verify.py:215-425</code></td>
+</tr>
+<tr>
+<td>Compact window/padding/scatter</td>
+<td><code>python/sglang/kernels/ops/speculative/dspark/dspark_verify_window.py:20-216,455-599</code></td>
+</tr>
+<tr>
+<td>Target verify metadata 准备</td>
+<td><code>python/sglang/srt/speculative/dflash_info.py:53-94</code></td>
+</tr>
+<tr>
+<td><code>ForwardBatch.init_new()</code></td>
+<td><code>python/sglang/srt/model_executor/forward_batch_info.py:684-942</code></td>
+</tr>
+<tr>
+<td>Ragged graph admission / pre-plan / replay</td>
+<td><code>python/sglang/srt/model_executor/runner/decode_cuda_graph_runner.py:502-631,1058-1288</code></td>
+</tr>
+<tr>
+<td>Target runner 选择</td>
+<td><code>python/sglang/srt/model_executor/model_runner.py:1479-1580</code></td>
+</tr>
+<tr>
+<td>TARGET_VERIFY 排除 Prefill Graph</td>
+<td><code>python/sglang/srt/model_executor/runner/prefill_cuda_graph_runner.py:1021-1024</code></td>
+</tr>
+<tr>
+<td><code>TargetVerifyResult</code> / <code>AcceptOuts</code></td>
+<td><code>python/sglang/srt/speculative/dspark_components/dspark_verify.py:64-66,444-450</code></td>
+</tr>
+<tr>
+<td>Accept 分派</td>
+<td><code>python/sglang/srt/speculative/dspark_components/dspark_verify.py:658-722</code></td>
+</tr>
+<tr>
+<td>Greedy helper</td>
+<td><code>python/sglang/srt/speculative/dflash_utils.py:547-585</code></td>
+</tr>
+<tr>
+<td>Sampling accept</td>
+<td><code>python/sglang/kernels/ops/speculative/dspark/dspark_accept.py:80-174</code></td>
+</tr>
+<tr>
+<td>Finalize lengths</td>
+<td><code>python/sglang/kernels/ops/speculative/dspark/dspark_accept.py:718-730</code></td>
+</tr>
+<tr>
+<td>cutoff trim 与 bonus 重选</td>
+<td><code>python/sglang/kernels/ops/speculative/dspark/dspark_accept.py:600-622,816-824</code></td>
+</tr>
+<tr>
+<td>Build output</td>
+<td><code>python/sglang/kernels/ops/speculative/dspark/dspark_verify_window.py:766-875</code></td>
+</tr>
+<tr>
+<td>Target hidden → Draft KV</td>
+<td><code>python/sglang/srt/speculative/dspark_components/dspark_kv_inject.py:13-157</code></td>
+</tr>
+<tr>
+<td>dSpark Target auxiliary hidden 选层</td>
+<td><code>python/sglang/srt/model_executor/model_runner_components/spec_aux_hidden_state.py:97-165</code></td>
+</tr>
+<tr>
+<td>Target features → Draft context hidden</td>
+<td><code>python/sglang/srt/models/dflash.py:358-400</code></td>
+</tr>
+<tr>
+<td>dense Draft KV 写入</td>
+<td><code>python/sglang/srt/models/dspark.py:505-550</code></td>
+</tr>
+<tr>
+<td>forward 入口输入解析</td>
+<td><code>python/sglang/srt/managers/overlap_utils.py:84-115</code></td>
+</tr>
+<tr>
+<td><code>ScheduleBatch</code> forward isolation</td>
+<td><code>python/sglang/srt/managers/scheduler.py:3325-3367</code></td>
+</tr>
+<tr>
+<td>non-overlap speculative 调用与直接写回</td>
+<td><code>python/sglang/srt/managers/scheduler.py:3500-3521</code></td>
+</tr>
+<tr>
+<td>下一轮 anchor 输入重建</td>
+<td><code>python/sglang/srt/speculative/dspark_components/dspark_draft.py:361-415</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>返回专题阅读顺序：<a href="index.html"><code>README.md</code></a>。</p>
+</article>
+
+            
+
+            <footer class="sf-footer"><span>投机解码源码专题</span><span>纯静态 · 本地依赖 · 可离线分享</span></footer>
+            <p class="print-only">投机解码源码专题 · SGLang dSpark 单轮 Decode：Draft → Target Verify → Accept → Rolling Anchor · None</p>
+          </div>
+
+          <aside class="sf-page-toc" aria-label="本页目录">
+            <p class="sf-page-toc__title">On this page</p>
+            <ol data-page-toc-list><li><a href="#1-读完本文应先掌握的结论" data-level="2">1. 读完本文应先掌握的结论</a></li><li><a href="#2-先固定符号量纲和坐标" data-level="2">2. 先固定符号、量纲和坐标</a></li><li><a href="#3-组件架构关系" data-level="2">3. 组件架构关系</a></li><li><a href="#4-_forward_decode-的主调用链" data-level="2">4. _forward_decode() 的主调用链</a></li><li><a href="#5-本轮入口状态和-verifywindow" data-level="2">5. 本轮入口状态和 VerifyWindow</a></li><li><a href="#6-draftblockproposer一次并行-transformer--串行-markov-采样" data-level="2">6. DraftBlockProposer：一次并行 Transformer + 串行 Markov 采样</a></li><li><a href="#7-从-draftproposal-到-target-candidates" data-level="2">7. 从 DraftProposal 到 Target candidates</a></li><li><a href="#8-target-verify两条入口一个统一结果" data-level="2">8. Target Verify：两条入口，一个统一结果</a></li><li><a href="#9-accept从-target-logits-得到-correct_len-与-bonus" data-level="2">9. Accept：从 Target logits 得到 correct_len 与 bonus</a></li><li><a href="#10-finalize-与输出固定缓冲不等于有效-token" data-level="2">10. Finalize 与输出：固定缓冲不等于有效 token</a></li><li><a href="#11-kv-提交写入的是-ya不是-az" data-level="2">11. KV 提交：写入的是 [Y,a]，不是 [a,Z]</a></li><li><a href="#12-下一轮状态和-scheduler-交接" data-level="2">12. 下一轮状态和 Scheduler 交接</a></li><li><a href="#13-两轮连续时间线rolling-anchor-如何滚动" data-level="2">13. 两轮连续时间线：rolling anchor 如何滚动</a></li><li><a href="#14-模式与高级边界" data-level="2">14. 模式与高级边界</a></li><li><a href="#15-常见误解检查表" data-level="2">15. 常见误解检查表</a></li><li><a href="#16-源码动作--改变状态--为什么-总结" data-level="2">16. 源码动作 / 改变状态 / 为什么 总结</a></li><li><a href="#17-自测" data-level="2">17. 自测</a></li><li><a href="#18-当前源码索引" data-level="2">18. 当前源码索引</a></li></ol>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="search-dialog" id="course-search-dialog" data-search-dialog aria-labelledby="course-search-title">
+    <div class="search-dialog__head"><strong id="course-search-title">搜索课程</strong><button class="sf-icon-button" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+    <form class="search-dialog__form" data-search-form role="search"><label class="sr-only" for="course-search-input">搜索对象、方法、状态或章节</label><input id="course-search-input" type="search" data-search-input autocomplete="off" placeholder="例如：running_batch、ForwardBatch、TARGET_VERIFY"><button class="sf-button" type="submit">搜索</button></form>
+    <p class="search-dialog__status" data-search-status aria-live="polite"></p><ol class="search-results" data-search-results></ol>
+  </dialog>
+
+  <dialog class="diagram-viewer" id="diagram-viewer-dialog" data-diagram-dialog aria-labelledby="diagram-viewer-title">
+    <div class="diagram-viewer__head"><div><strong id="diagram-viewer-title" data-diagram-title>图解沉浸阅读</strong> <span class="diagram-viewer__zoom" data-diagram-zoom>100%</span></div><div class="diagram-viewer__tools"><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-in" aria-label="放大">＋</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-out" aria-label="缩小">−</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="fit">看全图</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="reset">100%</button><button class="sf-button" type="button" data-diagram-action="close">关闭 ×</button></div></div>
+    <div class="diagram-viewer__viewport" data-diagram-viewport><div class="diagram-viewer__canvas mermaid" data-diagram-canvas></div></div>
+  </dialog>
+
+  <script src="visualizations/sglang-course-v2/assets/data/search-index.js" defer></script>
+  <script src="course/assets/vendor/mermaid.min.js" defer></script>
+  <script src="course/assets/js/site-shell.js" defer></script>
+  <script src="course/assets/js/toc-search.js" defer></script>
+  <script src="course/assets/js/diagram-viewer.js" defer></script>
+  <script src="course/assets/js/source-microscope.js" defer></script>
+  <script src="course/assets/js/labs.js" defer></script>
+  <script src="course/assets/js/lesson-components.js" defer></script>
+  
+  <script defer src="course/assets/notes/reading.js"></script>
+</body>
+</html>

@@ -1374,7 +1374,7 @@ class QKVParallelLinear(ColumnParallelLinear):
         assert (
             param_data.shape == loaded_weight.shape
         ), f"{param_data.shape=} {loaded_weight.shape=}"
-        param_data.copy_(loaded_weight)
+        param_data.copy_(loaded_weight)# 默认采用阻塞行为，CPU -> GPU
 
 
 class RowParallelLinear(LinearBase):

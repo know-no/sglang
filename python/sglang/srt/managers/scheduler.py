@@ -463,7 +463,7 @@ class Scheduler(
         maybe_revert_pr_fix()
 
         # Launch a model worker and draft model worker if using speculative decoding
-        self.init_model_worker()
+        self.init_model_worker()#后续交接：init_model_worker() 返回后，Scheduler.__init__() 才调用 kv_cache_builder.build_kv_cache()，构建前缀缓存，并把池引用接到 Scheduler.req_to_token_pool、Scheduler.token_to_kv_pool_allocator、Scheduler.tree_cache。 这一步主要是在已有底层池之上组织缓存策略。
 
         if (t := envs.SGLANG_TEST_STUCK_SCHEDULER_INIT.get()) > 0:
             time.sleep(t)
@@ -819,8 +819,8 @@ class Scheduler(
         else:
             from sglang.srt.managers.tp_worker import TpModelWorker
 
-            self.tp_worker = TpModelWorker(**worker_kwargs)
-
+            self.tp_worker = TpModelWorker(**worker_kwargs) # 在构建target的 worker 的时候，没有传递is_draft_worker，所以内部是false
+            # build_draft_tp_worker 传递的是 true，所以它的 runner 的is_draft_worker=true
     def maybe_init_draft_worker(self):
         if self.spec_algorithm.is_none():
             self.draft_worker = None
@@ -2791,8 +2791,8 @@ class Scheduler(
                     self.stash_chunked_request(req)
 
         if self.chunked_req is not None:
-            # Move the chunked request out of the batch so that we can merge
-            # only finished requests to running_batch.
+            # Move the chunked request out of the batch so that we can merge  # 解惑：排除尚未完成分块 prefill 的请求，让可进入后续阶段的请求合入 running_batch。
+            # only finished requests to running_batch.  # 解惑：这里的“完成”指 prefill 完成，不是 Req.finished()；后者表示整个请求已结束，应被过滤。
             chunked_req_to_exclude.add(self.chunked_req)
 
             # Stash (cache) the previous chunk only when it produced new KV
@@ -2829,13 +2829,13 @@ class Scheduler(
             if self.dllm_config is not None and last_batch.reqs:
                 chunked_req_to_exclude.update(last_batch.reqs)
 
-            # Filter batch
+            # Filter batch  # 解惑：过滤已结束请求和上述待排除的 chunked 请求；overlap 中结果未处理的请求仍可能保留。
             last_bs = last_batch.batch_size()
             last_batch.filter_batch(chunked_req_to_exclude=list(chunked_req_to_exclude))
             if last_batch.batch_size() < last_bs:
                 running_batch.batch_is_full = False
 
-            # Merge the new batch into the running batch.
+            # Merge the new batch into the running batch.  # 解惑：running_batch 是跨轮保留状态：接收 last_batch 剩余请求，不保证每个请求都需要 Decode。
             if not last_batch.is_empty():
                 if running_batch.is_empty():
                     running_batch = last_batch
@@ -2843,15 +2843,15 @@ class Scheduler(
                     # Merge running_batch with prefill batch
                     running_batch.merge_batch(last_batch)
 
-        # For prefill-only batch, filter out finished requests since they
-        # won't go through the decode step. This keeps running_batch accurate
-        # for load reporting (num_running_reqs via /v1/loads).
-        # Runs outside the last_batch block so stale requests are cleaned
-        # even when no new batches arrive (e.g. traffic stops).
+        # For prefill-only batch, filter out finished requests since they  # 解惑：与 ForwardBatch 同义：整批无需生成，跳过下方 Decode/update_running_batch 的常规过滤，需在此补上。
+        # won't go through the decode step. This keeps running_batch accurate  # 解惑：普通 CUDA overlap、单 rank、关闭投机：仅有 A（max_new_tokens=0、不分块），第 N 轮发起 prefill。
+        # for load reporting (num_running_reqs via /v1/loads).  # 解惑：N+1 轮先选批，尚未处理结果的 A 经 last_batch 进入 running_batch；随后才将共享 Req A 标为 finished。
+        # Runs outside the last_batch block so stale requests are cleaned  # 解惑：无后续请求时此轮无可执行批次，last_batch=None；N+2 轮仍须独立过滤，不能依赖上面的 last_batch 分支。
+        # even when no new batches arrive (e.g. traffic stops).  # 解惑：此处 filter_batch 仅移除已结束请求，保留未完成者；否则 A 会滞留并影响 /v1/loads 的 num_running_reqs。
         if running_batch.is_prefill_only:
             running_batch.filter_batch()
             if running_batch.is_empty():
-                running_batch.batch_is_full = False
+                running_batch.batch_is_full = False  # 清除“已满”状态，让后续新请求可以继续入批。
 
         if self.dllm_config is not None:
             new_batch = self.get_new_batch_dllm(running_batch)
@@ -2999,7 +2999,7 @@ class Scheduler(
             self.token_to_kv_pool_allocator,
             running_batch,
             self.new_token_ratio_tracker.current,
-            self.max_prefill_tokens,
+            self.max_prefill_tokens,# 本轮新增 Prefill 输入 token 预算；首个候选可越过此项预算，仍受其他容量约束。
             chunked_prefill_size,
             running_bs if self.is_mixed_chunk else 0,
             self.priority_scheduling_preemption_threshold,
@@ -3147,7 +3147,7 @@ class Scheduler(
                 self.tree_cache.ready_to_load_host_cache()
             )
 
-        new_batch.prepare_for_extend()
+        new_batch.prepare_for_extend() # 和batch.prepare_for_decode一样，入口往下，会计算需要的 token(如果有需要转 page 管理），alloc 后由各自：Extend 路径由 write_cache_indices() 写入映射表；普通 Decode 路径则在 alloc_for_decode() 中直接调用 req_to_token_pool.write()。
 
         if self.tp_worker.model_runner.prefill_aware_swa:
             for req in can_run_list:
@@ -3499,7 +3499,7 @@ class Scheduler(
                 batch.input_ids = None
             elif not batch.spec_algorithm.is_none():
                 # Non-overlap: drive the V2 worker synchronously (no
-                # future_map relay / on_publish).
+                # future_map relay / on_publish). # Non-overlap still resolves staged prefill/mixed inputs; pure dSpark decode usually hits no branch or FutureMap relay.
                 resolve_forward_inputs(batch, self.future_map)
                 with self._forward_isolation(batch, overlap=False):
                     batch_result = self.model_worker.forward_batch_generation(batch)
@@ -3511,7 +3511,7 @@ class Scheduler(
                     if batch.seq_lens_cpu is not None:
                         batch.seq_lens_cpu = batch_result.new_seq_lens.to("cpu")
                         batch.seq_lens_sum = int(batch.seq_lens_cpu.sum())
-                batch.input_ids = None  # rebuilt next iter from draft_token
+                batch.input_ids = None  # spec worker rebuilds from spec_info next iter
                 self.update_cache_from_scheduler(batch, batch_result)
                 # Sync D2H so the result processor can read CPU tensors.
                 batch_result.copy_done = self.device_module.Event()

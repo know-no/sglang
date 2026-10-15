@@ -1,0 +1,16 @@
+{% extends "page.html" %}
+{% block body_class %}sf-course-page sf-lab-page{% endblock %}
+{% block body_attributes %}data-page="{{ lab_page_id }}"{% endblock %}
+{% block extra_head %}
+  <!-- Generated from {{ source_path }} by notes/speculative/course/build.py; source-sha256={{ source_hash }}. -->
+  {{ lab_head|safe }}
+  <link rel="stylesheet" href="{{ lab_assets }}/dspark-course-shell.css">
+{% endblock %}
+{% block page_header %}
+  <nav class="sf-hero__actions" aria-label="实验源文件"><a href="{{ source_url }}" download>下载实验 HTML 源文件</a></nav>
+{% endblock %}
+{% block content %}
+  <div class="dspark-lab" data-toc-source>
+<!-- lab-content:start -->{{ lab_body|safe }}<!-- lab-content:end -->
+  </div>
+{% endblock %}

@@ -347,11 +347,11 @@ class PrefillInputBuffers(ForwardInputBuffers):
         hidden_size: int,
         dtype: torch.dtype,
         enable_mamba_track: bool,
-    ) -> PrefillInputBuffers:
-        with torch.device(device):
-            input_ids = torch.zeros((max_num_tokens,), dtype=torch.int64)
-            out_cache_loc = torch.zeros((max_num_tokens,), dtype=cache_loc_dtype)
-            num_token_non_padded = torch.zeros((1,), dtype=torch.int32)
+    ) -> PrefillInputBuffers:# 创建输入张量；先分配，再由调用方 share_buffers() 合并可共享存储。
+        with torch.device(device): # 普通输入按总 token 数分配；Mamba 跟踪字段按 max_bs，多模态输入还带 hidden/坐标维度。
+            input_ids = torch.zeros((max_num_tokens,), dtype=torch.int64)  # 展平后的 token ID；整个 batch 共用这条 token 轴。
+            out_cache_loc = torch.zeros((max_num_tokens,), dtype=cache_loc_dtype)  # 每个新 token 的 KV 写入槽位编号，不是 positions，也不是 GPU 字节地址。
+            num_token_non_padded = torch.zeros((1,), dtype=torch.int32)# 单元素张量，存放有效 token 数；registry 是否注册并更新此字段取决于相应开关。
             mamba_track_indices = (
                 torch.zeros((max_bs,), dtype=torch.int64)
                 if enable_mamba_track
@@ -365,7 +365,7 @@ class PrefillInputBuffers(ForwardInputBuffers):
                 if enable_mamba_track
                 else None
             )
-            positions = torch.zeros((max_num_tokens,), dtype=torch.int64)
+            positions = torch.zeros((max_num_tokens,), dtype=torch.int64)  # 模型使用的位置编号，通常是该 token 在自身序列中的位置，包含前缀偏移；不是展平数组下标。
 
             if is_multimodal:
                 input_embeds = torch.zeros((max_num_tokens, hidden_size), dtype=dtype)

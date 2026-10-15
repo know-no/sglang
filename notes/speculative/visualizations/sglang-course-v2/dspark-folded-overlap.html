@@ -1,0 +1,552 @@
+
+
+
+
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。">
+  <link rel="icon" href="data:,">
+  <title>DSpark folded fast path、capture/replay 与 overlap · 投机解码专题</title>
+  <link rel="stylesheet" href="assets/css/specforge-course.css">
+  <link rel="stylesheet" href="assets/css/labs.css">
+  <link rel="stylesheet" href="assets/css/print.css">
+</head>
+<body class="sf-course-page" data-root-url="index.html"
+      data-nav-open="false" data-nav-pinned="false"
+data-page-id="dspark-folded-overlap" data-chapter-id="dspark-folded-overlap"data-section-id="speculative"      style="--page-accent: var(--domain-speculative, var(--domain-entry))">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+
+  <div class="sf-shell">
+    <div class="sf-navigation">
+      <nav class="sf-rail" aria-label="课程工具">
+        <button class="sf-rail__button sf-rail__menu" type="button" data-nav-toggle aria-controls="course-navigation" aria-expanded="false">
+          <span aria-hidden="true">☰</span><span class="sr-only">打开课程目录</span>
+        </button>
+        <a class="sf-rail__brand" href="index.html" aria-label="回到 SGLang 课程地图">S</a>
+        <div class="sf-rail__spacer"></div>
+        <button class="sf-rail__button" type="button" data-search-open aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span class="sr-only">搜索课程</span></button>
+        <button class="sf-rail__button" type="button" data-theme-toggle><span aria-hidden="true">◐</span><span class="sr-only" data-theme-label>深色</span></button>
+      </nav>
+
+      <aside class="sf-drawer" id="course-navigation" aria-label="全部课程目录">
+        <header class="sf-drawer__head">
+          <div><p class="sf-drawer__eyebrow">SGLang source course</p><a href="index.html">投机解码专题</a></div>
+          <button class="sf-icon-button" type="button" data-nav-close aria-label="关闭课程目录">×</button>
+        </header>
+        <div class="sf-drawer__tools">
+          <button class="sf-button sf-button--quiet" type="button" data-search-open><span aria-hidden="true">⌕</span> 搜索</button>
+          <button class="sf-button sf-button--quiet" type="button" data-theme-toggle><span aria-hidden="true">◐</span> <span data-theme-label>深色</span></button>
+          <button class="sf-button sf-button--quiet sf-drawer__pin" type="button" data-nav-pin aria-pressed="false"><span aria-hidden="true">⌖</span> <span data-nav-pin-label>固定目录</span></button>
+        </div>
+        <p class="sf-drawer__context"><b>Speculative Decoding 全家族</b><span>DSpark folded fast path、capture/replay 与 overlap</span></p>
+        <nav class="sf-drawer__tree" aria-label="全部章节"><div class="sf-course-tree">
+      <details class="sf-course-tree__section" open>
+        <summary><span class="sf-course-tree__number">01</span><span>Speculative Decoding 全家族</span></summary>
+        <ul class="sf-course-tree__children sf-course-tree__children--section">
+<li class="sf-course-tree__overview"><a href="index.html" data-course-link data-chapter-id="speculative"
+     data-search-title="Speculative Decoding 全家族" data-search-section="Speculative Decoding 全家族"
+aria-current="page">Speculative Decoding 全家族</a></li><li><a href="common-contract.html" data-course-link data-chapter-id="spec-common-contract"
+     data-search-title="Draft 只提案：共同 worker 合同与四个长度" data-search-section="Speculative Decoding 全家族"
+data-search-summary="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。">Draft 只提案：共同 worker 合同与四个长度</a></li><li><a href="eagle-tree.html" data-course-link data-chapter-id="eagle-tree"
+     data-search-title="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask" data-search-section="Speculative Decoding 全家族"
+data-search-summary="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。">EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a></li><li><a href="dflash-block.html" data-course-link data-chapter-id="dflash-block"
+     data-search-title="DFlash fixed-block draft、hidden injection 与 compact cache" data-search-section="Speculative Decoding 全家族"
+data-search-summary="追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。">DFlash fixed-block draft、hidden injection 与 compact cache</a></li><li><a href="dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"
+     data-search-title="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer" data-search-section="Speculative Decoding 全家族"
+data-search-summary="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。">DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a></li><li><a href="dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"
+     data-search-title="DSpark confidence、history、per-step budget 与 ragged layout" data-search-section="Speculative Decoding 全家族"
+data-search-summary="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。">DSpark confidence、history、per-step budget 与 ragged layout</a></li><li><a href="dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"
+     data-search-title="DSpark Target verify、accept/finalize 与 KV commit/reclaim" data-search-section="Speculative Decoding 全家族"
+data-search-summary="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。">DSpark Target verify、accept/finalize 与 KV commit/reclaim</a></li><li><a href="dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"
+     data-search-title="DSpark folded fast path、capture/replay 与 overlap" data-search-section="Speculative Decoding 全家族"
+data-search-summary="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。"aria-current="page">DSpark folded fast path、capture/replay 与 overlap</a></li><li><a href="boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"
+     data-search-title="Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec" data-search-section="Speculative Decoding 全家族"
+data-search-summary="用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。">Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a></li>        </ul>
+      </details>
+  </div></nav>
+      </aside>
+    </div>
+
+    <button class="sf-nav-backdrop" type="button" data-nav-backdrop aria-label="关闭课程目录"></button>
+
+    <div class="sf-main-frame">
+      <main class="sf-main" id="main-content" tabindex="-1">
+        <div class="sf-page-grid">
+          <div class="sf-content-column">
+              <nav aria-label="面包屑"><ol class="sf-breadcrumbs">
+<li><a href="index.html">Speculative Decoding 专题</a></li><li><span aria-current="page">DSpark folded fast path、capture/replay 与 overlap</span></li>              </ol></nav>
+
+              <header class="sf-hero">
+                <h1>DSpark folded fast path、capture/replay 与 overlap</h1>
+<p class="sf-hero__lead">展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。</p>                <div class="sf-evidence-strip">
+<span><strong>源码版本</strong> f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</span>                </div>
+                <div class="sf-hero__actions"></div>
+              </header>
+
+
+            <nav class="sf-hero__actions" aria-label="关联阅读入口" data-repository-companion><a href="../index.html">投机可视化总入口</a></nav>
+<details class="sf-source-details"><summary>版本与验证范围</summary><p>保留原投机解码资料与核对日期。页面重建与链接检查不增加 GPU 或端到端验证证据。</p></details>
+              <aside class="sf-contract" aria-label="深入源码笔记" data-related-notes data-repository-companion>
+                <div><b>深入源码笔记</b><span>课程负责连贯导览；逐段源码推导与补充讨论在以下主文维护。</span></div>
+<div><a href="../../sglang-dspark-single-round-decode.html">dSpark accept、commit 与 overlap 顺序</a></div>              </aside>
+
+              <nav class="sf-stage-map" aria-label="本章学习路径">
+                <div class="sf-stage-map__head"><span>Stage roadmap</span><b>沿同一组对象，从结论走到源码与边界</b></div>
+                <ol><li><a href="#直接结论"><span>01</span>先钉住结论</a></li><li><a href="#当前路径假设"><span>02</span>前置直觉与运行坐标</a></li><li><a href="#对象与状态"><span>05</span>对象与所有权地图</a></li><li><a href="#当前源码调用链"><span>06</span>当前源码主链</a></li><li><a href="#连续例子"><span>07</span>固定样例 · 连续过程</a></li><li><a href="#边界矩阵"><span>09</span>分支与结论边界</a></li><li><a href="#自测"><span>11</span>自测与复盘</a></li></ol>
+              </nav>
+<details class="sf-mobile-toc"><summary>本页目录</summary><ol><li><a href="#直接结论">直接结论</a></li><li><a href="#当前路径假设">当前路径假设</a></li><li><a href="#输入-本页职责与输出">输入、本页职责与输出</a></li><li><a href="#为什么存在">为什么存在</a></li><li><a href="#对象与状态">对象与状态</a></li><li><a href="#当前源码调用链">当前源码调用链</a></li><li><a href="#连续例子">连续例子</a></li><li><a href="#为什么必须在这里">为什么必须在这里</a></li><li><a href="#边界矩阵">边界矩阵</a></li><li><a href="#source-action-changed-state-why">source action / changed state / why</a></li><li><a href="#自测">自测</a></li><li><a href="#source-evidence">源码引用与上下文</a></li></ol></details>
+<article class="sf-deep-lesson" data-toc-source data-lesson>
+<section class="sf-topic sf-topic--verdict" data-topic-kind="verdict" aria-labelledby="直接结论">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="直接结论"><span class="sf-sec-number" aria-hidden="true">01</span>直接结论</h2>
+    </header>
+
+      <div class="sf-note sf-note--key"><p>DSpark里的“folded”和Scheduler里的“overlap”是两条正交轴。folded回答的是一张CUDA Graph内部到底吸收了多少本来会在graph外执行的工作；overlap回答的是第N轮设备forward、结果D2H与第N+1轮CPU调度能否通过不同stream和延迟对象并行推进。不能把“跑了CUDA Graph”简称为“整轮都折叠”，更不能把<code>FutureMap.publish()</code>的Python调用完成当作GPU工作完成。</p>
+<p>一轮DSpark至少要分四个布尔阶段。第一，<code>proposal.folded</code>只说明greedy block token（以及可选confidence）由draft graph的捕获后sampler写入静态buffer。第二，<code>fold_eligible</code>还要求存在verify epilogue、logits adjustment为空、没有simulate accept、没有grammar。第三，<code>folded_accept</code>再要求本轮选择compact路径且target verify确实命中CUDA Graph。第四，<code>folded_commit</code>还要求epilogue持有支持融合写入的<code>commit_ctx</code>。四者是递进关系而不是同义词；任一步失败都走显式fallback，但仍必须形成相同的<code>AcceptOuts</code>、draft KV和<code>GenerationBatchResult</code>合同。</p>
+<p>overlap可以在四种fold状态之外独立开关：可以“overlap开启但整轮eager”，也可以“overlap关闭但draft/target graph内部折叠”；可以“proposal已folded但accept因grammar退回eager”，也可以“accept已folded但draft KV commit仍显式执行”。这组组合是理解性能事件、状态可见性和fallback正确性的最低坐标系。</p>
+</div>
+  </section><section class="sf-topic sf-topic--prereq" data-topic-kind="prereq" aria-labelledby="当前路径假设">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="当前路径假设"><span class="sf-sec-number" aria-hidden="true">02</span>当前路径假设</h2>
+    </header>
+
+      <div class="sf-note sf-note--scope"><p>主例为单Scheduler进程、CUDA、DSpark dense、batch中R0/R1均为greedy、gamma=4、ragged verify开启、compact layout有效、target decode CUDA Graph命中。R0/R1没有grammar、没有logit bias或temperature adjustment、<code>simulate_acc_len=0</code>；draft model有<code>compute_base_logits</code>与Markov head，因此可以安装<code>DsparkDraftSampler</code>。若当前KV pool暴露<code>set_swa_key_buffer_radix_fused_norm_rope</code>，示例进一步允许folded commit；否则只折叠accept。</p>
+<p>调度侧假设<code>enable_overlap=True</code>，Scheduler有schedule stream、forward stream、result copy stream以及供seq-lens/confidence使用的prepare-D2H stream。Python进程相同并不表示所有操作同一stream；<code>Event.record()</code>只把事件排进当前stream，<code>wait_event()</code>建立后继依赖，只有<code>query()</code>、<code>synchronize()</code>或依赖链走到相应节点，host才能声称结果可读。</p>
+<p>DP边界不从单卡例子外推。DSpark普通dense DP、DSV4 MoE同步、idle rank participation和compact graph组合各有启动/运行守卫；PP与CP也不能从“代码里出现collective”推断已兼容。本文只跟踪单rank主线与必要的DP提示，不把源码路径当作任何硬件上的实测重叠比例。</p>
+</div>
+  </section><section class="sf-topic sf-topic--contract" data-topic-kind="contract" aria-labelledby="输入-本页职责与输出">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="输入-本页职责与输出"><span class="sf-sec-number" aria-hidden="true">03</span>输入、本页职责与输出</h2>
+    </header>
+
+      <div class="sf-contract-body"><p>输入是Scheduler交给<code>DSparkWorkerV2.forward_batch_generation()</code>的<code>ScheduleBatch</code>、上一轮<code>DFlashDraftInputV2</code>、每请求prefix lens、sampling info，以及overlap模式下的<code>on_publish=partial(FutureMap.publish, future_indices)</code>。本页职责是说明折叠资格如何逐层收窄、每层失败后谁补做工作，以及publish、stash、D2H copy如何把一轮结果交给下一轮。输出仍是普通spec-v2的<code>GenerationBatchResult</code>；fold状态不是另一套结果类型。</p>
+<div class="table-scroll teaching-table"><table>
+<thead>
+<tr>
+<th>阶段状态</th>
+<th>决定条件</th>
+<th>写入或返回</th>
+<th>下一个消费者</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>proposal.folded</code></td>
+<td>sampler存在、draft graph命中、全greedy</td>
+<td>static draft token buffer，可选confidence buffer</td>
+<td>verify layout与target输入构造</td>
+</tr>
+<tr>
+<td><code>fold_eligible</code></td>
+<td>上项成立，且epilogue存在、adjustment no-op、无grammar/simulation</td>
+<td><code>inject_gate=1</code>，允许graph epilogue接管</td>
+<td>target ragged graph capture hook</td>
+</tr>
+<tr>
+<td><code>folded_accept</code></td>
+<td>eligible且compact且target graph命中</td>
+<td>epilogue中的correct/bonus/commit/output buffers</td>
+<td><code>accept_and_finalize()</code>读取统一<code>AcceptOuts</code></td>
+</tr>
+<tr>
+<td><code>folded_commit</code></td>
+<td>folded accept且pool支持融合commit</td>
+<td>accepted target hidden写入draft KV</td>
+<td>下一轮draft forward</td>
+</tr>
+<tr>
+<td><code>publish_ready</code></td>
+<td>worker得到<code>new_seq_lens</code>后调用publish</td>
+<td>pool-indexed lens/confidence与stream event</td>
+<td>下轮<code>resolve_seq_lens_cpu()</code>/budget prepare</td>
+</tr>
+<tr>
+<td><code>copy_done</code></td>
+<td>完整worker返回后Scheduler安排result D2H</td>
+<td>CPU可读accept/output结果</td>
+<td><code>BatchResultProcessor</code></td>
+</tr>
+</tbody>
+</table></div>
+</div>
+  </section><section class="sf-topic sf-topic--why" data-topic-kind="why" aria-labelledby="为什么存在">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="为什么存在"><span class="sf-sec-number" aria-hidden="true">04</span>为什么存在</h2>
+    </header>
+
+      <div class="sf-topic__body"><p>CUDA Graph要求地址、形状和控制结构足够稳定，但DSpark的真实工作量由batch size、每请求confidence budget、ragged cutoff和sampling约束共同决定。proposal sampler折入draft graph，可以省掉graph返回后再计算base logits、采样整块token的launch；target epilogue把compact rows散回固定stride并直接计算greedy accept，可以省掉graph后的若干kernel；融合commit又能把accepted hidden按commit lens注入draft KV。它们被拆成独立能力，是因为模型是否支持Markov sampler、API是否要求logit调整、target graph是否命中、KV pool是否支持融合写，各自可能单独变化。</p>
+<p>若只用一个<code>is_folded</code>总开关，最危险的不是少优化，而是漏做fallback。比如proposal token已经在graph里产生，并不能保证grammar mask已作用于target logits；若因此跳过eager accept，worker会按照未mask分布提交非法token。又如epilogue算出了commit lens，并不能证明draft KV内容已写；若pool没有融合注入能力却跳过<code>commit_hidden()</code>，下一轮draft会读取陈旧状态。当前代码显式计算<code>folded_accept</code>与<code>folded_commit</code>，正是把“结果已算出”和“状态已物化”分开。</p>
+<p>overlap解决的是另一种空隙。accept后<code>new_seq_lens</code>已经足以让Scheduler准备下轮，即使hidden commit、observer、完整result D2H尚未全部结束。因此worker可在中途publish一个设备侧前沿；schedule stream的下轮准备通过event等待正确producer，而CPU不必等待所有结果字段。完整accept token仍需copy stream和<code>copy_done</code>后交给result processor。这样把“下轮forward输入所需的最小信息”和“HTTP输出所需的完整信息”分开，但没有放松任何依赖。</p>
+</div>
+  </section><section class="sf-topic sf-topic--objects" data-topic-kind="objects" aria-labelledby="对象与状态">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="对象与状态"><span class="sf-sec-number" aria-hidden="true">05</span>对象与状态</h2>
+    </header>
+
+      <div class="sf-topic__body sf-object-body"><p><code>DraftBlockProposer.propose()</code>先运行draft forward。若捕获时安装了<code>DsparkDraftSampler</code>、本轮<code>fwd.can_run_graph</code>且全greedy，它直接把sampler静态输出view成<code>[B,gamma]</code>，<code>corrected_logits=None</code>并设置<code>folded=True</code>；否则graph只产生hidden，随后Python路径调用<code>compute_base_logits()</code>和<code>sample_draft_block()</code>。因此<code>proposal.folded</code>描述token采样位置，不描述draft forward本身是否graph化，更不描述target。</p>
+<p>target侧<code>DsparkVerifyEpilogue</code>持有固定大小的verify lens、draft tokens、correct len、bonus、commit lens、new seq lens、out tokens，以及scatter后的logits/hidden buffer。<code>capture_hook()</code>只在target runner、ragged verify、且output同时含logits与hidden时调用epilogue。<code>begin_step()</code>把本轮lens写入静态buffer，并以<code>inject_gate</code>控制融合commit是否真的写；捕获graph时可保留同一结构，运行时用gate关闭不合格分支。</p>
+<p><code>accept_and_finalize()</code>无论fold与否都返回<code>AcceptOuts</code>。folded时读取epilogue buffers；eager时对已scatter、已做logit adjustment或grammar mask的logits运行greedy/sampling accept与finalize。外层先用<code>on_publish</code>发布<code>accept.new_seq_lens</code>，再判断<code>epilogue.folds_commit</code>。这意味着“发布长度”的时间点位于显式hidden commit之前；正确性依赖forward stream内的顺序，以及下轮draft所在stream对publish/forward依赖的等待，不能靠Python源码行号推断设备立即可见。</p>
+<p><code>FutureMap</code>按<code>req_pool_idx</code>保存跨轮token、seq lens、hidden或算法payload。<code>publish()</code>先scatter lens/confidence，再在当前device stream记录<code>publish_ready</code>；<code>resolve_seq_lens_cpu()</code>在下轮从<code>future_indices</code> gather GPU lens，需要CPU镜像时由私有D2H stream等待event再copy并同步。<code>ConfidenceRelay</code>更保守：设备buffer发布后复制到深度3的pinned ring，<code>resolve()</code>只读取滞后2轮且<code>copy_done.query()</code>为真的slot，并用request generation防止pool row复用造成串请求。</p>
+<p>下图只画进程内的所有权与 stream 边界。schedule stream 不直接读 target graph 的静态 buffer，copy stream 也不提供下轮 forward 的前沿；它们分别通过 <code>FutureMap.publish_ready</code> 与 <code>GenerationBatchResult.copy_done</code> 这两类不同 event 获得自己所需的可见性。</p>
+<figure class="diagram-frame" data-diagram-frame data-diagram-kind="component"><div class="diagram-toolbar"><span class="diagram-toolbar__identity"><b>组件 / 所有权图</b><span>DSpark folded fast path、capture/replay 与 overlap · 下图只画进程内的所有权与 stream 边界</span></span><span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span><button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button></div><div class="diagram-legend" aria-label="图内语义色图例"><span class="diagram-legend__item" data-tone="blue">入口 / 接口</span><span class="diagram-legend__item" data-tone="orange">owner / 调度</span><span class="diagram-legend__item" data-tone="green">持久状态</span><span class="diagram-legend__item" data-tone="purple">执行组件</span></div><div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="图形阅读区，可横向滚动"><div class="diagram-frame__canvas"><pre class="mermaid" aria-label="DSpark folded fast path、capture/replay 与 overlap · 下图只画进程内的所有权与 stream 边界">flowchart LR
+    subgraph CPU[Scheduler process CPU ownership]
+        SS[schedule stream\nbatch metadata]
+        RP[BatchResultProcessor]
+        HTTP[user output / HTTP]
+    end
+    subgraph FWD[forward stream ownership]
+        DG[draft CUDA graph\noptional folded sampler]
+        TG[target ragged CUDA graph]
+        EP[DsparkVerifyEpilogue\nscatter / accept / optional commit]
+        FB[explicit accept or commit fallback]
+    end
+    subgraph RELAY[cross-iteration relay]
+        FM[FutureMap\nnew seq lens + anchor payload]
+        CR[ConfidenceRelay\npinned lag ring]
+    end
+    subgraph COPY[result copy stream]
+        D2H[logits / token / lens D2H]
+        DONE[copy_done event]
+    end
+    SS --&gt;|waited by forward stream| DG --&gt; TG --&gt; EP
+    EP --&gt;|guard fails| FB
+    EP --&gt;|new_seq_lens + confidence| FM
+    FM --&gt; CR
+    FM --&gt;|publish_ready event| SS
+    EP --&gt; D2H
+    FB --&gt; D2H --&gt; DONE --&gt; RP --&gt; HTTP
+</pre></div></div><figcaption><b>读图方法：</b>先认实例与持久状态的 owner，再沿组合、复用和下一消费者读边。</figcaption></figure>
+</div>
+  </section><section class="sf-topic sf-topic--source-flow" data-topic-kind="source-flow" aria-labelledby="当前源码调用链">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="当前源码调用链"><span class="sf-sec-number" aria-hidden="true">06</span>当前源码调用链</h2>
+    </header>
+
+      <div class="sf-topic__body"><figure class="diagram-frame" data-diagram-frame data-diagram-kind="sequence"><div class="diagram-toolbar"><span class="diagram-toolbar__identity"><b>时序 / 泳道图</b><span>DSpark folded fast path、capture/replay 与 overlap · 当前源码调用链</span></span><span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span><button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button></div><div class="diagram-legend" aria-label="图内语义色图例"><span class="diagram-legend__item" data-tone="blue">caller</span><span class="diagram-legend__item" data-tone="orange">scheduler</span><span class="diagram-legend__item" data-tone="purple">device work</span><span class="diagram-legend__item" data-tone="cyan">IPC / collective</span></div><div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="图形阅读区，可横向滚动"><div class="diagram-frame__canvas"><pre class="mermaid" aria-label="DSpark folded fast path、capture/replay 与 overlap · 当前源码调用链">sequenceDiagram
+    participant C as Scheduler CPU / schedule stream
+    participant F as forward stream
+    participant DG as DSpark draft graph
+    participant TG as target ragged graph + epilogue
+    participant M as FutureMap / confidence ring
+    participant X as result copy stream
+    C-&gt;&gt;F: wait_stream(schedule), then launch R0/R1 batch N
+    F-&gt;&gt;DG: draft forward
+    DG--&gt;&gt;F: hidden + folded greedy block/confidence
+    F-&gt;&gt;TG: compact TARGET_VERIFY, inject_gate
+    alt folded_accept and epilogue.folds_commit
+        TG-&gt;&gt;TG: scatter → accept/finalize → commit hidden inside captured epilogue
+        TG--&gt;&gt;F: graph buffers already contain AcceptOuts and committed draft KV
+        F-&gt;&gt;F: accept_and_finalize reads graph buffers
+        F-&gt;&gt;M: publish(new_seq_lens, confidence), then record event
+    else eager accept or explicit-commit fallback
+        TG--&gt;&gt;F: logits/hidden scatter, accept may be folded or eager
+        F-&gt;&gt;F: grammar/adjustment if needed → accept_and_finalize
+        F-&gt;&gt;M: publish(new_seq_lens, confidence), then record event
+        F-&gt;&gt;F: commit_hidden explicitly when folded_commit=false
+    end
+    Note over C,M: next schedule consumes through event dependency, not Python immediacy
+    F--&gt;&gt;C: GenerationBatchResult + next_draft_input
+    C-&gt;&gt;M: stash relay payload/future indices
+    F-&gt;&gt;X: copy_stream waits forward_stream, then D2H result
+    X--&gt;&gt;C: copy_done makes accept/output CPU-readable
+</pre></div></div><figcaption><b>读图方法：</b>从上到下区分 Python 调用、CPU 状态写入、异步 device enqueue、wait 与 return。</figcaption></figure>
+<p>Scheduler进入<code>run_batch()</code>后先让<code>future_map.resolve_seq_lens_cpu(batch)</code>解析上一轮发布的长度，再由confidence budget prepare读取可用的relay样本；随后forward stream等待schedule stream，并解析其他future inputs。它调用composite DSpark worker并传入<code>on_publish</code>。worker proposal阶段决定<code>proposal.folded</code>，planner算layout并选择compact；根据五个守卫得到<code>fold_eligible</code>，把它作为<code>inject_gate</code>传给target executor。target返回后再以<code>fold_eligible &amp;&amp; run_compact &amp;&amp; can_run_cuda_graph</code>得到<code>folded_accept</code>。</p>
+<p>如果folded accept为假，<code>accept_and_finalize()</code>显式消费最终logits；如果为真则读取graph epilogue静态buffer。真正的folded commit不是worker在publish后补做的动作：当 <code>folded_accept &amp;&amp; epilogue.folds_commit</code> 时，<code>DsparkVerifyEpilogue</code>已经在target graph内部按 <code>scatter → accept → commit</code> 的顺序注入accepted hidden，worker读出AcceptOuts后直接publish。其余情况统一走fallback顺序：worker得到accept结果，先publish <code>new_seq_lens</code>，再显式调用<code>commit_hidden()</code>。之后才清空公开hidden引用、观察metrics、构造next draft input并返回。Scheduler stash下一轮payload，把<code>batch.spec_info</code>换成返回对象并绑定future indices；完整result由copy stream等forward stream后异步D2H。</p>
+<p>非overlap时仍调用同一个DSpark V2 worker，只是不传<code>on_publish</code>、不使用future-map中继；worker返回后Scheduler同步安装<code>next_draft_input/new_seq_lens</code>并安排D2H。draft/target graph是否折叠由各自条件判断，不因调度不重叠而自动关闭。</p>
+<p>最后用代码决策图把三个“folded”拆开。图中每个菱形都对应当前源码的独立 guard；任何一条失败都只会退回它所管辖的阶段，不会把整轮退回普通 decode。</p>
+<figure class="diagram-frame" data-diagram-frame data-diagram-kind="code"><div class="diagram-toolbar"><span class="diagram-toolbar__identity"><b>源码流程图</b><span>DSpark folded fast path、capture/replay 与 overlap · 最后用代码决策图把三个“folded”拆开</span></span><span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span><button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button></div><div class="diagram-legend" aria-label="图内语义色图例"><span class="diagram-legend__item" data-tone="blue">entry / return</span><span class="diagram-legend__item" data-tone="orange">guard / policy</span><span class="diagram-legend__item" data-tone="green">state write</span><span class="diagram-legend__item" data-tone="red">fail / cleanup</span></div><div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="图形阅读区，可横向滚动"><div class="diagram-frame__canvas"><pre class="mermaid" aria-label="DSpark folded fast path、capture/replay 与 overlap · 最后用代码决策图把三个“folded”拆开">flowchart TD
+    P0[draft forward finished] --&gt; P1{draft sampler installed\ngraph hit\nall greedy?}
+    P1 --&gt;|yes| PF[proposal.folded = true\nread static proposal / confidence buffers]
+    P1 --&gt;|no| PE[eager base logits + sample_block\nproposal.folded = false]
+    PF --&gt; G
+    PE --&gt; G
+    G{epilogue exists AND proposal folded\nAND logits adjustments are noop\nAND simulate disabled AND no grammar?}
+    G --&gt;|no| VE[target forward then eager accept]
+    G --&gt;|yes| C{compact layout and target graph hit?}
+    C --&gt;|no| VE
+    C --&gt;|yes| FA[folded_accept = true\nread AcceptOuts from epilogue]
+    VE --&gt; PUB[publish new_seq_lens and confidence]
+    FA --&gt; FC{epilogue.folds_commit?}
+    FC --&gt;|yes| DONE[folded_commit = true\nKV injection already inside graph]
+    FC --&gt;|no| PUB
+    PUB --&gt; EX[explicit commit_hidden fallback]
+    EX --&gt; RET[return GenerationBatchResult]
+    DONE --&gt; RET
+</pre></div></div><figcaption><b>读图方法：</b>沿 receiver、guard、callee、return、状态写入和下一消费者逐跳核对当前源码。</figcaption></figure>
+</div>
+  </section><section class="sf-topic sf-topic--example" data-topic-kind="example" aria-labelledby="连续例子">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="连续例子"><span class="sf-sec-number" aria-hidden="true">07</span>连续例子</h2>
+    </header>
+
+      <div class="sf-teach-walk" data-teaching-walk data-step-count="5">
+        <div class="sf-teach-walk__head"><b>沿固定样例逐步运行</b><span>切换步骤时同时观察对象、状态与下一消费者</span></div>
+        <div class="sf-teach-walk__source"><section class="sf-walk-panel" data-walk-panel="1"><p>t0，R0/R1 prefix分别为100/60，gamma=4。上一轮已把anchor和seq lens放入future map。第N轮schedule stream完成batch元数据，forward stream等待后启动。draft graph命中，静态sampler得到R0 <code>[a,b,c,d]</code>、R1 <code>[x,y,z,w]</code>，两请求全greedy，所以<code>proposal.folded=True</code>；这只证明proposal token已在graph里产生。</p>
+</section><section class="sf-walk-panel" data-walk-panel="2"><p>t1，confidence planner给出<code>verify_lens=[3,2]</code>，compact有效rows为5，graph bucket为8。无grammar/adjustment/simulation，epilogue存在，所以<code>fold_eligible=True</code>；target graph命中，因此<code>folded_accept=True</code>。epilogue把5个有效row散回<code>[2,5]</code>逻辑stride，假设R0正确1个draft并得到bonus<code>B0</code>，R1正确0个并得到<code>B1</code>，于是commit lens为<code>[2,1]</code>、new seq lens为<code>[102,61]</code>。bucket的3个padding从不增加commit。</p>
+</section><section class="sf-walk-panel" data-walk-panel="3"><p>t2a，若pool支持融合SWA-key写入，<code>epilogue.folds_commit=True</code>且inject gate为1，target graph的epilogue在返回前已依次完成scatter、accept与accepted hidden注入；worker读取AcceptOuts后publish，外层不再commit。t2b，换成不支持该融合入口的pool，前述proposal/accept仍可folded，但<code>folded_commit=False</code>；worker读取AcceptOuts、先publish <code>[102,61]</code>，然后显式<code>commit_hidden(commit_lens=[2,1])</code>。如果grammar又使accept eager，顺序仍是eager accept→publish→explicit commit。两种路径返回完全相同的accepted tokens和下轮anchor；差别只在draft KV物化由graph epilogue还是fallback receiver完成。</p>
+</section><section class="sf-walk-panel" data-walk-panel="4"><p>t3，worker得到commit lens后publish <code>[102,61]</code>和confidence，forward stream记录event。schedule stream可准备第N+1轮，但读取发布值的stream必须等待event。confidence D2H进入ring，本轮值不会立刻供CPU预算使用：relay只取两轮前完成copy且generation仍匹配的slot。与此同时worker完成显式commit/observer并返回，copy stream再等待forward stream复制完整结果。HTTP/result processor读取accept token要等<code>copy_done</code>，不能因为publish已经调用就提前读。</p>
+</section><section class="sf-walk-panel" data-walk-panel="5"><p>t4，第N+1轮R0启用grammar。draft graph仍可能给出<code>proposal.folded=True</code>，但<code>not batch.has_grammar</code>失败，故<code>fold_eligible=False</code>，target可以仍走compact graph做forward/scatter，却必须在graph外先应用grammar mask，再eager accept，最后显式commit。这个反例证明“proposal folded”不能推出“accept folded”。若关闭Scheduler overlap，t0至t2的折叠仍可发生，只是没有中途publish与跨轮future relay。</p>
+</section></div>
+      </div>
+  </section><section class="sf-topic sf-topic--why-here" data-topic-kind="why-here" aria-labelledby="为什么必须在这里">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="为什么必须在这里"><span class="sf-sec-number" aria-hidden="true">08</span>为什么必须在这里</h2>
+    </header>
+
+      <div class="sf-topic__body"><p>proposal采样必须在draft graph capture hook中完成，才能复用graph内hidden和静态输出buffer；若在target后才补算，候选已经来不及构造verify输入。grammar与logit adjustment必须在accept之前落到target logits，因此任何graph epilogue看不到这些变化时都必须关闭folded accept。simulate accept同样改变裁决，不能在epilogue之后覆写一个已经融合commit的结果。</p>
+<p>hidden commit必须在accept后，因为commit lens此前未知；它又必须在下一轮draft读取KV之前完成。publish可以位于显式commit前，是因为它只发布下轮长度/预算所需的前沿，不宣称draft KV已在host可见；跨stream依赖必须覆盖真正消费者。若把publish event解释成“整轮完成”，会既高估重叠，又掩盖下一轮draft对commit完成的真实依赖。</p>
+<p>confidence relay使用两轮滞后而非每轮强制D2H同步，是为了避免CPU budget决策把forward串行化。代价是预算依据是旧样本；generation校验与fallback策略必须处理新请求、pool row复用和copy尚未完成。这里的设计是“允许安全陈旧”，不是“当前confidence即时驱动当前accept”。</p>
+</div>
+  </section><section class="sf-topic sf-topic--boundary" data-topic-kind="boundary" aria-labelledby="边界矩阵">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="边界矩阵"><span class="sf-sec-number" aria-hidden="true">09</span>边界矩阵</h2>
+    </header>
+
+      <div class="sf-topic__body"><div class="table-scroll teaching-table"><table>
+<thead>
+<tr>
+<th>组合</th>
+<th>proposal</th>
+<th>accept</th>
+<th>draft-KV commit</th>
+<th>Scheduler overlap</th>
+<th>典型原因/结论</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>全折叠主线</td>
+<td>graph sampler</td>
+<td>graph epilogue</td>
+<td>graph epilogue</td>
+<td>可开或关</td>
+<td>greedy、compact、graph命中、pool支持融合</td>
+</tr>
+<tr>
+<td>accept折叠/commit显式</td>
+<td>graph sampler</td>
+<td>graph epilogue</td>
+<td><code>commit_hidden()</code></td>
+<td>可开或关</td>
+<td>pool无融合commit入口，结果语义不变</td>
+</tr>
+<tr>
+<td>proposal折叠/accept显式</td>
+<td>graph sampler</td>
+<td>eager</td>
+<td>eager</td>
+<td>可开或关</td>
+<td>grammar、logit adjustment或simulation</td>
+</tr>
+<tr>
+<td>proposal eager/target graph</td>
+<td>eager base logits+sample</td>
+<td>可能eager；fold资格已失败</td>
+<td>eager</td>
+<td>可开或关</td>
+<td>sampling或draft sampler不可用</td>
+</tr>
+<tr>
+<td>全eager但重叠</td>
+<td>eager</td>
+<td>eager</td>
+<td>eager</td>
+<td>开</td>
+<td>stream/future relay仍可跨轮并行</td>
+</tr>
+<tr>
+<td>graph折叠但不重叠</td>
+<td>graph</td>
+<td>graph或eager</td>
+<td>graph或eager</td>
+<td>关</td>
+<td>同步调度不禁止worker内部graph优化</td>
+</tr>
+<tr>
+<td>DP idle rank</td>
+<td>无真实请求，按守卫参与必要collective</td>
+<td>无业务accept</td>
+<td>无业务commit</td>
+<td>依DP实现</td>
+<td>不能按单rank主线假装可直接跳过</td>
+</tr>
+<tr>
+<td>logprob请求</td>
+<td>当前DSpark拒绝</td>
+<td>不进入上述API主线</td>
+<td>不适用</td>
+<td>不适用</td>
+<td>EAGLE能力不可外推到DSpark</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+  </section><section class="sf-topic sf-topic--recap" data-topic-kind="recap" aria-labelledby="source-action-changed-state-why">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="source-action-changed-state-why"><span class="sf-sec-number" aria-hidden="true">10</span>source action / changed state / why</h2>
+    </header>
+
+      <div class="sf-state-flow-source" data-state-flow><div class="table-scroll teaching-table"><table>
+<thead>
+<tr>
+<th>source action</th>
+<th>changed state</th>
+<th>why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>draft sampler capture</td>
+<td>graph hidden → static proposal/confidence</td>
+<td>把greedy proposal移入稳定graph边界</td>
+</tr>
+<tr>
+<td>compute <code>fold_eligible</code></td>
+<td>runtime约束 → epilogue gate</td>
+<td>保证mask/adjustment/simulation不会被绕过</td>
+</tr>
+<tr>
+<td>target epilogue</td>
+<td>compact rows → strided accept buffers</td>
+<td>在graph内形成统一AcceptOuts布局</td>
+</tr>
+<tr>
+<td>commit fallback</td>
+<td>accepted target hidden → draft KV</td>
+<td>pool不能融合时补齐相同持久状态</td>
+</tr>
+<tr>
+<td><code>FutureMap.publish()</code></td>
+<td>pool row的new lens/confidence + event</td>
+<td>让下轮只等待所需前沿，而非完整D2H</td>
+</tr>
+<tr>
+<td>confidence ring resolve</td>
+<td>两轮前pinned sample → budget输入</td>
+<td>避免每轮host同步并防row复用污染</td>
+</tr>
+<tr>
+<td>result copy</td>
+<td>device accept/output → CPU tensors</td>
+<td>result processor/HTTP读取完整结果前的真实边界</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+  </section><section class="sf-topic sf-topic--self-check" data-topic-kind="self-check" aria-labelledby="自测">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="自测"><span class="sf-sec-number" aria-hidden="true">11</span>自测</h2>
+    </header>
+
+      <div class="sf-self-test" data-self-test>
+        <ol>
+<li><code>proposal.folded=True</code>而R0带grammar时，哪两个后续布尔量必须为false，accept由谁执行？</li>
+<li>target compact graph命中但KV pool不支持融合注入时，哪些结果已产生、哪个状态仍必须由<code>commit_hidden()</code>补齐？</li>
+<li>为什么<code>FutureMap.publish()</code>调用返回不能证明CPU可读取<code>new_seq_lens</code>，更不能证明完整accept tokens已经D2H？</li>
+<li>请构造“overlap开启但完全eager”和“overlap关闭但folded accept”各一个合法组合。</li>
+<li>confidence relay为什么读取两轮前slot？request generation在pool row复用时保护了什么？</li>
+</ol>
+
+      </div>
+  </section><section class="sf-topic sf-topic--evidence" data-topic-kind="evidence" aria-labelledby="source-evidence">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="source-evidence"><span class="sf-sec-number" aria-hidden="true">12</span>源码引用与上下文</h2>
+    </header>
+
+      <details class="sf-source-details"><summary>展开本章源码片段与定位工具</summary><div class="source-microscope" data-source-microscope data-source-key="source" data-default-step="source-1"><div class="source-microscope__head"><h3>源码显微镜：receiver、状态写入与下一消费者</h3><p>左侧按本章论证顺序定位决定性源码；每一跳必须回到正文判断它是 call、write、return 还是 next-consumer。相邻卡片本身不冒充直接调用边。</p></div><div class="source-microscope__tabs" data-source-tabs><button class="button button--quiet" data-source-step="source-1">01 · propose</button><button class="button button--quiet" data-source-step="source-2">02 · fold_eligible</button><button class="button button--quiet" data-source-step="source-3">03 · DsparkVerifyEpilogue</button><button class="button button--quiet" data-source-step="source-4">04 · folds_commit</button><button class="button button--quiet" data-source-step="source-5">05 · run_batch</button><button class="button button--quiet" data-source-step="source-6">06 · ConfidenceRelay</button><button class="button button--quiet" data-source-step="source-7">07 · publish</button></div><div class="source-microscope__stage"><section class="source-microscope__panel" data-source-panel="source-1"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>propose</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>区分graph内proposal采样与graph后eager proposal</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>fold_eligible</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_draft.py:268</span><span>步骤 1 / 7</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_draft.py:268 附近源码"><code>    264 |         if self._dp_moe_sync:
+    265 |             return draft_tp_context(get_parallel().attn_tp_group)
+    266 |         return nullcontext()
+    267 | 
+&gt;   268 |     def propose(
+    269 |         self,
+    270 |         *,
+    271 |         batch: ScheduleBatch,
+    272 |         draft_input: DFlashDraftInputV2,</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-2"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>fold_eligible</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>folded accept的grammar、sampling adjustment与simulation守卫</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>DsparkVerifyEpilogue</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:581</span><span>步骤 2 / 7</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:581 附近源码"><code>    577 |         grammar_tree = (
+    578 |             GrammarTree.from_linear_chain(verify_ids_2d) if batch.has_grammar else None
+    579 |         )
+    580 | 
+&gt;   581 |         # A live grammar forces the eager path: the folded epilogue accepts inside
+    582 |         # the cuda graph off its own buffers, where the mask below never lands.
+    583 |         fold_eligible = (
+    584 |             self._verify_executor.verify_epilogue is not None
+    585 |             and proposal.folded</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-3"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>DsparkVerifyEpilogue</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>ragged target graph中的scatter、accept与可选commit epilogue</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>folds_commit</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_verify.py:453</span><span>步骤 3 / 7</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_verify.py:453 附近源码"><code>    449 |     new_seq_lens: torch.Tensor
+    450 |     out_tokens: torch.Tensor
+    451 | 
+    452 | 
+&gt;   453 | class DsparkVerifyEpilogue:
+    454 | 
+    455 |     def __init__(
+    456 |         self,
+    457 |         *,</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-4"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>folds_commit</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>判断当前pool是否支持在epilogue中完成hidden KV注入</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>run_batch</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_verify.py:531</span><span>步骤 4 / 7</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_verify.py:531 附近源码"><code>    527 |             new_seq_lens=self.new_seq_lens_buf[:bs],
+    528 |             out_tokens=self.out_tokens_buf[:bs],
+    529 |         )
+    530 | 
+&gt;   531 |     @property
+    532 |     def folds_commit(self) -&gt; bool:
+    533 |         if self.commit_ctx is None:
+    534 |             return False
+    535 |         pool = self.commit_ctx.resolve_pool()</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-5"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>run_batch</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>overlap与同步spec-v2执行的共同调度入口</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>ConfidenceRelay</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/managers/scheduler.py:3370</span><span>步骤 5 / 7</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/managers/scheduler.py:3370 附近源码"><code>   3366 |             else:
+   3367 |                 batch.sampling_info = sched_sampling_info
+   3368 | 
+   3369 |     @scheduler_nvtx_method(&quot;scheduler.run_batch&quot;)
+&gt;  3370 |     def run_batch(
+   3371 |         self,
+   3372 |         batch: ScheduleBatch,
+   3373 |         pp_proxy_tensors: Optional[PPProxyTensors] = None,
+   3374 |     ) -&gt; Union[GenerationBatchResult, EmbeddingBatchResult]:</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-6"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>ConfidenceRelay</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>confidence的pool-indexed设备buffer与滞后D2H ring</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>publish</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/managers/overlap_utils.py:153</span><span>步骤 6 / 7</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/managers/overlap_utils.py:153 附近源码"><code>    149 |             dsa_topk_indices=draft_input.dsa_topk_indices,
+    150 |         )
+    151 | 
+    152 | 
+&gt;   153 | class ConfidenceRelay(msgspec.Struct):
+    154 | 
+    155 |     device: torch.device
+    156 |     req_pool_size: int
+    157 |     pool: Any</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-7"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>publish</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>发布new_seq_lens并以event建立跨stream可见性</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>回到本章结论</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/managers/overlap_utils.py:470</span><span>步骤 7 / 7</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/managers/overlap_utils.py:470 附近源码"><code>    466 |             # After the D2H copy completed (synchronize above), so the pinned
+    467 |             # mirror is not poisoned.
+    468 |             _assert_nonneg_and_invalidate(batch.seq_lens, self.new_seq_lens_buf, fi)
+    469 | 
+&gt;   470 |     def publish(
+    471 |         self,
+    472 |         future_indices: torch.Tensor,
+    473 |         new_seq_lens: torch.Tensor,
+    474 |         confidence: Optional[torch.Tensor] = None,</code></pre></div></section></div><div class="source-microscope__toolbar"><span class="source-microscope__status" data-source-status aria-live="polite"></span><div class="source-microscope__actions"><button class="button button--quiet" data-source-action="prev">上一跳</button><button class="button" data-source-action="next">下一跳</button><button class="button button--quiet" data-source-action="reset">回到入口</button></div></div></div></details>
+  </section>  </article>
+              <nav class="sf-pager" aria-label="相邻章节">
+<a href="dspark-verify-accept-kv.html"><span>← 上一章</span><b>DSpark Target verify、accept/finalize 与 KV commit/reclaim</b></a><a href="boundary-matrix.html"><span>下一章 →</span><b>Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</b></a>              </nav>
+
+            <footer class="sf-footer"><span>投机解码源码专题</span><span>源码快照 f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</span><span>纯静态 · 本地依赖 · 可离线分享</span></footer>
+            <p class="print-only">投机解码源码专题 · DSpark folded fast path、capture/replay 与 overlap · f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</p>
+          </div>
+
+          <aside class="sf-page-toc" aria-label="本页目录">
+            <p class="sf-page-toc__title">On this page</p>
+            <ol data-page-toc-list><li><a href="#直接结论" data-level="2">直接结论</a></li><li><a href="#当前路径假设" data-level="2">当前路径假设</a></li><li><a href="#输入-本页职责与输出" data-level="2">输入、本页职责与输出</a></li><li><a href="#为什么存在" data-level="2">为什么存在</a></li><li><a href="#对象与状态" data-level="2">对象与状态</a></li><li><a href="#当前源码调用链" data-level="2">当前源码调用链</a></li><li><a href="#连续例子" data-level="2">连续例子</a></li><li><a href="#为什么必须在这里" data-level="2">为什么必须在这里</a></li><li><a href="#边界矩阵" data-level="2">边界矩阵</a></li><li><a href="#source-action-changed-state-why" data-level="2">source action / changed state / why</a></li><li><a href="#自测" data-level="2">自测</a></li><li><a href="#source-evidence" data-level="2">源码引用与上下文</a></li></ol>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="search-dialog" id="course-search-dialog" data-search-dialog aria-labelledby="course-search-title">
+    <div class="search-dialog__head"><strong id="course-search-title">搜索课程</strong><button class="sf-icon-button" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+    <form class="search-dialog__form" data-search-form role="search"><label class="sr-only" for="course-search-input">搜索对象、方法、状态或章节</label><input id="course-search-input" type="search" data-search-input autocomplete="off" placeholder="例如：running_batch、ForwardBatch、TARGET_VERIFY"><button class="sf-button" type="submit">搜索</button></form>
+    <p class="search-dialog__status" data-search-status aria-live="polite"></p><ol class="search-results" data-search-results></ol>
+  </dialog>
+
+  <dialog class="diagram-viewer" id="diagram-viewer-dialog" data-diagram-dialog aria-labelledby="diagram-viewer-title">
+    <div class="diagram-viewer__head"><div><strong id="diagram-viewer-title" data-diagram-title>图解沉浸阅读</strong> <span class="diagram-viewer__zoom" data-diagram-zoom>100%</span></div><div class="diagram-viewer__tools"><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-in" aria-label="放大">＋</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-out" aria-label="缩小">−</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="fit">看全图</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="reset">100%</button><button class="sf-button" type="button" data-diagram-action="close">关闭 ×</button></div></div>
+    <div class="diagram-viewer__viewport" data-diagram-viewport><div class="diagram-viewer__canvas mermaid" data-diagram-canvas></div></div>
+  </dialog>
+
+<script src="assets/data/search-index.js" defer></script><script src="assets/vendor/mermaid.min.js" defer></script>  <script src="assets/js/site-shell.js" defer></script>
+  <script src="assets/js/toc-search.js" defer></script>
+  <script src="assets/js/diagram-viewer.js" defer></script>
+  <script src="assets/js/source-microscope.js" defer></script>
+  <script src="assets/js/labs.js" defer></script>
+  <script src="assets/js/lesson-components.js" defer></script>
+</body>
+</html>

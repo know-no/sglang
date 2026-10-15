@@ -273,8 +273,9 @@ class ReqToTokenPool:
         with memory_saver_adapter.region(GPU_MEMORY_TYPE_KV_CACHE):
             self.req_to_token = torch.zeros(
                 (self._alloc_size, max_context_len), dtype=torch.int32, device=device
-            )
-        self.free_slots = list(range(1, self._alloc_size))
+            ) # 是给请求分配一个行，还没到分配具体的 token，kv 呢:w
+            
+        self.free_slots = list(range(1, self._alloc_size))# 创建 slots , 哪些请求行可用；分配的时候，已经分配过的（chunked prefill）就不要再分配行了
         self.req_generation = torch.zeros(self._alloc_size, dtype=torch.int64)
 
     def write(self, indices, values):

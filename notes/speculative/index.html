@@ -1,0 +1,291 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Draft proposal → Target verify → accept → KV commit">
+  <link rel="icon" href="data:,">
+  <title>投机解码：提案、验证与跨轮状态 · 投机解码专题</title>
+  <link rel="stylesheet" href="course/assets/css/specforge-course.css">
+  <link rel="stylesheet" href="course/assets/css/labs.css">
+  <link rel="stylesheet" href="course/assets/css/print.css">
+  
+  <!-- Generated from notes/speculative/README.md by notes/speculative/course/build.py. -->
+  <link rel="stylesheet" href="course/assets/notes/navigation.css">
+  <link rel="stylesheet" href="course/assets/notes/syntax.css">
+  
+
+</head>
+<body class="sf-course-page sf-note-page" data-root-url="visualizations/sglang-course-v2/index.html"
+      data-nav-open="false" data-nav-pinned="false"
+      data-page-id="note-index" data-chapter-id="note-index"
+      data-section-id="note"
+      
+      style="--page-accent: var(--domain-speculative, var(--domain-entry))">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+
+  <div class="sf-shell">
+    <div class="sf-navigation">
+      <nav class="sf-rail" aria-label="课程工具">
+        <button class="sf-rail__button sf-rail__menu" type="button" data-nav-toggle aria-controls="course-navigation" aria-expanded="false">
+          <span aria-hidden="true">☰</span><span class="sr-only">打开课程目录</span>
+        </button>
+        <a class="sf-rail__brand" href="visualizations/sglang-course-v2/index.html" aria-label="回到 SGLang 课程地图">S</a>
+        <div class="sf-rail__spacer"></div>
+        <button class="sf-rail__button" type="button" data-search-open aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span class="sr-only">搜索课程</span></button>
+        <button class="sf-rail__button" type="button" data-theme-toggle><span aria-hidden="true">◐</span><span class="sr-only" data-theme-label>深色</span></button>
+      </nav>
+
+      <aside class="sf-drawer" id="course-navigation" aria-label="全部课程目录">
+        <header class="sf-drawer__head">
+          <div><p class="sf-drawer__eyebrow">SGLang source course</p><a href="visualizations/sglang-course-v2/index.html">投机解码专题</a></div>
+          <button class="sf-icon-button" type="button" data-nav-close aria-label="关闭课程目录">×</button>
+        </header>
+        <div class="sf-drawer__tools">
+          <button class="sf-button sf-button--quiet" type="button" data-search-open><span aria-hidden="true">⌕</span> 搜索</button>
+          <button class="sf-button sf-button--quiet" type="button" data-theme-toggle><span aria-hidden="true">◐</span> <span data-theme-label>深色</span></button>
+          <button class="sf-button sf-button--quiet sf-drawer__pin" type="button" data-nav-pin aria-pressed="false"><span aria-hidden="true">⌖</span> <span data-nav-pin-label>固定目录</span></button>
+        </div>
+        <p class="sf-drawer__context"><b>深入源码笔记</b><span>投机解码：提案、验证与跨轮状态</span></p>
+        <nav class="sf-drawer__tree" aria-label="全部章节"><div class="sf-course-tree">
+    
+      <details class="sf-course-tree__section">
+        <summary><span class="sf-course-tree__number">01</span><span>Speculative Decoding 全家族</span></summary>
+        <ul class="sf-course-tree__children sf-course-tree__children--section">
+          <li class="sf-course-tree__overview"><a href="visualizations/sglang-course-v2/index.html" data-course-link data-chapter-id="speculative"
+     data-search-title="Speculative Decoding 全家族" data-search-section="Speculative Decoding 全家族"
+     
+     
+     >Speculative Decoding 全家族</a></li>
+          <li><a href="visualizations/sglang-course-v2/common-contract.html" data-course-link data-chapter-id="spec-common-contract"
+     data-search-title="Draft 只提案：共同 worker 合同与四个长度" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。"
+     
+     >Draft 只提案：共同 worker 合同与四个长度</a></li><li><a href="visualizations/sglang-course-v2/eagle-tree.html" data-course-link data-chapter-id="eagle-tree"
+     data-search-title="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。"
+     
+     >EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a></li><li><a href="visualizations/sglang-course-v2/dflash-block.html" data-course-link data-chapter-id="dflash-block"
+     data-search-title="DFlash fixed-block draft、hidden injection 与 compact cache" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。"
+     
+     >DFlash fixed-block draft、hidden injection 与 compact cache</a></li><li><a href="visualizations/sglang-course-v2/dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"
+     data-search-title="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。"
+     
+     >DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a></li><li><a href="visualizations/sglang-course-v2/dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"
+     data-search-title="DSpark confidence、history、per-step budget 与 ragged layout" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。"
+     
+     >DSpark confidence、history、per-step budget 与 ragged layout</a></li><li><a href="visualizations/sglang-course-v2/dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"
+     data-search-title="DSpark Target verify、accept/finalize 与 KV commit/reclaim" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。"
+     
+     >DSpark Target verify、accept/finalize 与 KV commit/reclaim</a></li><li><a href="visualizations/sglang-course-v2/dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"
+     data-search-title="DSpark folded fast path、capture/replay 与 overlap" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。"
+     
+     >DSpark folded fast path、capture/replay 与 overlap</a></li><li><a href="visualizations/sglang-course-v2/boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"
+     data-search-title="Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。"
+     
+     >Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a></li>
+          
+        </ul>
+      </details>
+    
+  </div></nav>
+      </aside>
+    </div>
+
+    <button class="sf-nav-backdrop" type="button" data-nav-backdrop aria-label="关闭课程目录"></button>
+
+    <div class="sf-main-frame">
+      <main class="sf-main sf-main--wide" id="main-content" tabindex="-1">
+        <div class="sf-page-grid">
+          <div class="sf-content-column">
+            
+              <nav aria-label="面包屑"><ol class="sf-breadcrumbs">
+                <li><a href="visualizations/sglang-course-v2/index.html">投机解码专题</a></li><li><a href="../index.html">SGLang 全景图</a></li><li><span aria-current="page">投机解码：提案、验证与跨轮状态</span></li>
+              </ol></nav>
+            
+
+            
+  <header class="sf-note-meta">
+    <p class="sf-hero__eyebrow">投机解码 · 深入源码与专题笔记</p>
+    <nav class="sf-hero__actions" aria-label="笔记操作"><a href="../index.html">主题阅读顺序</a><a href="README.md" download>下载 Markdown 源文</a></nav>
+  </header>
+
+
+            <nav class="sf-hero__actions" aria-label="关联阅读入口" data-repository-companion><a href="../index.html">SGLang 全景图</a></nav>
+            
+
+            
+
+            
+            <details class="sf-mobile-toc"><summary>本页目录</summary><ol><li><a href="#主文与课程的分工">主文与课程的分工</a></li><li><a href="#dspark-深入路线">dSpark 深入路线</a></li><li><a href="#来源与维护">来源与维护</a></li></ol></details>
+
+            <article class="sf-article sf-note-article" data-toc-source><h1 id="投机解码提案验证与跨轮状态">投机解码：提案、验证与跨轮状态</h1>
+<p><a href="../index.html">总索引</a> · <a href="visualizations/index.html">可视化入口</a> · <a href="visualizations/sglang-course-v2/index.html">全家族课程</a></p>
+<p>投机解码跨越调度、模型执行、接受算法与 KV 生命周期。它作为独立专题组织；前置知识是 run_batch 的 worker 交接、ForwardBatch 与 runner、logits 与采样和 ordinary Prefill→Decode；这些前置概念可从 <a href="../index.html">SGLang 全景图</a>定位。</p>
+<h2 id="主文与课程的分工">主文与课程的分工</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>阅读目的</th>
+<th>主文</th>
+<th>衔接的交互课程</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>确定共同入口和算法边界</td>
+<td><a href="sglang-draft-target-verify-lifecycle.html">Draft→Target Verify 生命周期</a></td>
+<td><a href="visualizations/sglang-course-v2/common-contract.html">共同合同</a> · <a href="visualizations/sglang-course-v2/eagle-tree.html">EAGLE</a> · <a href="visualizations/sglang-course-v2/dflash-block.html">dFlash</a></td>
+</tr>
+<tr>
+<td>完整追踪 dSpark 一轮及下一轮</td>
+<td><a href="sglang-dspark-single-round-decode.html">dSpark 单轮 Decode</a></td>
+<td><a href="visualizations/dspark-complete-execution-flow.html">执行地图</a></td>
+</tr>
+<tr>
+<td>用固定坐标核对 tensor/slot</td>
+<td><a href="sglang-dspark-verify-visual-guide.html">Verify 图解练习</a></td>
+<td><a href="visualizations/dspark-verify-step-through.html">Target Verify 显微镜</a></td>
+</tr>
+<tr>
+<td>启动或迁移时查约束</td>
+<td><a href="sglang-dflash-dspark-startup-args-and-migration.html">启动参数与迁移参考</a></td>
+<td><a href="visualizations/sglang-course-v2/boundary-matrix.html">算法边界矩阵</a></td>
+</tr>
+</tbody>
+</table></div>
+<p>普通路径的前置概念由全景图定位，后续按主题重新学习；本专题保留共享合同、算法自己的分支和状态写入。greedy、Target-only sampling 与使用真实 q 的拒绝采样必须分别核对，不能因页面标题相似就互相套用。</p>
+<h2 id="dspark-深入路线">dSpark 深入路线</h2>
+<p>主阶段负责本阶段输入、调用、状态和交接；就近专题拥有对应算法推导或跨轮机制。固定案例以各页明确给定的 <code>B/G/W</code> 和 token/KV 坐标为准。</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>主阶段页面</th>
+<th>就近深入</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>00</td>
+<td><a href="visualizations/dspark-complete-execution-flow.html">完整执行地图</a></td>
+<td>先确定对象所有权和一轮闭环</td>
+</tr>
+<tr>
+<td>01</td>
+<td><a href="visualizations/dspark-forward-isolation.html">Scheduler 隔离</a></td>
+<td><a href="visualizations/dspark-overlap-nonoverlap-timeline.html">overlap / non-overlap</a></td>
+</tr>
+<tr>
+<td>02</td>
+<td><a href="visualizations/dspark-prefill-bootstrap.html">Prefill bootstrap</a></td>
+<td>Target hidden 建立 Draft KV 和首轮 anchor</td>
+</tr>
+<tr>
+<td>03</td>
+<td><a href="visualizations/dspark-draft-proposal.html">Draft 提案</a></td>
+<td><a href="visualizations/dspark-markov-head-internals.html">Markov Head</a></td>
+</tr>
+<tr>
+<td>04</td>
+<td><a href="visualizations/dspark-confidence-budget-layout.html">Confidence / Budget / Layout</a></td>
+<td><a href="visualizations/dspark-budget-history-sps.html">历史预算与 SPS</a> · <a href="visualizations/dspark-survival-topk-layout.html">Survival / Top-k</a></td>
+</tr>
+<tr>
+<td>05</td>
+<td><a href="visualizations/dspark-verify-step-through.html">Target Verify</a></td>
+<td>rectangle → compact → physical rows → strided</td>
+</tr>
+<tr>
+<td>06</td>
+<td><a href="visualizations/dspark-accept-finalize.html">Accept / Finalize</a></td>
+<td><a href="visualizations/dspark-sampling-rejection-lab.html">采样修正实验</a></td>
+</tr>
+<tr>
+<td>07</td>
+<td><a href="visualizations/dspark-target-hidden-kv-explainer.html">Hidden / KV / Rolling anchor</a></td>
+<td>输出、KV commit 和下一输入分别记账</td>
+</tr>
+<tr>
+<td>08</td>
+<td><a href="visualizations/dspark-folded-fast-path.html">Folded 快路</a></td>
+<td><a href="visualizations/dspark-folded-capture-replay.html">Capture / Replay</a></td>
+</tr>
+</tbody>
+</table></div>
+<p>第一次沿主阶段进入，需要推导时打开就近专题；复习时从问题进入。<a href="visualizations/sglang-course-v2/index.html">全家族课程</a>串联算法视野与跨阶段实验，dSpark 深入站承接具体张量和时序交互。</p>
+<h2 id="来源与维护">来源与维护</h2>
+<ul>
+<li><a href="references/DSpark-Confidence-Scheduled-Speculative-Decoding-arXiv-2607.05147.pdf">dSpark 论文</a>是论文参考；实现结论以对应主文的源码核对为准。</li>
+<li><a href="visualizations/index.html">可视化维护说明</a>区分共享 JavaScript 教学数据、课程生成源和历史快照。</li>
+<li>主文保留各自核对日期和验证范围。当前文档组织检查不增加 GPU 实验或算法正确性证据。</li>
+</ul>
+</article>
+
+            
+
+            <footer class="sf-footer"><span>投机解码源码专题</span><span>纯静态 · 本地依赖 · 可离线分享</span></footer>
+            <p class="print-only">投机解码源码专题 · 投机解码：提案、验证与跨轮状态 · None</p>
+          </div>
+
+          <aside class="sf-page-toc" aria-label="本页目录">
+            <p class="sf-page-toc__title">On this page</p>
+            <ol data-page-toc-list><li><a href="#主文与课程的分工" data-level="2">主文与课程的分工</a></li><li><a href="#dspark-深入路线" data-level="2">dSpark 深入路线</a></li><li><a href="#来源与维护" data-level="2">来源与维护</a></li></ol>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="search-dialog" id="course-search-dialog" data-search-dialog aria-labelledby="course-search-title">
+    <div class="search-dialog__head"><strong id="course-search-title">搜索课程</strong><button class="sf-icon-button" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+    <form class="search-dialog__form" data-search-form role="search"><label class="sr-only" for="course-search-input">搜索对象、方法、状态或章节</label><input id="course-search-input" type="search" data-search-input autocomplete="off" placeholder="例如：running_batch、ForwardBatch、TARGET_VERIFY"><button class="sf-button" type="submit">搜索</button></form>
+    <p class="search-dialog__status" data-search-status aria-live="polite"></p><ol class="search-results" data-search-results></ol>
+  </dialog>
+
+  <dialog class="diagram-viewer" id="diagram-viewer-dialog" data-diagram-dialog aria-labelledby="diagram-viewer-title">
+    <div class="diagram-viewer__head"><div><strong id="diagram-viewer-title" data-diagram-title>图解沉浸阅读</strong> <span class="diagram-viewer__zoom" data-diagram-zoom>100%</span></div><div class="diagram-viewer__tools"><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-in" aria-label="放大">＋</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-out" aria-label="缩小">−</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="fit">看全图</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="reset">100%</button><button class="sf-button" type="button" data-diagram-action="close">关闭 ×</button></div></div>
+    <div class="diagram-viewer__viewport" data-diagram-viewport><div class="diagram-viewer__canvas mermaid" data-diagram-canvas></div></div>
+  </dialog>
+
+  <script src="visualizations/sglang-course-v2/assets/data/search-index.js" defer></script>
+  <script src="course/assets/vendor/mermaid.min.js" defer></script>
+  <script src="course/assets/js/site-shell.js" defer></script>
+  <script src="course/assets/js/toc-search.js" defer></script>
+  <script src="course/assets/js/diagram-viewer.js" defer></script>
+  <script src="course/assets/js/source-microscope.js" defer></script>
+  <script src="course/assets/js/labs.js" defer></script>
+  <script src="course/assets/js/lesson-components.js" defer></script>
+  
+  <script defer src="course/assets/notes/reading.js"></script>
+</body>
+</html>

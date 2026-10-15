@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="zh-CN" data-route="compact-sampling">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>06 · dSpark Accept &amp; Finalize</title>
+  <style>
+    :root{
+      color-scheme:dark;--bg:#02050b;--panel:#07101f;--panel2:#0a1528;--line:#263957;
+      --text:#eff7ff;--muted:#9aabc4;--main:#62f59a;--data:#5d9fff;--guard:#ffd060;
+      --fail:#ff5e7f;--cuda:#c36cff;--off:#71809a;--cyan:#37def5;--radius:16px;
+      --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+      --sans:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif
+    }
+    *{box-sizing:border-box}html{background:var(--bg);scroll-behavior:smooth}body{margin:0;min-width:0;overflow-x:hidden;color:var(--text);font-family:var(--sans);line-height:1.55;background:
+      radial-gradient(circle at 8% 0,rgba(83,168,255,.16),transparent 28rem),
+      radial-gradient(circle at 94% 8%,rgba(188,108,255,.14),transparent 30rem),
+      linear-gradient(rgba(74,112,164,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(74,112,164,.05) 1px,transparent 1px),var(--bg);background-size:auto,auto,28px 28px,28px 28px,auto}
+    a{color:var(--cyan);text-underline-offset:3px}a:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}code,pre{font-family:var(--mono)}code{overflow-wrap:anywhere}.shell{width:min(1480px,100%);margin:auto;padding:18px clamp(10px,2.3vw,34px) 48px}.crumb{display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--muted);font:11px/1.35 var(--mono);margin-bottom:11px}.crumb b{color:var(--main)}
+    .hero{position:relative;overflow:hidden;border:1px solid #36577e;border-radius:22px;padding:clamp(20px,3vw,38px);background:linear-gradient(135deg,rgba(10,24,48,.97),rgba(4,8,18,.98));box-shadow:0 0 44px rgba(83,168,255,.09),inset 0 -2px rgba(96,255,154,.25)}.hero:after{content:"06";position:absolute;right:clamp(12px,4vw,52px);top:-24px;color:rgba(96,255,154,.07);font:900 clamp(110px,20vw,260px)/1 var(--mono);pointer-events:none}.eyebrow{margin:0 0 8px;color:var(--main);font:800 11px/1.2 var(--mono);letter-spacing:.15em}.hero h1{position:relative;max-width:1050px;margin:0;font-size:clamp(30px,5vw,64px);line-height:1.02;letter-spacing:-.045em;text-wrap:balance}.hero h1 span{background:linear-gradient(90deg,var(--main),var(--cyan) 46%,var(--cuda));background-clip:text;-webkit-background-clip:text;color:transparent}.lead{position:relative;max-width:1080px;margin:14px 0 0;color:#bdcce0;font-size:clamp(14px,1.5vw,17px)}.chips{position:relative;display:flex;gap:7px;flex-wrap:wrap;margin-top:17px}.chip,.tag{display:inline-flex;align-items:center;border:1px solid var(--line);background:#030916;border-radius:999px;font:700 10px/1.2 var(--mono)}.chip{padding:6px 9px;color:#c6d5e8}.tag{padding:4px 7px;letter-spacing:.06em}.tag.main{color:var(--main);border-style:solid}.tag.data{color:var(--data);border-style:double}.tag.guard{color:var(--guard);border-style:dashed}.tag.fail{color:var(--fail);border-style:dotted}.tag.cuda{color:var(--cuda);border-style:double}.tag.off{color:var(--off);border-style:dotted}
+    .chapter-nav{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:6px;margin:14px 0}.chapter-nav a{min-width:0;padding:8px 6px;border:1px solid var(--line);border-radius:10px;background:#050b16;color:var(--muted);text-decoration:none;font:10px/1.25 var(--mono);overflow-wrap:anywhere}.chapter-nav a span{display:block;color:#dce9f8;font-weight:800;margin-bottom:3px}.chapter-nav a[aria-current=page]{border-color:var(--main);color:#dfffea;box-shadow:inset 0 -2px var(--main),0 0 18px rgba(96,255,154,.1);background:rgba(96,255,154,.07)}
+    .routebar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;margin:12px 0;padding:11px 13px;border:1px solid var(--line);border-radius:13px;background:rgba(5,11,23,.94)}.route-copy strong{display:block;color:var(--cyan);font-size:12px}.route-copy span{display:block;color:var(--muted);font-size:11px}.routes{display:flex;gap:6px;flex-wrap:wrap}.routes a{padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:#030916;color:var(--muted);text-decoration:none;font:10px/1.2 var(--mono)}html[data-route="static-greedy"] .routes a[data-route-choice="static-greedy"],html[data-route="compact-sampling"] .routes a[data-route-choice="compact-sampling"],html[data-route="folded-greedy"] .routes a[data-route-choice="folded-greedy"]{color:var(--text);border-color:var(--cyan);box-shadow:inset 0 -2px var(--cyan)}
+    .legend{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin:12px 0 18px}.legend-item{min-width:0;padding:8px 9px;border:1px solid var(--line);background:#050b17;color:var(--muted);font-size:10px}.legend-line{height:0;margin:0 0 7px;border-top:2px solid currentColor}.legend-item.main{color:var(--main)}.legend-item.data{color:var(--data)}.legend-item.data .legend-line{border-top-style:double;border-top-width:3px}.legend-item.guard{color:var(--guard)}.legend-item.guard .legend-line{border-top-style:dashed}.legend-item.fail{color:var(--fail)}.legend-item.fail .legend-line{border-top-style:dotted}.legend-item.cuda{color:var(--cuda)}.legend-item.cuda .legend-line{border-top:3px double}.legend-item.off{color:var(--off)}.legend-item.off .legend-line{border-top-style:dotted}
+    section{margin-top:16px}.section-head{margin-bottom:10px}.kicker{margin:0;color:var(--guard);font:800 10px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase}.section-head h2{margin:5px 0 0;font-size:clamp(20px,2.6vw,31px);line-height:1.15}.section-head p{max-width:1050px;margin:6px 0 0;color:var(--muted);font-size:13px}.panel{min-width:0;border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(155deg,rgba(9,18,35,.97),rgba(4,9,18,.98));padding:clamp(12px,2vw,19px);box-shadow:0 16px 42px rgba(0,0,0,.2)}
+    .contract{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.contract-card{min-width:0;padding:12px;border:1px solid var(--line);background:var(--panel);border-left:4px solid var(--data);overflow-wrap:anywhere}.contract-card:nth-child(2){border-left-style:dashed;border-left-color:var(--guard)}.contract-card:nth-child(3){border-left-color:var(--main)}.contract-card:nth-child(4){border-left-style:double;border-left-width:5px;border-left-color:var(--data)}.contract-card small{color:var(--muted);font:9px/1.3 var(--mono)}.contract-card h3{margin:6px 0;color:var(--cyan);font:800 12px/1.35 var(--mono)}.contract-card p{margin:0;color:#bdcbe0;font-size:12px}
+    .trace{display:grid;gap:8px}.trace-row{display:grid;grid-template-columns:126px minmax(0,1fr) 165px;gap:9px;align-items:stretch}.trace-meta,.trace-next{min-width:0;padding:10px;border:1px solid var(--line);background:#050b16;color:var(--muted);font:10px/1.4 var(--mono);overflow-wrap:anywhere}.trace-next{color:#bcd0e7}.trace-card{min-width:0;padding:11px 12px;border:1px solid var(--line);border-left:4px solid var(--main);background:var(--panel2);overflow-wrap:anywhere}.trace-card.guard{border-left-style:dashed;border-left-color:var(--guard)}.trace-card.data{border-left-style:double;border-left-width:6px;border-left-color:var(--data)}.trace-card.fail{border-left-style:dotted;border-left-color:var(--fail)}.trace-card strong{display:block;color:#e7f3ff;font:800 11px/1.4 var(--mono)}.trace-card span{display:block;margin-top:5px;color:var(--muted);font-size:11px}.trace-arrow{height:12px;margin-left:190px;border-left:2px solid var(--main);position:relative}.trace-arrow:after{content:"";position:absolute;left:-4px;bottom:0;width:6px;height:6px;border-right:2px solid var(--main);border-bottom:2px solid var(--main);transform:rotate(45deg)}
+    .modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.mode{min-width:0;padding:13px;border:1px solid var(--line);background:var(--panel);overflow-wrap:anywhere}.mode h3{margin:0;font-size:14px}.mode .formula{margin:9px 0;padding:9px;border:1px solid var(--line);background:#020812;color:#e8f3ff;font:11px/1.55 var(--mono);white-space:pre-wrap}.mode p,.mode li{color:#bac9dc;font-size:12px}.mode ul{padding-left:18px;margin:8px 0 0}.mode.greedy{border-top:3px solid var(--main)}.mode.sampling{border-top:4px double var(--data)}.mode.mixed{border-top:3px dashed var(--guard)}.callout{margin-top:9px;padding:11px 12px;border:1px dashed var(--guard);background:rgba(255,200,87,.06);color:#eadcb7;font-size:12px}.callout strong{color:var(--guard)}
+    .ledger{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}.ledger-card{min-width:0;padding:13px;border:1px solid var(--line);background:var(--panel);overflow-wrap:anywhere}.ledger-card.before{border-top:4px double var(--data)}.ledger-card.write{border-top:3px dashed var(--guard)}.ledger-card.after{border-top:3px solid var(--main)}.ledger-card h3{margin:0;color:var(--cyan);font:800 11px/1.3 var(--mono)}.ledger-card p{margin:7px 0;color:var(--muted);font-size:12px}.tokens{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.tok{min-width:40px;padding:7px 8px;border:1px solid var(--data);background:#071329;text-align:center;font:800 11px/1.2 var(--mono)}.tok.accept{color:var(--main);border-color:var(--main)}.tok.bonus{color:var(--guard);border:2px dashed var(--guard)}.tok.reject{color:var(--fail);border:2px dotted var(--fail);text-decoration:line-through}.tok.off{color:var(--off);border:1px dotted var(--off)}.equation{margin-top:10px;padding:10px;border:1px solid var(--line);background:#030914;color:#dbe9fa;font:11px/1.55 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
+    .outputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.field{min-width:0;padding:10px;border:1px solid var(--line);background:#050c19}.field code{display:block;color:var(--data);font-size:11px}.field b{display:block;margin-top:5px;color:var(--text);font:12px/1.35 var(--mono)}.field span{display:block;margin-top:5px;color:var(--muted);font-size:11px}.field.commit{border-color:rgba(96,255,154,.45)}.field.commit code{color:var(--main)}.field.guard{border-style:dashed;border-color:rgba(255,200,87,.5)}
+    .why-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.why{min-width:0;padding:12px;border:1px solid var(--line);background:var(--panel)}.why h3{margin:0;color:var(--main);font:800 11px/1.3 var(--mono)}.why.fail h3{color:var(--fail)}.why.guard h3{color:var(--guard)}.why.next h3{color:var(--data)}.why p{margin:7px 0 0;color:#bdcbde;font-size:12px}.source-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:9px}.source-card{min-width:0;padding:10px;border:1px solid var(--line);background:#030914}.source-card code{display:block;color:var(--cyan);font-size:10px}.source-card span{display:block;margin-top:5px;color:var(--muted);font-size:11px}.deep-link{display:block;margin-top:10px;padding:12px;border:1px solid var(--data);background:rgba(83,168,255,.07);text-decoration:none}.deep-link strong{display:block;color:var(--data)}.deep-link span{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+    .pager{display:flex;justify-content:space-between;gap:9px;margin-top:17px}.pager a{min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#050c19;text-decoration:none;font:11px/1.35 var(--mono);overflow-wrap:anywhere}.pager a:last-child{text-align:right}.footer{margin-top:17px;color:var(--off);font:10px/1.5 var(--mono)}
+    @media(max-width:1120px){.legend{grid-template-columns:repeat(3,minmax(0,1fr))}.contract{grid-template-columns:repeat(2,minmax(0,1fr))}.trace-row{grid-template-columns:112px minmax(0,1fr)}.trace-next{grid-column:2}.trace-arrow{margin-left:168px}.outputs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:736px){.shell{padding:10px 8px 34px}.hero{border-radius:15px;padding:18px 14px}.chapter-nav{grid-template-columns:repeat(3,minmax(0,1fr))}.routebar{grid-template-columns:1fr}.legend,.contract,.modes,.ledger,.outputs,.why-grid,.source-grid{grid-template-columns:1fr}.trace-row{grid-template-columns:1fr}.trace-next{grid-column:auto}.trace-arrow{margin-left:22px}.pager{flex-direction:column}.pager a:last-child{text-align:left}}
+    @media(max-width:380px){.hero h1{font-size:30px}.chapter-nav a{font-size:9px;padding:7px 5px}.routes{display:grid;grid-template-columns:1fr;width:100%}.tokens{gap:4px}.tok{min-width:34px;padding:6px}.panel{padding:11px}.crumb{font-size:10px}}
+    /* Shared semantic stroke contract: MAIN/DATA solid, GUARD/CUDA dashed, FAIL double, OFF dotted. */
+    .tag.data{border-style:solid}.tag.fail{border-style:double}.tag.cuda{border-style:dashed}
+    .legend-item.data .legend-line{border-top:2px solid}.legend-item.fail .legend-line{border-top:3px double}.legend-item.cuda .legend-line{border-top:2px dashed}
+    .contract-card:nth-child(4){border-left-style:solid;border-left-width:4px}.trace-card.data{border-left-style:solid;border-left-width:4px}.trace-card.fail{border-left-style:double;border-left-width:4px}
+    .mode.sampling,.ledger-card.before{border-top-style:solid;border-top-width:3px}.tok.reject{border-style:double}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  </style>
+</head>
+<body>
+<main class="shell">
+  <div class="crumb"><a href="dspark-complete-execution-flow.html" data-route-link>dSpark 执行总览</a><span>›</span><span>DECODE</span><span>›</span><b>06 Accept &amp; Finalize</b></div>
+  <header class="hero">
+    <p class="eyebrow">06 / 08 · ACCEPT → FINALIZE</p>
+    <h1><span>Target 已经算完。</span><br>现在决定提交哪些 token。</h1>
+    <p class="lead">本页只负责验收与打包：从 <code>verify_ids_2d</code>、Target logits 和 Draft 的真实 proposal 分布出发，得到 <code>correct_len / bonus</code>，再生成 <code>commit_lens / new_seq_lens / out_tokens</code>。例子贯穿 <code>[X,a,b,c,d]</code>，最终只有 <code>[a,Y]</code> 具有提交语义。</p>
+    <div class="chips"><span class="chip">CUDA · DSparkWorkerV2 · PP=1</span><span class="chip">current checkout · static source evidence</span><span class="chip">GPU runtime 未在本页验证</span></div>
+  </header>
+
+  <nav class="chapter-nav" aria-label="dSpark 00 到 08 章节">
+    <a href="dspark-complete-execution-flow.html" data-route-link><span>00</span>总览</a>
+    <a href="dspark-forward-isolation.html" data-route-link><span>01</span>隔离</a>
+    <a href="dspark-prefill-bootstrap.html" data-route-link><span>02</span>Prefill</a>
+    <a href="dspark-draft-proposal.html" data-route-link><span>03</span>Draft</a>
+    <a href="dspark-confidence-budget-layout.html" data-route-link><span>04</span>Plan</a>
+    <a href="dspark-verify-step-through.html" data-route-link><span>05</span>Target</a>
+    <a href="dspark-accept-finalize.html" data-route-link aria-current="page"><span>06</span>Accept</a>
+    <a href="dspark-target-hidden-kv-explainer.html" data-route-link><span>07</span>KV / Result</a>
+    <a href="dspark-folded-fast-path.html" data-route-link><span>08</span>Folded</a>
+  </nav>
+
+  <div class="routebar">
+    <div class="route-copy"><strong>路线参数只改变高亮，不隐藏内容</strong><span>当前页同时展示 greedy / sampling / mixed；链接会继续携带合法的 <code>?route=…</code>。</span></div>
+    <div class="routes" aria-label="路线选择">
+      <a href="?route=static-greedy" data-route-choice="static-greedy">STATIC · greedy</a>
+      <a href="?route=compact-sampling" data-route-choice="compact-sampling">COMPACT · sampling</a>
+      <a href="?route=folded-greedy" data-route-choice="folded-greedy">Folded · greedy</a>
+    </div>
+  </div>
+
+  <div class="legend" aria-label="固定视觉语义">
+    <div class="legend-item main"><div class="legend-line"></div><b>MAIN</b> · solid · 主路径/已提交</div>
+    <div class="legend-item data"><div class="legend-line"></div><b>DATA</b> · solid · 张量/状态</div>
+    <div class="legend-item guard"><div class="legend-line"></div><b>GUARD</b> · dashed · 条件/临时值</div>
+    <div class="legend-item fail"><div class="legend-line"></div><b>FAIL</b> · double · 拒绝/错误</div>
+    <div class="legend-item cuda"><div class="legend-line"></div><b>CUDA</b> · dashed · kernel/graph</div>
+    <div class="legend-item off"><div class="legend-line"></div><b>OFF</b> · dotted · padding/非有效区</div>
+  </div>
+
+  <section>
+    <div class="section-head"><p class="kicker">method contract</p><h2>一个方法把“验证结果”变成“可提交结果”</h2><p>接收、写入、返回、下一消费者四个边界先钉死；这里不再运行 Target transformer，也还没有写 Draft KV。</p></div>
+    <div class="contract">
+      <article class="contract-card"><span class="tag data">RECEIVES</span><h3>verify_ids_2d / target_logits / draft_block</h3><p><code>[bs,W]</code> candidates、<code>[bs×W,V]</code> Target logits、Draft token 与 corrected logits，以及 sampling/layout/prefix 状态。</p></article>
+      <article class="contract-card"><span class="tag guard">MUTATES</span><h3>局部 acceptance tensors</h3><p>产生 <code>correct_len</code>、<code>bonus</code>、<code>cap_trim_lens</code>；normal path 不修改跨轮 <code>ScheduleBatch.spec_info</code>。</p></article>
+      <article class="contract-card"><span class="tag main">RETURNS</span><h3>AcceptOuts</h3><p>封装 acceptance、提交长度、更新后序列长度与固定 stride 的 <code>out_tokens</code> backing。</p></article>
+      <article class="contract-card"><span class="tag data">NEXT</span><h3>on_publish → commit_hidden → GenerationBatchResult</h3><p>07 页接手 hidden/KV；随后 <code>make_next_draft_input()</code> 建立下一轮 rolling anchor。</p></article>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="section-head"><p class="kicker">caller → callee → return → next</p><h2>当前源码的精确调用链</h2><p>实例名写在左栏，FQCN 与方法写在中栏，右栏标明返回或下一消费者。</p></div>
+    <div class="trace">
+      <div class="trace-row"><div class="trace-meta"><span class="tag main">MAIN</span><br><code>self === scheduler.model_worker</code><br>: DSparkWorkerV2</div><div class="trace-card"><strong>sglang.srt.speculative.dspark_components.dspark_worker_v2.DSparkWorkerV2._forward_decode()</strong><span>Target verify 已返回 <code>logits_output</code>；调用 <code>self._verify_executor.accept_and_finalize(...)</code>。</span></div><div class="trace-next">传入 <code>folded_accept</code>、<code>verify_ids_2d</code>、Target logits、DraftBlockResult、layout 与 prefix。</div></div>
+      <div class="trace-arrow"></div>
+      <div class="trace-row"><div class="trace-meta"><span class="tag guard">GUARD</span><br><code>self._verify_executor</code><br>: TargetVerifyExecutor</div><div class="trace-card guard"><strong>sglang.srt.speculative.dspark_components.dspark_verify.TargetVerifyExecutor.accept_and_finalize()</strong><span><code>folded_accept=True</code> 时只读 epilogue buffers（08）；本页 normal path 进入 <code>accept_draft_tokens()</code>，再执行 finalize/build。</span></div><div class="trace-next">内部三元组来自 <code>accept_draft_tokens()</code>；executor 的最终返回值是完整 <code>AcceptOuts</code>。</div></div>
+      <div class="trace-arrow"></div>
+      <div class="trace-row"><div class="trace-meta"><span class="tag data">DATA</span><br><code>module function</code></div><div class="trace-card data"><strong>sglang.srt.speculative.dspark_components.dspark_verify.accept_draft_tokens()</strong><span>按 <code>sampling_info.is_all_greedy / is_any_greedy</code> 分派到 AcceptGreedy、AcceptSampling 或二者加 SelectMixedAccept。</span></div><div class="trace-next">sampling 路线先由 <code>SoftmaxTemp.execute()</code> 从 corrected logits 重建真实 Draft proposal <code>q</code>。</div></div>
+      <div class="trace-arrow"></div>
+      <div class="trace-row"><div class="trace-meta"><span class="tag cuda">CUDA</span><br><code>class dispatch</code></div><div class="trace-card data"><strong>sglang.kernels.ops.speculative.dspark.dspark_accept.{AcceptGreedy | AcceptSampling | SelectMixedAccept}.execute()</strong><span>CUDA inputs 走 Triton；CPU fallback 走 torch。输出仍是统一的 <code>(correct_len, bonus, cap_trim_lens)</code>。</span></div><div class="trace-next">拒绝后的 sampling bonus 来自修正后的随机采样，不是强制 Target argmax。</div></div>
+      <div class="trace-arrow"></div>
+      <div class="trace-row"><div class="trace-meta"><span class="tag main">MAIN</span><br><code>kernel wrappers</code></div><div class="trace-card"><strong>sglang.kernels.ops.speculative.dspark.dspark_accept.FinalizeAcceptLens.execute()<br>sglang.kernels.ops.speculative.dspark.dspark_verify_window.BuildOutTokens.execute()</strong><span>前者算长度，后者构造固定 stride backing；二者共同装配 <code>AcceptOuts</code>。</span></div><div class="trace-next"><code>AcceptOuts</code> 返回 DSparkWorkerV2；随后进入 07 的 Target hidden → Draft KV。</div></div>
+    </div>
+    <div class="callout"><strong>当前源码参数合同：</strong><code>AcceptGreedy.execute(candidates, target_logits, verify_num_draft_tokens, cutoff_verify_lens)</code>；sampling 另传 <code>draft_probs / sampling_info / draft_input / gamma</code>；<code>FinalizeAcceptLens.execute(correct_len, cap_trim_lens, prefix_lens)</code>；<code>BuildOutTokens.execute(draft_tokens, correct_len, bonus, verify_num_draft_tokens, gamma)</code>。</div>
+  </section>
+
+  <section>
+    <div class="section-head"><p class="kicker">three acceptance paths</p><h2>greedy、sampling、mixed：相同输出合同，不同验收语义</h2></div>
+    <div class="modes">
+      <article class="mode greedy"><span class="tag main">MAIN · GREEDY</span><h3>逐位置 equality</h3><div class="formula">target_predict = argmax(target_logits)
+correct_len = first mismatch index
+bonus = target_predict[correct_len]</div><ul><li><code>AcceptGreedy.execute()</code>。</li><li>没有拒绝采样概率修正。</li><li>若 layout 截断，则 <code>CapCorrectLen</code> 重新截断并在新位置取 bonus。</li></ul></article>
+      <article class="mode sampling"><span class="tag data">DATA · SAMPLING</span><h3>使用真实 q 做拒绝采样</h3><div class="formula">q = softmax(corrected_logits / temperature)
+p = target distribution after temperature/top-k/top-p
+accept draft x with min(1, p(x)/q(x))
+reject → sample from normalized [p-q]₊</div><ul><li><code>SoftmaxTemp.execute()</code> 重建 proposal <code>q</code>。</li><li>Target <code>p</code> 由 SoftmaxTemp 或 top-k/top-p helper 构造。</li><li>最终 bonus 由随机数与修正分布决定，可能不是 argmax。</li></ul></article>
+      <article class="mode mixed"><span class="tag guard">GUARD · MIXED</span><h3>同一 batch 逐请求选择</h3><div class="formula">greedy_out   = AcceptGreedy.execute(...)
+sampling_out = AcceptSampling.execute(...)
+out = SelectMixedAccept.execute(greedy_mask, ...)</div><ul><li>不是整批强制一个算法。</li><li><code>draft_block.greedy_mask[req]</code> 决定每个请求选哪组结果。</li><li>最终仍收敛到同一个 <code>AcceptOuts</code> 数据结构。</li></ul></article>
+    </div>
+    <div class="callout"><strong>关键纪律：</strong> sampling verify 使用的是 Draft 当时真正用来 proposal 的分布 <code>q</code>。如果只保留 token 而丢掉 corrected logits/temperature，就无法保持 Target 原始输出分布。</div>
+  </section>
+
+  <section class="panel">
+    <div class="section-head"><p class="kicker">before → writes → after</p><h2>具体 token 账本：<code>[X,a,b,c,d]</code> 如何得到 <code>[a,Y]</code></h2><p>设 <code>prefix_lens=[20]</code>、<code>gamma=4</code>、<code>W=5</code>。Target 在 X 后预测 a，在 a 后预测 Y；因此只接受一个 Draft token。</p></div>
+    <div class="ledger">
+      <article class="ledger-card before"><span class="tag data">BEFORE</span><h3>verify_ids_2d / Target predict</h3><p>candidates 包含 anchor 与四个 drafts。Target 的每一行预测下一 token。</p><div class="tokens"><span class="tok">X</span><span class="tok">a</span><span class="tok">b</span><span class="tok">c</span><span class="tok">d</span></div><div class="tokens"><span class="tok accept">a</span><span class="tok bonus">Y</span><span class="tok">…</span><span class="tok">…</span><span class="tok">…</span></div></article>
+      <article class="ledger-card write"><span class="tag guard">WRITES</span><h3>accept + finalize</h3><p><code>a</code> 匹配，<code>b</code> 与 Y 不匹配；在 sampling 路线，Y 仅代表本例采样结果。</p><div class="tokens"><span class="tok accept">a ✓</span><span class="tok reject">b ✕</span><span class="tok reject">c</span><span class="tok reject">d</span></div><div class="equation">correct_len = [1]
+bonus = [Y]
+cap_trim_lens = [0]
+commit_lens = correct_len + 1 = [2]
+new_seq_lens = prefix_lens + commit_lens = [22]</div></article>
+      <article class="ledger-card after"><span class="tag main">AFTER</span><h3>BuildOutTokens backing</h3><p>先复制 drafts，再把 index=<code>correct_len</code> 改写为 bonus。有效输出只看前 <code>commit_lens</code> 项。</p><div class="tokens"><span class="tok accept">a</span><span class="tok bonus">Y</span><span class="tok off">c</span><span class="tok off">d</span><span class="tok off">0</span></div><div class="equation">physical backing = [a, Y, c, d, 0]
+semantic output  = backing[:commit_lens] = [a, Y]
+c / d / 0 are OFF: not committed</div></article>
+    </div>
+    <div class="callout"><strong>容易误读的实现细节：</strong><code>BuildOutTokens</code> 并不把 bonus 之后的所有槽都清零。源码先复制 <code>[a,b,c,d]</code>，再 scatter Y 到 index 1，所以 backing 是 <code>[a,Y,c,d,0]</code>；<code>commit_lens=[2]</code> 才是有效边界。</div>
+  </section>
+
+  <section>
+    <div class="section-head"><p class="kicker">AcceptOuts fields</p><h2>六个字段各自控制什么</h2></div>
+    <div class="outputs">
+      <div class="field"><code>correct_len</code><b>[1] · route-dependent dtype</b><span>接受的 Draft token 数，不包含 bonus。sampling/mixed 路径为 int32；普通 greedy 的 Torch reduction 与 folded buffer 为 int64，不能假设全路径统一 int32。</span></div>
+      <div class="field"><code>bonus</code><b>[Y] · int64</b><span>拒绝位置/链尾的 Target 修正采样 token；下一轮 anchor。</span></div>
+      <div class="field guard"><code>cap_trim_lens</code><b>[0] · int32</b><span>因 verify_lens 截断而未计入 commit 的潜在正确 drafts；主要进入 metrics。</span></div>
+      <div class="field commit"><code>commit_lens</code><b>[2] · int32</b><span><code>correct_len + 1</code>，唯一的 out_tokens 有效前缀长度。</span></div>
+      <div class="field commit"><code>new_seq_lens</code><b>[22] · prefix dtype</b><span><code>prefix_lens + commit_lens</code>，传给发布与下一轮状态。</span></div>
+      <div class="field"><code>out_tokens</code><b>[[a,Y,c,d,0]] · int64</b><span>固定 stride backing；消费者必须结合 <code>commit_lens</code> 解释。</span></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="section-head"><p class="kicker">why / omitted / source / evidence</p><h2>为什么必须在这里 finalize</h2></div>
+    <div class="why-grid">
+      <article class="why"><span class="tag main">MAIN</span><h3>WHY HERE</h3><p>只有验收结束后，系统才同时知道“接受了几个 Draft”与“必须额外提交的 bonus”。因此 <code>commit_lens=correct_len+1</code> 不能在 proposal 或 Target forward 前提前决定。</p></article>
+      <article class="why fail"><span class="tag fail">FAIL</span><h3>IF OMITTED</h3><p>若把 <code>correct_len</code> 当提交长度，会漏掉 bonus；若把整个 backing 当有效输出，则会把已拒绝的 <code>c/d</code> 泄漏给用户并推进错误的序列长度。</p></article>
+      <article class="why guard"><span class="tag guard">GUARD</span><h3>BOUNDARY</h3><p><code>cutoff_layout.verify_lens</code> 可限制 correct_len 并重取 bonus；<code>SGLANG_SIMULATE_ACC_LEN</code> 是测试/模拟覆盖。Folded 路线把相同输出合同放入 CUDA graph，见 08。</p></article>
+      <article class="why next"><span class="tag data">NEXT</span><h3>NEXT CONSUMER</h3><p><code>DSparkWorkerV2._forward_decode()</code> 先可调用 <code>on_publish(accept.new_seq_lens)</code>，再让 07 的 <code>TargetVerifyExecutor.commit_hidden()</code> 只提交对应 hidden；最后构造 <code>GenerationBatchResult</code>。</p></article>
+    </div>
+    <div class="source-grid">
+      <div class="source-card"><code>python/sglang/srt/speculative/dspark_components/dspark_verify.py:91–149</code><span><code>TargetVerifyExecutor.accept_and_finalize()</code> 与 <code>AcceptOuts</code> 装配。</span></div>
+      <div class="source-card"><code>python/sglang/srt/speculative/dspark_components/dspark_verify.py:658–722</code><span>greedy / sampling / mixed 分派与 Draft proposal q 的重建。</span></div>
+      <div class="source-card"><code>python/sglang/kernels/ops/speculative/dspark/dspark_accept.py:80–174, 558–673, 676–730</code><span>sampling core、greedy equality、FinalizeAcceptLens。</span></div>
+      <div class="source-card"><code>python/sglang/kernels/ops/speculative/dspark/dspark_verify_window.py:766–827</code><span>BuildOutTokens 的 copy → zero tail slot → scatter bonus 顺序。</span></div>
+    </div>
+    <a class="deep-link" href="dspark-target-hidden-kv-explainer.html" data-route-link><strong>07 · 继续：Target hidden 如何只提交 [X,a]，而 Y 成为 position=22 的下一轮 anchor →</strong><span>本页到 AcceptOuts 为止；KV ownership、GenerationBatchResult 与 Scheduler 跨轮提交由 07 负责。</span></a>
+  </section>
+
+  <div class="pager"><a href="dspark-verify-step-through.html" data-route-link>← 05 · Target Verify</a><a href="dspark-target-hidden-kv-explainer.html" data-route-link>07 · KV / Result →</a></div>
+  <footer class="footer">Evidence: current-checkout source navigation and line-level static inspection. The token example instantiates the verified contracts; CUDA/Triton runtime was not executed on this host.</footer>
+</main>
+<script>
+(() => {
+  const valid = new Set(['static-greedy', 'compact-sampling', 'folded-greedy']);
+  const params = new URLSearchParams(location.search);
+  const requested = params.get('route');
+  const route = valid.has(requested) ? requested : 'compact-sampling';
+  document.documentElement.dataset.route = route;
+  document.querySelectorAll('[data-route-choice]').forEach((link) => {
+    const active = link.dataset.routeChoice === route;
+    if (active) link.setAttribute('aria-current', 'true');
+    else link.removeAttribute('aria-current');
+  });
+  document.querySelectorAll('a[data-route-link]').forEach((link) => {
+    const url = new URL(link.getAttribute('href'), location.href);
+    url.searchParams.set('route', route);
+    link.setAttribute('href', url.pathname.split('/').pop() + url.search + url.hash);
+  });
+})();
+</script>
+</body>
+</html>

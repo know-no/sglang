@@ -383,7 +383,7 @@ class CudaGraphBufferRegistry:
         raw_bs: int,
         padded_bs: int,
         raw_num_tokens: int,
-        padded_num_tokens: int,
+        padded_num_tokens: int,# 调用的时候，这个已经补齐到图档位的个数了
         pp_proxy_tensors: Optional[Any] = None,
     ) -> None:
         """Copy FB → registry buffers.
@@ -409,7 +409,7 @@ class CudaGraphBufferRegistry:
             padded_num_tokens=padded_num_tokens,
             pp_proxy_tensors=pp_proxy_tensors,
         )
-
+        # 根据字段的策略处理尾部：防止上一轮的数据残留;上一轮的真实请求位置，下一轮可能变成 padding。
         # Phase 1: reset padded regions where it matters.
         for slot in self._slots.values():
             if not slot.enabled or slot.buffer is None:
@@ -466,7 +466,7 @@ class CudaGraphBufferRegistry:
         for slot in self._slots.values():
             if not slot.enabled or slot.buffer is None or slot.post_fill is None:
                 continue
-            slot.post_fill(slot.buffer, forward_batch, ctx)
+            slot.post_fill(slot.buffer, forward_batch, ctx) #普通复制完成后，用来计算并写入特殊字段的回调
 
     def extract_buffer(
         self,
@@ -829,7 +829,7 @@ def build_prefill_registry(
 
     def _bs(bs: int, _mt: int) -> Tuple[int, ...]:
         return (bs,)
-
+    # GraphSlot 规定字段的复制、padding 和切片规则；上方 source=None 的调用描述已过时，当前 PrefillRunner 传入 source=self.buffers。
     slots = [
         GraphSlot(
             "input_ids",
@@ -918,7 +918,7 @@ def build_prefill_registry(
                     f"source is missing buffer {slot.name!r} required by the "
                     "prefill registry; cannot adopt."
                 )
-        reg.register_slot(slot, bind=bind)
+        reg.register_slot(slot, bind=bind)  # 有 source 时绑定已有张量；本 Prefill 路径不重复分配，字段对应的是 buffer，不是一个请求槽位。
     return reg
 
 

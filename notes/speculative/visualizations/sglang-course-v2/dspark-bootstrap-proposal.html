@@ -1,0 +1,520 @@
+
+
+
+
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。">
+  <link rel="icon" href="data:,">
+  <title>DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer · 投机解码专题</title>
+  <link rel="stylesheet" href="assets/css/specforge-course.css">
+  <link rel="stylesheet" href="assets/css/labs.css">
+  <link rel="stylesheet" href="assets/css/print.css">
+</head>
+<body class="sf-course-page" data-root-url="index.html"
+      data-nav-open="false" data-nav-pinned="false"
+data-page-id="dspark-bootstrap-proposal" data-chapter-id="dspark-bootstrap-proposal"data-section-id="speculative"      style="--page-accent: var(--domain-speculative, var(--domain-entry))">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+
+  <div class="sf-shell">
+    <div class="sf-navigation">
+      <nav class="sf-rail" aria-label="课程工具">
+        <button class="sf-rail__button sf-rail__menu" type="button" data-nav-toggle aria-controls="course-navigation" aria-expanded="false">
+          <span aria-hidden="true">☰</span><span class="sr-only">打开课程目录</span>
+        </button>
+        <a class="sf-rail__brand" href="index.html" aria-label="回到 SGLang 课程地图">S</a>
+        <div class="sf-rail__spacer"></div>
+        <button class="sf-rail__button" type="button" data-search-open aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span class="sr-only">搜索课程</span></button>
+        <button class="sf-rail__button" type="button" data-theme-toggle><span aria-hidden="true">◐</span><span class="sr-only" data-theme-label>深色</span></button>
+      </nav>
+
+      <aside class="sf-drawer" id="course-navigation" aria-label="全部课程目录">
+        <header class="sf-drawer__head">
+          <div><p class="sf-drawer__eyebrow">SGLang source course</p><a href="index.html">投机解码专题</a></div>
+          <button class="sf-icon-button" type="button" data-nav-close aria-label="关闭课程目录">×</button>
+        </header>
+        <div class="sf-drawer__tools">
+          <button class="sf-button sf-button--quiet" type="button" data-search-open><span aria-hidden="true">⌕</span> 搜索</button>
+          <button class="sf-button sf-button--quiet" type="button" data-theme-toggle><span aria-hidden="true">◐</span> <span data-theme-label>深色</span></button>
+          <button class="sf-button sf-button--quiet sf-drawer__pin" type="button" data-nav-pin aria-pressed="false"><span aria-hidden="true">⌖</span> <span data-nav-pin-label>固定目录</span></button>
+        </div>
+        <p class="sf-drawer__context"><b>Speculative Decoding 全家族</b><span>DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</span></p>
+        <nav class="sf-drawer__tree" aria-label="全部章节"><div class="sf-course-tree">
+      <details class="sf-course-tree__section" open>
+        <summary><span class="sf-course-tree__number">01</span><span>Speculative Decoding 全家族</span></summary>
+        <ul class="sf-course-tree__children sf-course-tree__children--section">
+<li class="sf-course-tree__overview"><a href="index.html" data-course-link data-chapter-id="speculative"
+     data-search-title="Speculative Decoding 全家族" data-search-section="Speculative Decoding 全家族"
+aria-current="page">Speculative Decoding 全家族</a></li><li><a href="common-contract.html" data-course-link data-chapter-id="spec-common-contract"
+     data-search-title="Draft 只提案：共同 worker 合同与四个长度" data-search-section="Speculative Decoding 全家族"
+data-search-summary="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。">Draft 只提案：共同 worker 合同与四个长度</a></li><li><a href="eagle-tree.html" data-course-link data-chapter-id="eagle-tree"
+     data-search-title="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask" data-search-section="Speculative Decoding 全家族"
+data-search-summary="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。">EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a></li><li><a href="dflash-block.html" data-course-link data-chapter-id="dflash-block"
+     data-search-title="DFlash fixed-block draft、hidden injection 与 compact cache" data-search-section="Speculative Decoding 全家族"
+data-search-summary="追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。">DFlash fixed-block draft、hidden injection 与 compact cache</a></li><li><a href="dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"
+     data-search-title="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer" data-search-section="Speculative Decoding 全家族"
+data-search-summary="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。"aria-current="page">DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a></li><li><a href="dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"
+     data-search-title="DSpark confidence、history、per-step budget 与 ragged layout" data-search-section="Speculative Decoding 全家族"
+data-search-summary="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。">DSpark confidence、history、per-step budget 与 ragged layout</a></li><li><a href="dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"
+     data-search-title="DSpark Target verify、accept/finalize 与 KV commit/reclaim" data-search-section="Speculative Decoding 全家族"
+data-search-summary="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。">DSpark Target verify、accept/finalize 与 KV commit/reclaim</a></li><li><a href="dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"
+     data-search-title="DSpark folded fast path、capture/replay 与 overlap" data-search-section="Speculative Decoding 全家族"
+data-search-summary="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。">DSpark folded fast path、capture/replay 与 overlap</a></li><li><a href="boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"
+     data-search-title="Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec" data-search-section="Speculative Decoding 全家族"
+data-search-summary="用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。">Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a></li>        </ul>
+      </details>
+  </div></nav>
+      </aside>
+    </div>
+
+    <button class="sf-nav-backdrop" type="button" data-nav-backdrop aria-label="关闭课程目录"></button>
+
+    <div class="sf-main-frame">
+      <main class="sf-main" id="main-content" tabindex="-1">
+        <div class="sf-page-grid">
+          <div class="sf-content-column">
+              <nav aria-label="面包屑"><ol class="sf-breadcrumbs">
+<li><a href="index.html">Speculative Decoding 专题</a></li><li><span aria-current="page">DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</span></li>              </ol></nav>
+
+              <header class="sf-hero">
+                <h1>DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</h1>
+<p class="sf-hero__lead">解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。</p>                <div class="sf-evidence-strip">
+<span><strong>源码版本</strong> f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</span>                </div>
+                <div class="sf-hero__actions"></div>
+              </header>
+
+
+            <nav class="sf-hero__actions" aria-label="关联阅读入口" data-repository-companion><a href="../index.html">投机可视化总入口</a></nav>
+<details class="sf-source-details"><summary>版本与验证范围</summary><p>保留原投机解码资料与核对日期。页面重建与链接检查不增加 GPU 或端到端验证证据。</p></details>
+              <aside class="sf-contract" aria-label="深入源码笔记" data-related-notes data-repository-companion>
+                <div><b>深入源码笔记</b><span>课程负责连贯导览；逐段源码推导与补充讨论在以下主文维护。</span></div>
+<div><a href="../../sglang-dspark-single-round-decode.html">dSpark 从 bootstrap 到下一轮 anchor</a></div>              </aside>
+
+              <nav class="sf-stage-map" aria-label="本章学习路径">
+                <div class="sf-stage-map__head"><span>Stage roadmap</span><b>沿同一组对象，从结论走到源码与边界</b></div>
+                <ol><li><a href="#直接结论"><span>01</span>先钉住结论</a></li><li><a href="#当前路径假设"><span>02</span>前置直觉与运行坐标</a></li><li><a href="#对象与状态"><span>05</span>对象与所有权地图</a></li><li><a href="#当前源码调用链"><span>06</span>当前源码主链</a></li><li><a href="#连续例子"><span>07</span>固定样例 · 连续过程</a></li><li><a href="#边界矩阵"><span>09</span>分支与结论边界</a></li><li><a href="#自测"><span>11</span>自测与复盘</a></li></ol>
+              </nav>
+<details class="sf-mobile-toc"><summary>本页目录</summary><ol><li><a href="#直接结论">直接结论</a></li><li><a href="#当前路径假设">当前路径假设</a></li><li><a href="#输入-本页职责与输出">输入、本页职责与输出</a></li><li><a href="#为什么存在">为什么存在</a></li><li><a href="#对象与状态">对象与状态</a></li><li><a href="#当前源码调用链">当前源码调用链</a></li><li><a href="#连续例子">连续例子</a></li><li><a href="#为什么必须在这里">为什么必须在这里</a></li><li><a href="#边界矩阵">边界矩阵</a></li><li><a href="#source-action-changed-state-why">source action / changed state / why</a></li><li><a href="#自测">自测</a></li><li><a href="#source-evidence">源码引用与上下文</a></li></ol></details>
+<article class="sf-deep-lesson" data-toc-source data-lesson>
+<section class="sf-topic sf-topic--verdict" data-topic-kind="verdict" aria-labelledby="直接结论">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="直接结论"><span class="sf-sec-number" aria-hidden="true">01</span>直接结论</h2>
+    </header>
+
+      <div class="sf-note sf-note--key"><p>DSpark 的第一轮不是凭空得到 <code>gamma</code> 个draft token。target prefill先生成一个next token，这个token成为rolling anchor；同时target auxiliary hidden经过 <code>TargetHiddenKvInjector</code>写成draft模型可读的KV。decode时 <code>DraftBlockProposer</code>构造长度为 <code>gamma</code> 的draft输入 <code>[anchor, MASK, ..., MASK]</code>，draft forward为这<code>gamma</code>行产生hidden；随后base logits与Markov head以“前一个真实/已采样token”为条件，顺序采出 <code>d1…d_gamma</code>。target最终验证的却是宽度 <code>gamma+1</code> 的 <code>[anchor,d1,…,d_gamma]</code>。</p>
+<p>rolling anchor解决了自回归边界的一个偏移：本轮用户输出是若干accepted draft加新bonus，但target KV实际提交的输入链是旧anchor加accepted drafts；新bonus尚未作为input经过target，留给下一轮做anchor。于是“输出长度”和“提交KV长度”相同，内容却错开一位。<code>new_seq_lens=prefix_lens+commit_lens</code>只表示前沿位置推进，绝不能解释成新bonus已经拥有target KV。本页先建立这个proposal坐标，confidence和ragged layout留到下一页，accept/KV回收留到再下一页。</p>
+</div>
+  </section><section class="sf-topic sf-topic--prereq" data-topic-kind="prereq" aria-labelledby="当前路径假设">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="当前路径假设"><span class="sf-sec-number" aria-hidden="true">02</span>当前路径假设</h2>
+    </header>
+
+      <div class="sf-note sf-note--scope"><p>主线是CUDA、<code>DSPARK</code>、<code>pp_size=1</code>、<code>gamma=4</code>、verify width=5、普通文本R0、greedy、无grammar、无logit adjustment、static或尚未改变proposal的ragged配置。target与dense draft模型在同一worker进程，draft checkpoint提供合法 <code>mask_token_id</code> 与Markov head；target暴露lm head，worker把target embedding/lm head附给draft所需模块。是否走draft CUDA Graph不改变proposal对象，只会决定greedy sampler/head/confidence是否折叠到graph尾部。</p>
+<p>DSpark允许一组受限DP attention组合：dense draft可切换draft TP context；DeepSeek-V4 MoE draft有额外attn_tp和collective守卫、idle rank参与逻辑。CP在DP模式被启动校验拒绝，PP不支持，mixed chunked prefill关闭。这里使用单rank示例，不把single-rank的调用完成视为多rank collective/device completion证据。当前worker也直接拒绝 <code>return_logprob</code>。</p>
+</div>
+  </section><section class="sf-topic sf-topic--contract" data-topic-kind="contract" aria-labelledby="输入-本页职责与输出">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="输入-本页职责与输出"><span class="sf-sec-number" aria-hidden="true">03</span>输入、本页职责与输出</h2>
+    </header>
+
+      <div class="sf-contract-body"><p>prefill输入是target生成结果、FULL auxiliary hidden、extend/prefix lengths和out-cache locations；输出是已写好的draft KV以及 <code>DFlashDraftInputV2(bonus_tokens,new_seq_lens)</code>，DSpark复用该跨轮容器但不复用DFlash block算法。decode proposal输入是anchor、prefix lengths、为宽度5预先准备的verify slots、sampling info、target embedding以及draft模型。输出 <code>DraftProposal</code> 包含输入block ids、真正draft tokens、draft hidden、可选confidence/tap和 <code>folded</code>标记。</p>
+<div class="table-scroll teaching-table"><table>
+<thead>
+<tr>
+<th>名称</th>
+<th>gamma=4 的形状/值</th>
+<th>是否是用户token</th>
+<th>下一消费者</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>draft_block_ids</code></td>
+<td><code>[B,4]=[A,M,M,M]</code></td>
+<td>只有A是真实旧anchor</td>
+<td>draft model forward</td>
+</tr>
+<tr>
+<td><code>draft_hidden_3d</code></td>
+<td><code>[B,4,Hd]</code></td>
+<td>不是token</td>
+<td>base logits、confidence</td>
+</tr>
+<tr>
+<td><code>draft_tokens</code></td>
+<td><code>[B,4]=[d1,d2,d3,d4]</code></td>
+<td>只是proposal</td>
+<td>planner与target verify</td>
+</tr>
+<tr>
+<td><code>verify_ids_2d</code></td>
+<td><code>[B,5]=[A,d1,d2,d3,d4]</code></td>
+<td>target验证输入</td>
+<td>target executor</td>
+</tr>
+<tr>
+<td><code>bonus</code></td>
+<td>例如B</td>
+<td>target给的新输出</td>
+<td>本轮emit、下一轮anchor</td>
+</tr>
+<tr>
+<td><code>new_seq_lens</code></td>
+<td><code>prefix+commit_lens</code></td>
+<td>长度状态</td>
+<td>FutureMap/下一轮prepare</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+  </section><section class="sf-topic sf-topic--why" data-topic-kind="why" aria-labelledby="为什么存在">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="为什么存在"><span class="sf-sec-number" aria-hidden="true">04</span>为什么存在</h2>
+    </header>
+
+      <div class="sf-topic__body"><p>mask block让draft模型一次计算多个位置hidden，而Markov head在其上补回token间依赖。若直接对每个位置base logits独立argmax，<code>d2</code>不知道已经选了<code>d1</code>，proposal不再对应一条条件链；<code>markov_head.sample_block()</code>接收anchor、draft hidden和step sampler，逐步以先前token embedding修正logits。对non-greedy请求，step sampler还按每请求temperature与greedy mask选择multinomial或argmax；因此proposal对象保留corrected logits，供后续rejection sampling使用。</p>
+<p>target embedding/lm head共享是当前模型接口的一部分，不表示draft和target整模共享权重。worker显式找到target <code>lm_head.weight</code>并调用draft <code>attach_shared_modules()</code>；draft transformer/Markov/confidence头仍来自draft checkpoint。缺少lm head、Markov head或mask token会在初始化/运行时报错，而不是自动退化成普通decode。</p>
+<p>prefill hidden注入必须先于第一轮proposal。anchor只告诉draft“最后一个token是什么”，不足以重建长prompt的attention上下文；<code>TargetHiddenKvInjector</code>把target隐藏表示通过draft模型的写入接口变成draft KV。反过来，仅有KV没有anchor也不够，因为 <code>[A,M,M,M]</code> 的第一行必须用上一轮target预测token启动滚动链。</p>
+</div>
+  </section><section class="sf-topic sf-topic--objects" data-topic-kind="objects" aria-labelledby="对象与状态">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="对象与状态"><span class="sf-sec-number" aria-hidden="true">05</span>对象与状态</h2>
+    </header>
+
+      <div class="sf-topic__body sf-object-body"><p><code>DSparkWorkerV2</code>是组合根：<code>_target_worker</code>负责真实target；<code>_draft_worker/draft_model_runner/draft_model</code>负责mask-block forward；<code>_kv_injector</code>维护draft KV；<code>_proposer</code>生成候选；<code>_verify_planner</code>决定预算/布局；<code>_verify_executor</code>做target和accept；observer只记录，不控制写入。初始化还把 <code>gamma</code> 与 <code>verify_num_draft_tokens=gamma+1</code>分开保存，这比沿用一个模糊的 <code>num_draft_tokens</code>更能防止off-by-one。</p>
+<p><code>DraftForwardResult</code>保存<code>draft_block_ids</code>、raw hidden、三维hidden与graph命中；<code>DraftBlockResult</code>保存真正的draft tokens、sampling所需corrected logits、greedy mask和temperatures；<code>DraftProposal</code>把两者合并，并附带confidence或confidence tap及<code>folded</code>。<code>folded=True</code>只说明draft greedy proposal来自CUDA Graph尾部buffer，不说明target accept或KV commit也折叠，后者有独立守卫。</p>
+<p>verify slots在proposal前由<code>alloc_verify_window()</code>从target <code>req_to_token</code>映射得到，包含position与 <code>[B,gamma+1]</code> cache loc。draft forward只使用前<code>gamma</code>列写自己的block状态；target verify使用完整<code>gamma+1</code>列。预留地址可先存在，但R0的<code>Req.kv_committed_len</code>仍由稍后的result processor推进。</p>
+<p>组件图显示了 <code>DSparkWorkerV2</code> 为什么是“编排者”而不是又一个模型。proposal、confidence/layout、target verify/accept、hidden-to-draft-KV 分别有独立 receiver；observer 只旁路观测，不参与 token 或 KV 的正确性裁决。</p>
+<figure class="diagram-frame" data-diagram-frame data-diagram-kind="component"><div class="diagram-toolbar"><span class="diagram-toolbar__identity"><b>组件 / 所有权图</b><span>DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer · 组件图显示了 DSparkWorkerV2 为什么是“编排者”而不是又一个模型</span></span><span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span><button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button></div><div class="diagram-legend" aria-label="图内语义色图例"><span class="diagram-legend__item" data-tone="blue">入口 / 接口</span><span class="diagram-legend__item" data-tone="orange">owner / 调度</span><span class="diagram-legend__item" data-tone="green">持久状态</span><span class="diagram-legend__item" data-tone="purple">执行组件</span></div><div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="图形阅读区，可横向滚动"><div class="diagram-frame__canvas"><pre class="mermaid" aria-label="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer · 组件图显示了 DSparkWorkerV2 为什么是“编排者”而不是又一个模型">flowchart LR
+    S[Scheduler\nmodel_worker]
+    subgraph W[DSparkWorkerV2 composite]
+        O[forward_batch_generation]
+        P[DraftBlockProposer]
+        L[DSparkVerifyPlanner]
+        V[TargetVerifyExecutor]
+        I[TargetHiddenKvInjector]
+        OBS[DsparkStepObservers\nread-only]
+    end
+    subgraph D[draft side]
+        DR[draft ModelRunner]
+        DM[draft transformer]
+        MH[base logits + Markov head]
+        CH[confidence head / tap]
+        DKV[draft KV]
+    end
+    subgraph T[target side]
+        TW[target TpModelWorker]
+        TM[target ModelRunner + attention]
+        WIN[target req_to_token verify window]
+        TKV[target KV]
+        AUX[target logits + auxiliary hidden]
+    end
+    S --&gt; O
+    O --&gt; P --&gt; DR --&gt; DM --&gt; MH
+    MH --&gt;|DraftProposal| P
+    P --&gt; L --&gt; V
+    V --&gt; TW --&gt; TM --&gt; TKV
+    WIN --&gt; DR
+    WIN --&gt; TM
+    TM --&gt; AUX --&gt; V
+    AUX --&gt; I --&gt; DKV
+    CH --&gt; L
+    O -. metrics inputs .-&gt; OBS
+    V -. accept metrics .-&gt; OBS
+</pre></div></div><figcaption><b>读图方法：</b>先认实例与持久状态的 owner，再沿组合、复用和下一消费者读边。</figcaption></figure>
+</div>
+  </section><section class="sf-topic sf-topic--source-flow" data-topic-kind="source-flow" aria-labelledby="当前源码调用链">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="当前源码调用链"><span class="sf-sec-number" aria-hidden="true">06</span>当前源码调用链</h2>
+    </header>
+
+      <div class="sf-topic__body"><figure class="diagram-frame" data-diagram-frame data-diagram-kind="sequence"><div class="diagram-toolbar"><span class="diagram-toolbar__identity"><b>时序 / 泳道图</b><span>DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer · 当前源码调用链</span></span><span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span><button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button></div><div class="diagram-legend" aria-label="图内语义色图例"><span class="diagram-legend__item" data-tone="blue">caller</span><span class="diagram-legend__item" data-tone="orange">scheduler</span><span class="diagram-legend__item" data-tone="purple">device work</span><span class="diagram-legend__item" data-tone="cyan">IPC / collective</span></div><div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="图形阅读区，可横向滚动"><div class="diagram-frame__canvas"><pre class="mermaid" aria-label="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer · 当前源码调用链">sequenceDiagram
+    participant T as target TpModelWorker
+    participant I as TargetHiddenKvInjector
+    participant W as DSparkWorkerV2
+    participant P as DraftBlockProposer
+    participant D as draft ModelRunner + Markov head
+    W-&gt;&gt;T: _forward_prefill → target forward(capture_hidden=FULL)
+    T--&gt;&gt;W: prefill logits, next token A, FULL aux hidden
+    W-&gt;&gt;I: inject prompt hidden at out_cache_loc
+    W--&gt;&gt;W: next_draft_input(A, seq_lens)
+    W-&gt;&gt;P: propose(R0, anchor A, verify window)
+    P-&gt;&gt;D: forward [A,M,M,M]
+    D--&gt;&gt;P: hidden [4,H]
+    P-&gt;&gt;D: base logits + sample_block(anchor=A)
+    D--&gt;&gt;P: d1,d2,d3,d4
+    P--&gt;&gt;W: DraftProposal
+    W--&gt;&gt;W: build [A,d1,d2,d3,d4] for planner/verify
+</pre></div></div><figcaption><b>读图方法：</b>从上到下区分 Python 调用、CPU 状态写入、异步 device enqueue、wait 与 return。</figcaption></figure>
+<p><code>_forward_prefill()</code>调用target并要求FULL hidden，把<code>batch_output.new_seq_lens</code>设为当前seq lens并publish；随后验证hidden、extend/prefix/out loc存在，计算positions，调用injector写draft KV，清掉公开结果中的hidden，再以target <code>next_token_ids</code>构造首个anchor状态。</p>
+<p><code>_forward_decode()</code>确保<code>batch.spec_info</code>是 <code>DFlashDraftInputV2</code>，为R0分配verify window，然后进入draft context调用<code>DraftBlockProposer.propose()</code>。proposer的<code>_run_forward()</code>建立 <code>[A,M,M,M]</code>，positions与cache loc取verify window前gamma列，构造 <code>ForwardBatch(ForwardMode.TARGET_VERIFY,spec_algorithm=DSPARK)</code>并运行draft runner。得到hidden后，如果draft graph sampler可用、graph命中且全greedy，就直接读取其tail buffer；否则调用<code>compute_base_logits()</code>并以<code>sample_draft_block()</code>逐步采样。worker随后取得proposal，才进入confidence、budget、layout和target verify阶段。</p>
+<p>下图只跟踪形状与 rolling anchor，不画 confidence 与 accept 细节。<code>gamma=4</code> 时 draft runner 输入是4行 mask block，Markov head 产生4个真实 draft token，target verify 则需要 <code>gamma+1=5</code> 行；这是两种宽度合同，不是某一处 off-by-one。</p>
+<figure class="diagram-frame" data-diagram-frame data-diagram-kind="data"><div class="diagram-toolbar"><span class="diagram-toolbar__identity"><b>数据 / Tensor 流</b><span>DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer · 下图只跟踪形状与 rolling anchor，不画 confidence 与 accept 细节</span></span><span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span><button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button></div><div class="diagram-legend" aria-label="图内语义色图例"><span class="diagram-legend__item" data-tone="blue">输入对象</span><span class="diagram-legend__item" data-tone="green">KV / tensor</span><span class="diagram-legend__item" data-tone="purple">计算</span><span class="diagram-legend__item" data-tone="cyan">传输</span></div><div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="图形阅读区，可横向滚动"><div class="diagram-frame__canvas"><pre class="mermaid" aria-label="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer · 下图只跟踪形状与 rolling anchor，不画 confidence 与 accept 细节">flowchart TD
+    PREF[target prefill R0\nprompt positions 0..99]
+    PH[target auxiliary hidden for prompt]
+    PKV[inject_target_hidden\ndraft KV now contains prompt context]
+    A[next_draft_input.bonus_tokens = A]
+    WIN[alloc_verify_window\npositions 100..104; five target slots]
+    DB[draft_block_ids shape 1x4\nA, MASK, MASK, MASK]
+    DH[draft hidden shape 1x4xH\nh0, h1, h2, h3]
+    MK[Markov sample_block\nprev starts at A then d1,d2,d3]
+    DT[draft_tokens shape 1x4\nd1, d2, d3, d4]
+    VI[target verify_ids shape 1x5\nA, d1, d2, d3, d4]
+    RAW[target accepts d1,d2 and predicts B]
+    KV[target committed input KV\nA, d1, d2]
+    U[user candidate output\nd1, d2, B]
+    N[next round prefix=103\nanchor=B; verify starts at position103]
+    PREF --&gt; PH --&gt; PKV
+    PREF --&gt; A --&gt; DB
+    PKV --&gt;|prompt context read by draft attention| DH
+    WIN --&gt; DB --&gt; DH --&gt; MK --&gt; DT --&gt; VI
+    A --&gt; VI
+    VI --&gt; RAW
+    RAW --&gt; KV --&gt; N
+    RAW --&gt; U --&gt; N
+    PKV --&gt; N
+</pre></div></div><figcaption><b>读图方法：</b>沿对象或 tensor 身份、shape/索引和存储位置读，不把控制流误当数据复制。</figcaption></figure>
+</div>
+  </section><section class="sf-topic sf-topic--example" data-topic-kind="example" aria-labelledby="连续例子">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="连续例子"><span class="sf-sec-number" aria-hidden="true">07</span>连续例子</h2>
+    </header>
+
+      <div class="sf-teach-walk" data-teaching-walk data-step-count="4">
+        <div class="sf-teach-walk__head"><b>沿固定样例逐步运行</b><span>切换步骤时同时观察对象、状态与下一消费者</span></div>
+        <div class="sf-teach-walk__source"><section class="sf-walk-panel" data-walk-panel="1"><p>t0，R0 prompt长度100。target prefill输入最后一个prompt token，在位置0～99写target KV，输出next token <code>A</code>和每个extend row的aux hidden。injector将这些hidden写成draft KV；此时用户还未收到后续block，但<code>A</code>作为prefill结果会进入普通结果流程并成为下一decode轮的anchor状态。</p>
+</section><section class="sf-walk-panel" data-walk-panel="2"><p>t1，decode前缀frontier记为100，anchor <code>A</code>代表将被放在位置100作为target输入。<code>alloc_verify_window()</code>准备positions <code>[100,101,102,103,104]</code>及对应5个slot。proposer只取前4个slot，构造 <code>[A,M,M,M]</code>并运行draft；得到hidden <code>[h0,h1,h2,h3]</code>。base head产生每位置初始logits，Markov head以<code>A</code>为第一个prev token采出<code>d1</code>，再以<code>d1</code>影响<code>d2</code>，依次得到<code>[d1,d2,d3,d4]</code>。</p>
+</section><section class="sf-walk-panel" data-walk-panel="3"><p>t2，worker构建target输入 <code>[A,d1,d2,d3,d4]</code>。假设target只认可<code>d1,d2</code>并产生新bonus <code>B</code>，则本轮输出 <code>[d1,d2,B]</code>，commit_lens=3，KV逻辑输入链是 <code>[A,d1,d2]</code>，new seq lens=103。位置103的<code>B</code>还没有作为target input写KV；它被放入下一轮 <code>next_draft_input.bonus_tokens</code>。</p>
+</section><section class="sf-walk-panel" data-walk-panel="4"><p>t3，第二轮的prefix=103、anchor=<code>B</code>。新的verify input从 <code>[B,e1,e2,e3,e4]</code>开始；如果错误地认为B在上轮已经有KV并从位置104开始，positions会整体错一位。连续两轮的rolling例子说明同一个<code>commit_lens</code>同时描述输出数和target输入KV数，但两组token内容是“右移一位”的关系。</p>
+</section></div>
+      </div>
+  </section><section class="sf-topic sf-topic--why-here" data-topic-kind="why-here" aria-labelledby="为什么必须在这里">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="为什么必须在这里"><span class="sf-sec-number" aria-hidden="true">08</span>为什么必须在这里</h2>
+    </header>
+
+      <div class="sf-topic__body"><p>injector必须在prefill结束且target hidden可得时执行，因为更早没有target语义特征，更晚第一轮draft已经需要prompt上下文。<code>draft_block_ids[:,0]</code>必须在proposer内从最新 <code>bonus_tokens</code>拷入，不能仅使用<code>Req.output_ids[-1]</code>：overlap下上一轮结果可能尚未被CPU result processor写入Req，而FutureMap已经发布了device上的真实anchor。</p>
+<p>Markov采样必须在draft hidden出来后，因为base logits/confidence tap依赖这些hidden；又必须在target verify之前，因为verify需要真实候选而不是MASK。confidence/layout必须放在proposal之后，是因为它们评估的是当前draft位置；但budget在overlap下可能来自历史relay，这一“历史决定多少、当前confidence决定给谁”的分工将在下一页展开。</p>
+</div>
+  </section><section class="sf-topic sf-topic--boundary" data-topic-kind="boundary" aria-labelledby="边界矩阵">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="边界矩阵"><span class="sf-sec-number" aria-hidden="true">09</span>边界矩阵</h2>
+    </header>
+
+      <div class="sf-topic__body"><div class="table-scroll teaching-table"><table>
+<thead>
+<tr>
+<th>边界</th>
+<th>当前DSpark proposal</th>
+<th>改变时的分支</th>
+<th>不能外推</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gamma/width</td>
+<td>gamma个draft，verify宽gamma+1</td>
+<td>启动时强制二者关系</td>
+<td>DFlash block_size语义不可照搬</td>
+</tr>
+<tr>
+<td>anchor</td>
+<td>上轮target bonus</td>
+<td>first prefill由target next token建立</td>
+<td>anchor不是MASK也不是最后draft</td>
+</tr>
+<tr>
+<td>hidden</td>
+<td>target aux hidden写draft KV；draft hidden供head/confidence</td>
+<td>DSV4 draft有专用tap/forward_embed</td>
+<td>EAGLE recurrent hidden合同不同</td>
+</tr>
+<tr>
+<td>sampling</td>
+<td>greedy或逐request sampling</td>
+<td>graph folded仅全greedy；sampling保留corrected logits</td>
+<td>folded proposal不等于folded accept</td>
+</tr>
+<tr>
+<td>DP</td>
+<td>dense/MoE各有同步context和idle参与守卫</td>
+<td>CP不支持，PP必须1</td>
+<td>单rankcall不能证明collective完成</td>
+</tr>
+<tr>
+<td>graph</td>
+<td>draft sampler可作capture tail hook</td>
+<td>eager仍显式算base logits/Markov</td>
+<td>graph replay不改变rolling anchor</td>
+</tr>
+<tr>
+<td>logprob</td>
+<td>worker直接拒绝</td>
+<td>无当前DSpark return_logprob路径</td>
+<td>不从EAGLE/旧实现迁移结论</td>
+</tr>
+<tr>
+<td>mixed/PD</td>
+<td>mixed chunked prefill关闭；本页同进程</td>
+<td>decoupled spec有独立token协议</td>
+<td>FutureMap不是跨进程同步</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+  </section><section class="sf-topic sf-topic--recap" data-topic-kind="recap" aria-labelledby="source-action-changed-state-why">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="source-action-changed-state-why"><span class="sf-sec-number" aria-hidden="true">10</span>source action / changed state / why</h2>
+    </header>
+
+      <div class="sf-state-flow-source" data-state-flow><div class="table-scroll teaching-table"><table>
+<thead>
+<tr>
+<th>source action</th>
+<th>changed state</th>
+<th>why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>target prefill FULL capture</td>
+<td>产生anchor与aux hidden</td>
+<td>为第一轮draft提供token和长上下文</td>
+</tr>
+<tr>
+<td><code>inject_target_hidden()</code></td>
+<td>target hidden → draft KV内容</td>
+<td>draft不能直接解释target KV</td>
+</tr>
+<tr>
+<td><code>alloc_verify_window()</code></td>
+<td>为 <code>[anchor+gamma drafts]</code>取得positions/slots</td>
+<td>proposal与verify共享稳定地址几何</td>
+</tr>
+<tr>
+<td>draft <code>_run_forward()</code></td>
+<td><code>[A,M...]</code> → gamma行hidden</td>
+<td>一次构造多位置特征</td>
+</tr>
+<tr>
+<td>Markov <code>sample_block()</code></td>
+<td>hidden/base logits → 条件候选链</td>
+<td>保留token间顺序依赖</td>
+</tr>
+<tr>
+<td><code>make_next_draft_input()</code></td>
+<td>新bonus/new seq → 下一轮anchor状态</td>
+<td>维持rolling-anchor不变量</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+  </section><section class="sf-topic sf-topic--self-check" data-topic-kind="self-check" aria-labelledby="自测">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="自测"><span class="sf-sec-number" aria-hidden="true">11</span>自测</h2>
+    </header>
+
+      <div class="sf-self-test" data-self-test>
+        <ol>
+<li>gamma=4 时，<code>draft_block_ids</code>、<code>draft_tokens</code>、<code>verify_ids_2d</code>各有几列，首列分别是什么？</li>
+<li>为什么<code>[A,M,M,M]</code>一次forward后仍需Markov head逐步采样，而不能四行独立argmax？</li>
+<li>本轮输出 <code>[d1,d2,B]</code> 时，target committed KV的三项输入是什么？B何时作为target input？</li>
+<li><code>proposal.folded=True</code>能否推出target accept与KV commit已folded？请指出独立守卫。</li>
+<li>prefill只有anchor而没有target-hidden注入，会让draft缺失哪类状态？</li>
+</ol>
+
+      </div>
+  </section><section class="sf-topic sf-topic--evidence" data-topic-kind="evidence" aria-labelledby="source-evidence">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="source-evidence"><span class="sf-sec-number" aria-hidden="true">12</span>源码引用与上下文</h2>
+    </header>
+
+      <details class="sf-source-details"><summary>展开本章源码片段与定位工具</summary><div class="source-microscope" data-source-microscope data-source-key="source" data-default-step="source-1"><div class="source-microscope__head"><h3>源码显微镜：receiver、状态写入与下一消费者</h3><p>左侧按本章论证顺序定位决定性源码；每一跳必须回到正文判断它是 call、write、return 还是 next-consumer。相邻卡片本身不冒充直接调用边。</p></div><div class="source-microscope__tabs" data-source-tabs><button class="button button--quiet" data-source-step="source-1">01 · DSparkWorkerV2</button><button class="button button--quiet" data-source-step="source-2">02 · _forward_prefill</button><button class="button button--quiet" data-source-step="source-3">03 · _forward_decode</button><button class="button button--quiet" data-source-step="source-4">04 · DraftBlockResult</button><button class="button button--quiet" data-source-step="source-5">05 · DraftBlockProposer</button><button class="button button--quiet" data-source-step="source-6">06 · TargetHiddenKvInjector</button></div><div class="source-microscope__stage"><section class="source-microscope__panel" data-source-panel="source-1"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>DSparkWorkerV2</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>DSpark target/draft/planner/injector/proposer/executor 的组合根对象</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>_forward_prefill</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:66</span><span>步骤 1 / 6</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:66 附近源码"><code>     62 | 
+     63 | logger = logging.getLogger(__name__)
+     64 | 
+     65 | 
+&gt;    66 | class DSparkWorkerV2(BaseSpecWorker):
+     67 | 
+     68 |     def __init__(
+     69 |         self,
+     70 |         server_args: ServerArgs,</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-2"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>_forward_prefill</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>target prefill hidden 注入与首个 rolling anchor 建立</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>_forward_decode</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:379</span><span>步骤 2 / 6</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:379 附近源码"><code>    375 |             return self._forward_prefill(batch, on_publish)
+    376 | 
+    377 |         return self._forward_decode(batch, on_publish, grammar_barrier)
+    378 | 
+&gt;   379 |     def _forward_prefill(
+    380 |         self, batch: ScheduleBatch, on_publish
+    381 |     ) -&gt; GenerationBatchResult:
+    382 |         if batch.forward_mode.is_idle():
+    383 |             if self.server_args.enable_dp_attention:</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-3"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>_forward_decode</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>verify window、proposal、planner、verify 与下一轮输入的总顺序</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>DraftBlockResult</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:482</span><span>步骤 3 / 6</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:482 附近源码"><code>    478 |             speculative_num_draft_tokens=int(self.verify_num_draft_tokens),
+    479 |             new_seq_lens=next_draft_input.new_seq_lens,
+    480 |         )
+    481 | 
+&gt;   482 |     def _forward_decode(
+    483 |         self, batch: ScheduleBatch, on_publish, grammar_barrier=None
+    484 |     ) -&gt; GenerationBatchResult:
+    485 |         if batch.spec_info is None:
+    486 |             batch.spec_info = DFlashDraftInputV2.create_idle_input(device=self.device)</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-4"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>DraftBlockResult</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>sampled tokens、corrected logits、greedy mask 与温度的proposal结果</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>DraftBlockProposer</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_draft.py:51</span><span>步骤 4 / 6</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_draft.py:51 附近源码"><code>     47 |     &quot;dspark.draft.probs&quot;, Bucket.SOFTEN, NotNaN(), recover=_one_hot_token0
+     48 | )
+     49 | 
+     50 | 
+&gt;    51 | class DraftBlockResult(msgspec.Struct, frozen=True):
+     52 |     draft_tokens: torch.Tensor
+     53 |     corrected_logits: Optional[torch.Tensor]
+     54 |     greedy_mask: torch.Tensor
+     55 |     temperatures: torch.Tensor</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-5"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>DraftBlockProposer</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>mask block forward 与 Markov proposal 的封装边界</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>TargetHiddenKvInjector</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_draft.py:241</span><span>步骤 5 / 6</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_draft.py:241 附近源码"><code>    237 |         temperatures=temperatures,
+    238 |     )
+    239 | 
+    240 | 
+&gt;   241 | class DraftBlockProposer:
+    242 |     def __init__(
+    243 |         self,
+    244 |         *,
+    245 |         draft_model,</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-6"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>TargetHiddenKvInjector</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>target hidden 写入 DSpark draft KV 的独立组件</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>回到本章结论</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_kv_inject.py:13</span><span>步骤 6 / 6</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_kv_inject.py:13 附近源码"><code>      9 | from sglang.srt.managers.schedule_batch import ScheduleBatch
+     10 | from sglang.srt.speculative.ragged_verify import RaggedVerifyLayout
+     11 | 
+     12 | 
+&gt;    13 | class TargetHiddenKvInjector:
+     14 |     def __init__(
+     15 |         self,
+     16 |         *,
+     17 |         draft_model,</code></pre></div></section></div><div class="source-microscope__toolbar"><span class="source-microscope__status" data-source-status aria-live="polite"></span><div class="source-microscope__actions"><button class="button button--quiet" data-source-action="prev">上一跳</button><button class="button" data-source-action="next">下一跳</button><button class="button button--quiet" data-source-action="reset">回到入口</button></div></div></div></details>
+  </section>  </article>
+              <nav class="sf-pager" aria-label="相邻章节">
+<a href="dflash-block.html"><span>← 上一章</span><b>DFlash fixed-block draft、hidden injection 与 compact cache</b></a><a href="dspark-confidence-layout.html"><span>下一章 →</span><b>DSpark confidence、history、per-step budget 与 ragged layout</b></a>              </nav>
+
+            <footer class="sf-footer"><span>投机解码源码专题</span><span>源码快照 f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</span><span>纯静态 · 本地依赖 · 可离线分享</span></footer>
+            <p class="print-only">投机解码源码专题 · DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer · f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</p>
+          </div>
+
+          <aside class="sf-page-toc" aria-label="本页目录">
+            <p class="sf-page-toc__title">On this page</p>
+            <ol data-page-toc-list><li><a href="#直接结论" data-level="2">直接结论</a></li><li><a href="#当前路径假设" data-level="2">当前路径假设</a></li><li><a href="#输入-本页职责与输出" data-level="2">输入、本页职责与输出</a></li><li><a href="#为什么存在" data-level="2">为什么存在</a></li><li><a href="#对象与状态" data-level="2">对象与状态</a></li><li><a href="#当前源码调用链" data-level="2">当前源码调用链</a></li><li><a href="#连续例子" data-level="2">连续例子</a></li><li><a href="#为什么必须在这里" data-level="2">为什么必须在这里</a></li><li><a href="#边界矩阵" data-level="2">边界矩阵</a></li><li><a href="#source-action-changed-state-why" data-level="2">source action / changed state / why</a></li><li><a href="#自测" data-level="2">自测</a></li><li><a href="#source-evidence" data-level="2">源码引用与上下文</a></li></ol>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="search-dialog" id="course-search-dialog" data-search-dialog aria-labelledby="course-search-title">
+    <div class="search-dialog__head"><strong id="course-search-title">搜索课程</strong><button class="sf-icon-button" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+    <form class="search-dialog__form" data-search-form role="search"><label class="sr-only" for="course-search-input">搜索对象、方法、状态或章节</label><input id="course-search-input" type="search" data-search-input autocomplete="off" placeholder="例如：running_batch、ForwardBatch、TARGET_VERIFY"><button class="sf-button" type="submit">搜索</button></form>
+    <p class="search-dialog__status" data-search-status aria-live="polite"></p><ol class="search-results" data-search-results></ol>
+  </dialog>
+
+  <dialog class="diagram-viewer" id="diagram-viewer-dialog" data-diagram-dialog aria-labelledby="diagram-viewer-title">
+    <div class="diagram-viewer__head"><div><strong id="diagram-viewer-title" data-diagram-title>图解沉浸阅读</strong> <span class="diagram-viewer__zoom" data-diagram-zoom>100%</span></div><div class="diagram-viewer__tools"><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-in" aria-label="放大">＋</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-out" aria-label="缩小">−</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="fit">看全图</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="reset">100%</button><button class="sf-button" type="button" data-diagram-action="close">关闭 ×</button></div></div>
+    <div class="diagram-viewer__viewport" data-diagram-viewport><div class="diagram-viewer__canvas mermaid" data-diagram-canvas></div></div>
+  </dialog>
+
+<script src="assets/data/search-index.js" defer></script><script src="assets/vendor/mermaid.min.js" defer></script>  <script src="assets/js/site-shell.js" defer></script>
+  <script src="assets/js/toc-search.js" defer></script>
+  <script src="assets/js/diagram-viewer.js" defer></script>
+  <script src="assets/js/source-microscope.js" defer></script>
+  <script src="assets/js/labs.js" defer></script>
+  <script src="assets/js/lesson-components.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+[resource]
+usergroup = hadoop-friday-rl
+queue = root.shxs_training_cluster.hadoop-fridayagi.friday_agi
+mlp.sche.priority = P2
+
+[base]
+type = ml-easy-job
+
+[roles]
+workers = 1
+worker.memory = 240000
+worker.vcore = 24
+worker.gcoresh20-141g = 1
+worker.ports = 1
+worker.script = bash hope_launch_sglang_qwen3_06b.sh
+afo.app.name = sglang_local_qwen3_06b_1gpu_20260827_v21
+
+[user_args]
+afo.role.worker.nopassword = true
+
+[am]
+am.vcore = 1
+am.memory = 1024
+
+[tensorboard]
+with.tensor.board = false
+
+[docker]
+afo.docker.image.name = registry-offlinebiz.sankuai.com/custom_prod/com.sankuai.data.hadoop.gpu/friday-rl/training_codelab_ubuntu_fluentllm_python312_uv_260603_update_flashinfer_9df89590:1.0.1
+afo.app.am.resource.mb = 4096
+
+[data]
+afo.data.prefetch = false
+
+[scheduler]
+afo.app.yarn.allocate.timeout.seconds = 0
+
+[others]
+afo.app.env.YARN_CONTAINER_RUNTIME_DOCKER_SHM_SIZE_BYTES = 68719476736
+afo.app.env.YARN_CONTAINER_RUNTIME_DOCKER_ULIMITS = memlock=-1
+afo.network.mode = TCP
+with_requirements = false
+afo.afo-base.image.version = llm_sup_multi_arch
+afo.use.acceleration.submission = true
+afo.use.hdfs.fuse = true
+afo.use.hdfs.fuse.subpath = zw04mlnn01:/mnt/hdfs
+source.system = kinet
+client.git.remote = git@github.com:sgl-project/sglang.git
+afo.dolphinfs.otherusers = hadoop-friday-studio,hadoop-friday-llm-hldy,hadoop-nlp-sh02,hadoop-hldy-nlp
+afo.docker.rw.volume.paths = /mnt/dolphinfs/ssd_pool/docker/user/hadoop-friday-studio
+afo.role.worker.env.SGLANG_MODEL_PATH = /mnt/dolphinfs/ssd_pool/docker/user/hadoop-friday-studio/SAM/tangyingchao/verl_resources/raw_model/Qwen/Qwen3-0.6B
+afo.role.worker.env.SGLANG_SERVED_MODEL_NAME = qwen3-0.6b-local
+afo.role.worker.env.SGLANG_SERVER_PORT = 8443
+afo.role.worker.env.SGLANG_TP_SIZE = 1
+afo.role.worker.env.SGLANG_CONTEXT_LENGTH = 4096
+afo.role.worker.env.SGLANG_MEM_FRACTION_STATIC = 0.70
+afo.role.worker.env.SGLANG_READY_TIMEOUT_SECONDS = 1800
+afo.role.worker.env.HF_HOME = /mnt/dolphinfs/ssd_pool/docker/user/hadoop-friday-studio/sglang-hope-cache/huggingface
+afo.role.worker.env.SGLANG_PYDEPS_DIR = /mnt/dolphinfs/ssd_pool/docker/user/hadoop-friday-studio/sglang-hope-cache/pydeps-lean-transformers-5.12.1-xgrammar-0.2.1-v2
+afo.role.worker.env.SGLANG_PYPI_INDEX_URL = https://pypi.sankuai.com/simple
+afo.role.worker.env.SGLANG_ENABLE_JIT_DEEPGEMM = false
+afo.role.worker.env.SGLANG_IS_FLASHINFER_AVAILABLE = false
+afo.role.worker.env.SGLANG_SKIP_SGL_KERNEL_VERSION_CHECK = true
+
+[failover]
+afo.app.support.engine.failover = true
+afo.role.worker.not.nccl_not_ready = true
+afo.role.worker.task.attempt.max.retry = 1
+afo.use.nic.down.new.strategy = true
+afo.role.worker.env.AFO_SLEEP_WHEN_FINISHED = false
+afo.role.worker.env.INIT_SCRIPT_SSHD_ENABLED = true
+afo.role.worker.env.INIT_SCRIPT_SSHD_PASSWORD = abc123
+afo.role.worker.env.INIT_SCRIPT_SSHD_PROT = 8022

@@ -1,0 +1,877 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Draft proposal → Target verify → accept → KV commit">
+  <link rel="icon" href="data:,">
+  <title>SGLang Draft → Target Verify 生命周期 · 投机解码专题</title>
+  <link rel="stylesheet" href="course/assets/css/specforge-course.css">
+  <link rel="stylesheet" href="course/assets/css/labs.css">
+  <link rel="stylesheet" href="course/assets/css/print.css">
+  
+  <!-- Generated from notes/speculative/sglang-draft-target-verify-lifecycle.md by notes/speculative/course/build.py. -->
+  <link rel="stylesheet" href="course/assets/notes/navigation.css">
+  <link rel="stylesheet" href="course/assets/notes/syntax.css">
+  
+
+</head>
+<body class="sf-course-page sf-note-page" data-root-url="visualizations/sglang-course-v2/index.html"
+      data-nav-open="false" data-nav-pinned="false"
+      data-page-id="note-sglang-draft-target-verify-lifecycle" data-chapter-id="note-sglang-draft-target-verify-lifecycle"
+      data-section-id="note"
+      
+      style="--page-accent: var(--domain-speculative, var(--domain-entry))">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+
+  <div class="sf-shell">
+    <div class="sf-navigation">
+      <nav class="sf-rail" aria-label="课程工具">
+        <button class="sf-rail__button sf-rail__menu" type="button" data-nav-toggle aria-controls="course-navigation" aria-expanded="false">
+          <span aria-hidden="true">☰</span><span class="sr-only">打开课程目录</span>
+        </button>
+        <a class="sf-rail__brand" href="visualizations/sglang-course-v2/index.html" aria-label="回到 SGLang 课程地图">S</a>
+        <div class="sf-rail__spacer"></div>
+        <button class="sf-rail__button" type="button" data-search-open aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span class="sr-only">搜索课程</span></button>
+        <button class="sf-rail__button" type="button" data-theme-toggle><span aria-hidden="true">◐</span><span class="sr-only" data-theme-label>深色</span></button>
+      </nav>
+
+      <aside class="sf-drawer" id="course-navigation" aria-label="全部课程目录">
+        <header class="sf-drawer__head">
+          <div><p class="sf-drawer__eyebrow">SGLang source course</p><a href="visualizations/sglang-course-v2/index.html">投机解码专题</a></div>
+          <button class="sf-icon-button" type="button" data-nav-close aria-label="关闭课程目录">×</button>
+        </header>
+        <div class="sf-drawer__tools">
+          <button class="sf-button sf-button--quiet" type="button" data-search-open><span aria-hidden="true">⌕</span> 搜索</button>
+          <button class="sf-button sf-button--quiet" type="button" data-theme-toggle><span aria-hidden="true">◐</span> <span data-theme-label>深色</span></button>
+          <button class="sf-button sf-button--quiet sf-drawer__pin" type="button" data-nav-pin aria-pressed="false"><span aria-hidden="true">⌖</span> <span data-nav-pin-label>固定目录</span></button>
+        </div>
+        <p class="sf-drawer__context"><b>深入源码笔记</b><span>SGLang Draft → Target Verify 生命周期</span></p>
+        <nav class="sf-drawer__tree" aria-label="全部章节"><div class="sf-course-tree">
+    
+      <details class="sf-course-tree__section">
+        <summary><span class="sf-course-tree__number">01</span><span>Speculative Decoding 全家族</span></summary>
+        <ul class="sf-course-tree__children sf-course-tree__children--section">
+          <li class="sf-course-tree__overview"><a href="visualizations/sglang-course-v2/index.html" data-course-link data-chapter-id="speculative"
+     data-search-title="Speculative Decoding 全家族" data-search-section="Speculative Decoding 全家族"
+     
+     
+     >Speculative Decoding 全家族</a></li>
+          <li><a href="visualizations/sglang-course-v2/common-contract.html" data-course-link data-chapter-id="spec-common-contract"
+     data-search-title="Draft 只提案：共同 worker 合同与四个长度" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。"
+     
+     >Draft 只提案：共同 worker 合同与四个长度</a></li><li><a href="visualizations/sglang-course-v2/eagle-tree.html" data-course-link data-chapter-id="eagle-tree"
+     data-search-title="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。"
+     
+     >EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a></li><li><a href="visualizations/sglang-course-v2/dflash-block.html" data-course-link data-chapter-id="dflash-block"
+     data-search-title="DFlash fixed-block draft、hidden injection 与 compact cache" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。"
+     
+     >DFlash fixed-block draft、hidden injection 与 compact cache</a></li><li><a href="visualizations/sglang-course-v2/dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"
+     data-search-title="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。"
+     
+     >DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a></li><li><a href="visualizations/sglang-course-v2/dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"
+     data-search-title="DSpark confidence、history、per-step budget 与 ragged layout" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。"
+     
+     >DSpark confidence、history、per-step budget 与 ragged layout</a></li><li><a href="visualizations/sglang-course-v2/dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"
+     data-search-title="DSpark Target verify、accept/finalize 与 KV commit/reclaim" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。"
+     
+     >DSpark Target verify、accept/finalize 与 KV commit/reclaim</a></li><li><a href="visualizations/sglang-course-v2/dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"
+     data-search-title="DSpark folded fast path、capture/replay 与 overlap" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。"
+     
+     >DSpark folded fast path、capture/replay 与 overlap</a></li><li><a href="visualizations/sglang-course-v2/boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"
+     data-search-title="Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。"
+     
+     >Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a></li>
+          
+        </ul>
+      </details>
+    
+  </div></nav>
+      </aside>
+    </div>
+
+    <button class="sf-nav-backdrop" type="button" data-nav-backdrop aria-label="关闭课程目录"></button>
+
+    <div class="sf-main-frame">
+      <main class="sf-main sf-main--wide" id="main-content" tabindex="-1">
+        <div class="sf-page-grid">
+          <div class="sf-content-column">
+            
+              <nav aria-label="面包屑"><ol class="sf-breadcrumbs">
+                <li><a href="visualizations/sglang-course-v2/index.html">投机解码专题</a></li><li><a href="../index.html">SGLang 全景图</a></li><li><span aria-current="page">SGLang Draft → Target Verify 生命周期</span></li>
+              </ol></nav>
+            
+
+            
+  <header class="sf-note-meta">
+    <p class="sf-hero__eyebrow">投机解码 · 深入源码与专题笔记</p>
+    <nav class="sf-hero__actions" aria-label="笔记操作"><a href="index.html">主题阅读顺序</a><a href="sglang-draft-target-verify-lifecycle.md" download>下载 Markdown 源文</a></nav>
+  </header>
+
+
+            <nav class="sf-hero__actions" aria-label="关联阅读入口" data-repository-companion><a href="../index.html">SGLang 全景图</a></nav>
+            
+
+            
+
+            
+            <details class="sf-mobile-toc"><summary>本页目录</summary><ol><li><a href="#1-先给出当前已经确定的结论">1. 先给出当前已经确定的结论</a></li><li><a href="#2-为什么已知-draft-token-后可以像-prefill-一样并行评分">2. 为什么已知 draft token 后可以像 Prefill 一样并行评分</a></li><li><a href="#3-先认清-scheduler-中三个名字相似的-worker">3. 先认清 Scheduler 中三个名字相似的 worker</a></li><li><a href="#4-初始化时如何装配-target协调器和真正的-draft-worker">4. 初始化时如何装配 target、协调器和真正的 draft worker</a></li><li><a href="#5-non-overlap-run_batch-的实际投机调用">5. non-overlap run_batch() 的实际投机调用</a></li><li><a href="#6-_forward_isolation-为什么必须存在">6. _forward_isolation() 为什么必须存在</a></li><li><a href="#7-进入协调器后三种算法的一级分支">7. 进入协调器后，三种算法的一级分支</a></li><li><a href="#8-一个重要边界target_verify-不是模型所有权标签">8. 一个重要边界：TARGET_VERIFY 不是模型所有权标签</a></li><li><a href="#9-当前单请求的已知时间线">9. 当前单请求的已知时间线</a></li><li><a href="#10-当前主题的边界">10. 当前主题的边界</a></li><li><a href="#11-源码动作--改变状态--为什么-小结">11. 源码动作 / 改变状态 / 为什么 小结</a></li><li><a href="#12-复习问题">12. 复习问题</a></li></ol></details>
+
+            <article class="sf-article sf-note-article" data-toc-source><h1 id="sglang-draft--target-verify-生命周期">SGLang Draft → Target Verify 生命周期</h1>
+<blockquote>
+<p>目标：从 <code>Scheduler.run_batch()</code> 的投机分发开始，最终追到 Draft、Target Verify、
+Accept/Reject、KV 状态提交和下一轮输入。</p>
+<p>范围：投机验证直觉、worker 对象装配、non-overlap 动态分发与 <code>_forward_isolation()</code>。
+各算法只在外层分派处对照；dSpark 内层流程见
+<a href="sglang-dspark-single-round-decode.html">单轮 Decode</a>。</p>
+<p>当前源码核对日期：2026-08-09。结论基于本地 checkout 静态源码；未做 GPU 运行时验证。</p>
+</blockquote>
+<p>前置：run_batch 的 worker 分派。普通请求执行的前置概念从 <a href="../index.html">SGLang 全景图</a>定位。</p>
+<p>本文负责：投机共同直觉、worker 装配、一级分支与字段隔离；具体 dSpark Tensor 状态由 <a href="sglang-dspark-single-round-decode.html">单轮 Decode 主文</a> 接续。</p>
+<h2 id="1-先给出当前已经确定的结论">1. 先给出当前已经确定的结论</h2>
+<p><code>TARGET_VERIFY</code> 可以同时有三种描述，它们并不矛盾：</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>观察层次</th>
+<th>结论</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>整个生成生命周期</td>
+<td>属于投机 Decode</td>
+<td>draft 和 target 正在共同决定后续生成 token</td>
+</tr>
+<tr>
+<td><code>ForwardMode</code> 业务语义</td>
+<td>是独立的 <code>TARGET_VERIFY</code>，不等于普通 <code>EXTEND</code></td>
+<td>它要验证暂定候选并计算接受长度</td>
+</tr>
+<tr>
+<td>单次 forward 的数据形态</td>
+<td>属于 Extend 类多-token forward</td>
+<td>每个请求一次可能验证多个已知候选，而不是只输入一个 token</td>
+</tr>
+</tbody>
+</table></div>
+<p>因此正确说法是：</p>
+<blockquote>
+<p>Target Verify 进入 <code>_execute_extend()</code>，不是因为 draft 模型“占用了 Decode 阶段”，而是
+因为 target 一次要处理每个请求的多个已知候选 token；它在 EagerRunner 中呈现为
+Extend 形态。</p>
+</blockquote>
+<p><code>ForwardMode</code> 当前定义位于
+<code>python/sglang/srt/model_executor/forward_batch_info.py:98-181</code>：</p>
+<pre class="codehilite"><code class="language-python"><span class="k">class</span><span class="w"> </span><span class="nc">ForwardMode</span><span class="p">(</span><span class="n">IntEnum</span><span class="p">):</span>
+    <span class="n">EXTEND</span> <span class="o">=</span> <span class="n">auto</span><span class="p">()</span>         <span class="c1"># 已有 prefix KV，本轮扩展多个 token</span>
+    <span class="n">DECODE</span> <span class="o">=</span> <span class="n">auto</span><span class="p">()</span>         <span class="c1"># 每请求 Decode 一个 token</span>
+    <span class="n">MIXED</span> <span class="o">=</span> <span class="n">auto</span><span class="p">()</span>
+    <span class="n">IDLE</span> <span class="o">=</span> <span class="n">auto</span><span class="p">()</span>
+    <span class="n">TARGET_VERIFY</span> <span class="o">=</span> <span class="n">auto</span><span class="p">()</span>  <span class="c1"># 投机解码的 target verification</span>
+    <span class="n">DRAFT_EXTEND_V2</span> <span class="o">=</span> <span class="n">auto</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_extend</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">include_draft_extend_v2</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="bp">self</span> <span class="o">==</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">EXTEND</span>
+            <span class="ow">or</span> <span class="bp">self</span> <span class="o">==</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">MIXED</span>
+            <span class="ow">or</span> <span class="p">(</span><span class="n">include_draft_extend_v2</span> <span class="ow">and</span> <span class="bp">self</span> <span class="o">==</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">DRAFT_EXTEND_V2</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="bp">self</span> <span class="o">==</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">TARGET_VERIFY</span>
+            <span class="ow">or</span> <span class="bp">self</span> <span class="o">==</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">SPLIT_PREFILL</span>
+            <span class="ow">or</span> <span class="bp">self</span> <span class="o">==</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">DLLM_EXTEND</span>
+        <span class="p">)</span>
+</code></pre>
+<p>EagerRunner 在
+<code>python/sglang/srt/model_executor/runner/eager_runner.py:194-204</code> 根据这个分类分发：</p>
+<pre class="codehilite"><code class="language-python"><span class="k">def</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">forward_batch</span><span class="p">,</span> <span class="n">pp_proxy_tensors</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">forward_batch</span><span class="o">.</span><span class="n">forward_mode</span>
+    <span class="k">if</span> <span class="n">mode</span><span class="o">.</span><span class="n">is_decode</span><span class="p">():</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute_decode</span><span class="p">(</span><span class="n">forward_batch</span><span class="p">,</span> <span class="n">pp_proxy_tensors</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">mode</span><span class="o">.</span><span class="n">is_idle</span><span class="p">():</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute_idle</span><span class="p">(</span><span class="n">forward_batch</span><span class="p">,</span> <span class="n">pp_proxy_tensors</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">mode</span><span class="o">.</span><span class="n">is_extend</span><span class="p">(</span><span class="n">include_draft_extend_v2</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute_extend</span><span class="p">(</span><span class="n">forward_batch</span><span class="p">,</span> <span class="n">pp_proxy_tensors</span><span class="p">)</span>
+</code></pre>
+<p>所以在已经确定选择 Eager 的前提下：</p>
+<pre class="codehilite"><code class="language-text">DECODE
+  → _execute_decode()
+
+EXTEND / MIXED / TARGET_VERIFY / DRAFT_EXTEND_V2
+  → _execute_extend()
+</code></pre>
+<p>但 <code>TARGET_VERIFY.is_cuda_graph()</code> 当前也为 <code>True</code>
+（<code>forward_batch_info.py:175-181</code>）。因此“Extend 形态”和“这轮是否实际走 Eager”是两个
+维度；只有 ModelRunner 没有选择可用 Graph 时，才会落到这里的 EagerRunner 分支。</p>
+<h2 id="2-为什么已知-draft-token-后可以像-prefill-一样并行评分">2. 为什么已知 draft token 后可以像 Prefill 一样并行评分</h2>
+<p>假设 target 已经缓存前缀：</p>
+<pre class="codehilite"><code class="language-text">Prefix：A B C
+KV Cache：已经有 A、B、C 的 K/V
+</code></pre>
+<p>没有 draft 时，未来 token 尚未知道，target 只能逐步生成：</p>
+<pre class="codehilite"><code class="language-text">先得到 d1
+  → 才能把 d1 作为输入计算 d2
+  → 再把 d2 作为输入计算 d3
+</code></pre>
+<p>draft 模型先给出候选 <code>d1, d2, d3</code> 后，这段假设续写已经成为已知输入。target 可以在一次
+forward 中同时计算多个 query 位置，并由 causal mask 保持依赖关系：</p>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart LR
+    P[&quot;已有 Prefix KV：A B C&quot;] --&gt; D[&quot;Draft 候选：d1 d2 d3&quot;]
+    D --&gt; T[&quot;Target 一次多-token forward&quot;]
+    T --&gt; L1[&quot;评分位置 1：只依赖 Prefix&quot;]
+    T --&gt; L2[&quot;评分位置 2：依赖 Prefix + d1&quot;]
+    T --&gt; L3[&quot;评分位置 3：依赖 Prefix + d1 + d2&quot;]
+    L1 --&gt; A[&quot;按因果顺序 Accept / Reject&quot;]
+    L2 --&gt; A
+    L3 --&gt; A
+">flowchart LR
+    P[&quot;已有 Prefix KV：A B C&quot;] --&gt; D[&quot;Draft 候选：d1 d2 d3&quot;]
+    D --&gt; T[&quot;Target 一次多-token forward&quot;]
+    T --&gt; L1[&quot;评分位置 1：只依赖 Prefix&quot;]
+    T --&gt; L2[&quot;评分位置 2：依赖 Prefix + d1&quot;]
+    T --&gt; L3[&quot;评分位置 3：依赖 Prefix + d1 + d2&quot;]
+    L1 --&gt; A[&quot;按因果顺序 Accept / Reject&quot;]
+    L2 --&gt; A
+    L3 --&gt; A
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart LR
+    P[&quot;已有 Prefix KV：A B C&quot;] --&gt; D[&quot;Draft 候选：d1 d2 d3&quot;]
+    D --&gt; T[&quot;Target 一次多-token forward&quot;]
+    T --&gt; L1[&quot;评分位置 1：只依赖 Prefix&quot;]
+    T --&gt; L2[&quot;评分位置 2：依赖 Prefix + d1&quot;]
+    T --&gt; L3[&quot;评分位置 3：依赖 Prefix + d1 + d2&quot;]
+    L1 --&gt; A[&quot;按因果顺序 Accept / Reject&quot;]
+    L2 --&gt; A
+    L3 --&gt; A
+</code></pre></details></figcaption></figure>
+<p>这里的“并行”表示 GPU 在同一次 forward 中批量计算多个 token 位置，不表示这些位置相互
+独立，也不表示后面的 token 可以绕过因果 mask 偷看未来。</p>
+<p>它像普通 Prefill，是因为两者都拥有一段已经知道的 token；但它不等于普通 Prompt
+Prefill：</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>普通 Prompt Prefill</th>
+<th>Target Verify</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>prompt token 已确定有效</td>
+<td>draft token 只是暂定候选</td>
+</tr>
+<tr>
+<td>主要目标是建立 prompt KV</td>
+<td>主要目标是给候选评分并求接受长度</td>
+</tr>
+<tr>
+<td>不需要接受/拒绝 prompt</td>
+<td>只允许提交连续接受的因果前缀</td>
+</tr>
+<tr>
+<td>普通生成常只消费每请求最后位置 logits</td>
+<td>verify 需要多个验证位置的 logits</td>
+</tr>
+</tbody>
+</table></div>
+<p>anchor 是否显式包含在验证输入、候选和 logits 如何错位对齐，由 dFlash、dSpark、EAGLE 的
+具体布局决定，不能从上述通用图直接写死。dSpark 的线性布局已经核对为
+<code>[anchor,d1,...,d_gamma]</code>，详见
+<a href="sglang-dspark-single-round-decode.html"><code>sglang-dspark-single-round-decode.md</code></a>；dFlash/EAGLE 仍须
+进入各自实现，不能从 dSpark 外推。</p>
+<h2 id="3-先认清-scheduler-中三个名字相似的-worker">3. 先认清 Scheduler 中三个名字相似的 worker</h2>
+<h3 id="31-变量定义">3.1 变量定义</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Scheduler 字段</th>
+<th>严格含义</th>
+<th>大白话</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>self.tp_worker</code></td>
+<td>正式 target 模型的 <code>TpModelWorker</code></td>
+<td>大模型执行者</td>
+</tr>
+<tr>
+<td><code>self.draft_worker</code></td>
+<td>dFlash/dSpark/EAGLE 等 <code>BaseSpecWorker</code> 子类实例</td>
+<td>投机解码总指挥，不只是裸 draft 模型</td>
+</tr>
+<tr>
+<td><code>self.model_worker</code></td>
+<td><code>run_batch()</code> 使用的统一执行入口别名</td>
+<td>这轮 batch 应该交给谁</td>
+</tr>
+</tbody>
+</table></div>
+<p>开启投机解码后，对象关系是：</p>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart TD
+    S[&quot;Scheduler&quot;]
+    TP[&quot;Scheduler.tp_worker&lt;br/&gt;Target TpModelWorker&quot;]
+    SW[&quot;Scheduler.draft_worker&lt;br/&gt;BaseSpecWorker 子类/投机协调器&quot;]
+    MW[&quot;Scheduler.model_worker&lt;br/&gt;统一运行入口&quot;]
+    IT[&quot;协调器.target_worker&quot;]
+    ID[&quot;协调器.draft_worker&lt;br/&gt;真正的 Draft 执行者&quot;]
+
+    S --&gt; TP
+    S --&gt; SW
+    S --&gt; MW
+    MW -. &quot;speculative 时指向同一个协调器&quot; .-&gt; SW
+    SW --&gt; IT
+    IT -. &quot;同一个对象&quot; .-&gt; TP
+    SW --&gt; ID
+">flowchart TD
+    S[&quot;Scheduler&quot;]
+    TP[&quot;Scheduler.tp_worker&lt;br/&gt;Target TpModelWorker&quot;]
+    SW[&quot;Scheduler.draft_worker&lt;br/&gt;BaseSpecWorker 子类/投机协调器&quot;]
+    MW[&quot;Scheduler.model_worker&lt;br/&gt;统一运行入口&quot;]
+    IT[&quot;协调器.target_worker&quot;]
+    ID[&quot;协调器.draft_worker&lt;br/&gt;真正的 Draft 执行者&quot;]
+
+    S --&gt; TP
+    S --&gt; SW
+    S --&gt; MW
+    MW -. &quot;speculative 时指向同一个协调器&quot; .-&gt; SW
+    SW --&gt; IT
+    IT -. &quot;同一个对象&quot; .-&gt; TP
+    SW --&gt; ID
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart TD
+    S[&quot;Scheduler&quot;]
+    TP[&quot;Scheduler.tp_worker&lt;br/&gt;Target TpModelWorker&quot;]
+    SW[&quot;Scheduler.draft_worker&lt;br/&gt;BaseSpecWorker 子类/投机协调器&quot;]
+    MW[&quot;Scheduler.model_worker&lt;br/&gt;统一运行入口&quot;]
+    IT[&quot;协调器.target_worker&quot;]
+    ID[&quot;协调器.draft_worker&lt;br/&gt;真正的 Draft 执行者&quot;]
+
+    S --&gt; TP
+    S --&gt; SW
+    S --&gt; MW
+    MW -. &quot;speculative 时指向同一个协调器&quot; .-&gt; SW
+    SW --&gt; IT
+    IT -. &quot;同一个对象&quot; .-&gt; TP
+    SW --&gt; ID
+</code></pre></details></figcaption></figure>
+<p>例如 dSpark 下：</p>
+<pre class="codehilite"><code class="language-text">Scheduler.tp_worker                  = Target TpModelWorker
+Scheduler.draft_worker               = DSparkWorkerV2
+Scheduler.model_worker               = DSparkWorkerV2
+Scheduler.draft_worker.target_worker = Scheduler.tp_worker
+Scheduler.draft_worker.draft_worker  = 真正执行 dSpark draft 模型的 worker
+</code></pre>
+<h3 id="32-为什么-schedulerdraft_worker-这个名字容易误导">3.2 为什么 <code>Scheduler.draft_worker</code> 这个名字容易误导</h3>
+<p><code>BaseSpecWorker</code> 在
+<code>python/sglang/srt/speculative/base_spec_worker.py:45-68</code> 同时暴露两个内部角色：</p>
+<pre class="codehilite"><code class="language-python"><span class="k">class</span><span class="w"> </span><span class="nc">BaseSpecWorker</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">target_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_target_worker</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">draft_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_draft_worker</span>
+</code></pre>
+<p>因此 Scheduler 层的 <code>draft_worker</code> 实际是一个高层算法 worker。它的一次
+<code>forward_batch_generation()</code> 可以连续组织：</p>
+<pre class="codehilite"><code class="language-text">Draft
+  → 构造 VerifyInput
+  → Target Verify
+  → Accept/Reject/Bonus
+  → 返回下一轮状态
+</code></pre>
+<p>真正只运行 draft model 的对象位于这个协调器内部。</p>
+<h2 id="4-初始化时如何装配-target协调器和真正的-draft-worker">4. 初始化时如何装配 target、协调器和真正的 draft worker</h2>
+<h3 id="41-先创建-target-worker">4.1 先创建 target worker</h3>
+<p>调用点：<code>Scheduler.init_model_worker()</code>
+（<code>python/sglang/srt/managers/scheduler.py:901-910</code>）。</p>
+<p>被调方法：<code>Scheduler.init_tp_model_worker()</code>
+（<code>scheduler.py:806-822</code>）。</p>
+<pre class="codehilite"><code class="language-python"><span class="k">def</span><span class="w"> </span><span class="nf">init_tp_model_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="o">...</span>
+    <span class="k">if</span> <span class="n">use_mlx</span><span class="p">():</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tp_worker</span> <span class="o">=</span> <span class="n">MlxTpModelWorker</span><span class="p">(</span><span class="o">**</span><span class="n">worker_kwargs</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tp_worker</span> <span class="o">=</span> <span class="n">TpModelWorker</span><span class="p">(</span><span class="o">**</span><span class="n">worker_kwargs</span><span class="p">)</span>
+</code></pre>
+<p>本文后续主线假设通用 CUDA/ROCm，因此 <code>self.tp_worker</code> 是通用 <code>TpModelWorker</code>。MLX 会换成
+<code>MlxTpModelWorker</code>，不能因为 IDE 静态跳转到 MLX override 就把它当成 CUDA 运行路径。</p>
+<h3 id="42-根据算法选择协调器类">4.2 根据算法选择协调器类</h3>
+<p><code>Scheduler.maybe_init_draft_worker()</code> 位于 <code>scheduler.py:824-866</code>：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">draft_worker_kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="n">server_args</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">server_args</span><span class="p">,</span>
+    <span class="n">gpu_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ps</span><span class="o">.</span><span class="n">gpu_id</span><span class="p">,</span>
+    <span class="n">ps</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ps</span><span class="p">,</span>
+    <span class="n">nccl_port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nccl_port</span><span class="p">,</span>
+    <span class="n">target_worker</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tp_worker</span><span class="p">,</span>  <span class="c1"># [讲解] 复用已经加载好的正式 target</span>
+<span class="p">)</span>
+
+<span class="n">DraftWorkerClass</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec_algorithm</span><span class="o">.</span><span class="n">create_worker</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">server_args</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">draft_worker</span> <span class="o">=</span> <span class="n">DraftWorkerClass</span><span class="p">(</span><span class="o">**</span><span class="n">draft_worker_kwargs</span><span class="p">)</span>
+</code></pre>
+<p><code>SpeculativeAlgorithm.create_worker()</code> 的当前映射位于
+<code>python/sglang/srt/speculative/spec_info.py:248-300</code>：</p>
+<pre class="codehilite"><code class="language-text">DFLASH       → DFlashWorkerV2
+DSPARK       → DSparkWorkerV2
+EAGLE/EAGLE3 → EAGLEWorkerV2（multi-layer 开关另有实现）
+</code></pre>
+<p>为什么把既有 target worker 传进去，而不是重新创建第二个 target？因为它已经持有正式模型
+权重、ModelRunner、target KV pool、attention backend、分布式通信和 Graph 等资源；投机协调器
+需要驱动它，而不是复制它。</p>
+<h3 id="43-协调器内部再创建-draft-执行者">4.3 协调器内部再创建 draft 执行者</h3>
+<p>dSpark 构造函数位于
+<code>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:66-123</code>：</p>
+<pre class="codehilite"><code class="language-python"><span class="bp">self</span><span class="o">.</span><span class="n">_target_worker</span> <span class="o">=</span> <span class="n">target_worker</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">model_runner</span> <span class="o">=</span> <span class="n">target_worker</span><span class="o">.</span><span class="n">model_runner</span>
+
+<span class="n">bundle</span> <span class="o">=</span> <span class="n">build_draft_tp_worker</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">_draft_worker</span> <span class="o">=</span> <span class="n">bundle</span><span class="o">.</span><span class="n">draft_worker</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">draft_model_runner</span> <span class="o">=</span> <span class="n">bundle</span><span class="o">.</span><span class="n">draft_model_runner</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">draft_model</span> <span class="o">=</span> <span class="n">bundle</span><span class="o">.</span><span class="n">draft_model</span>
+</code></pre>
+<p>dFlash 在 <code>python/sglang/srt/speculative/dflash_worker_v2.py:154-218</code> 使用相同的两角色结构。</p>
+<p>EAGLE 在 <code>python/sglang/srt/speculative/eagle_worker_v2.py:1021-1056</code> 中，将 draft 侧进一步
+包装成 <code>EagleDraftWorker</code>：</p>
+<pre class="codehilite"><code class="language-python"><span class="bp">self</span><span class="o">.</span><span class="n">_target_worker</span> <span class="o">=</span> <span class="n">target_worker</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">_draft_worker</span> <span class="o">=</span> <span class="n">EagleDraftWorker</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">target_worker</span><span class="p">)</span>
+</code></pre>
+<p>这形成第一个算法边界：</p>
+<pre class="codehilite"><code class="language-text">dFlash / dSpark
+  → 外层协调器 + plain draft TpModelWorker/ModelRunner
+
+EAGLE
+  → 外层 EAGLEWorkerV2 + 内层 EagleDraftWorker
+  → 内层还区分 draft() 与 draft_extend()
+</code></pre>
+<p>当前只确认对象结构，不在这里展开 EAGLE 的 tree draft。</p>
+<h3 id="44-最后绑定统一入口-model_worker">4.4 最后绑定统一入口 <code>model_worker</code></h3>
+<p><code>Scheduler.init_model_worker()</code> 在 <code>scheduler.py:922-926</code> 执行：</p>
+<pre class="codehilite"><code class="language-python"><span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec_algorithm</span><span class="o">.</span><span class="n">is_none</span><span class="p">():</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">model_worker</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tp_worker</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">model_worker</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">draft_worker</span>
+</code></pre>
+<p>所以 <code>run_batch()</code> 后面可以始终写同一句：</p>
+<pre class="codehilite"><code class="language-python"><span class="bp">self</span><span class="o">.</span><span class="n">model_worker</span><span class="o">.</span><span class="n">forward_batch_generation</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+</code></pre>
+<p>但它的动态接收者不同：</p>
+<pre class="codehilite"><code class="language-text">ordinary → TpModelWorker.forward_batch_generation()
+dFlash   → DFlashWorkerV2.forward_batch_generation()
+dSpark   → DSparkWorkerV2.forward_batch_generation()
+EAGLE    → EAGLEWorkerV2.forward_batch_generation()
+</code></pre>
+<h2 id="5-non-overlap-run_batch-的实际投机调用">5. non-overlap <code>run_batch()</code> 的实际投机调用</h2>
+<p>本文当前固定：generation、speculative、non-overlap、非 PDMux split-prefill。</p>
+<p>调用点位于 <code>python/sglang/srt/managers/scheduler.py:3500-3521</code>：</p>
+<pre class="codehilite"><code class="language-python"><span class="k">elif</span> <span class="ow">not</span> <span class="n">batch</span><span class="o">.</span><span class="n">spec_algorithm</span><span class="o">.</span><span class="n">is_none</span><span class="p">():</span>
+    <span class="n">resolve_forward_inputs</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">future_map</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forward_isolation</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">overlap</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">batch_result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_worker</span><span class="o">.</span><span class="n">forward_batch_generation</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+
+    <span class="c1"># [讲解] 临时字段 rebind 已恢复；这里只提交真正需要跨轮保存的状态</span>
+    <span class="n">batch</span><span class="o">.</span><span class="n">spec_info</span> <span class="o">=</span> <span class="n">batch_result</span><span class="o">.</span><span class="n">next_draft_input</span>
+    <span class="k">if</span> <span class="n">batch_result</span><span class="o">.</span><span class="n">new_seq_lens</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">batch</span><span class="o">.</span><span class="n">seq_lens</span> <span class="o">=</span> <span class="n">batch_result</span><span class="o">.</span><span class="n">new_seq_lens</span>
+        <span class="o">...</span>
+
+    <span class="n">batch</span><span class="o">.</span><span class="n">input_ids</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># rebuilt next iter from draft_token</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">update_cache_from_scheduler</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">batch_result</span><span class="p">)</span>
+    <span class="n">batch_result</span><span class="o">.</span><span class="n">copy_to_cpu</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+</code></pre>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart TD
+    A[&quot;Scheduler.run_batch(batch)&quot;] --&gt; B{&quot;batch.spec_algorithm&quot;}
+    B --&gt;|&quot;NONE&quot;| C[&quot;TpModelWorker.forward_batch_generation()&quot;]
+    B --&gt;|&quot;DFLASH / DSPARK / EAGLE&quot;| D[&quot;resolve_forward_inputs()&quot;]
+    D --&gt; E[&quot;_forward_isolation(overlap=False)&quot;]
+    E --&gt; F[&quot;model_worker.forward_batch_generation()&quot;]
+    F --&gt; G1[&quot;DFlashWorkerV2&quot;]
+    F --&gt; G2[&quot;DSparkWorkerV2&quot;]
+    F --&gt; G3[&quot;EAGLEWorkerV2&quot;]
+    G1 --&gt; R[&quot;GenerationBatchResult&quot;]
+    G2 --&gt; R
+    G3 --&gt; R
+    R --&gt; S1[&quot;next_draft_input → batch.spec_info&quot;]
+    R --&gt; S2[&quot;new_seq_lens → batch.seq_lens&quot;]
+    R --&gt; S3[&quot;cache update / CPU result&quot;]
+">flowchart TD
+    A[&quot;Scheduler.run_batch(batch)&quot;] --&gt; B{&quot;batch.spec_algorithm&quot;}
+    B --&gt;|&quot;NONE&quot;| C[&quot;TpModelWorker.forward_batch_generation()&quot;]
+    B --&gt;|&quot;DFLASH / DSPARK / EAGLE&quot;| D[&quot;resolve_forward_inputs()&quot;]
+    D --&gt; E[&quot;_forward_isolation(overlap=False)&quot;]
+    E --&gt; F[&quot;model_worker.forward_batch_generation()&quot;]
+    F --&gt; G1[&quot;DFlashWorkerV2&quot;]
+    F --&gt; G2[&quot;DSparkWorkerV2&quot;]
+    F --&gt; G3[&quot;EAGLEWorkerV2&quot;]
+    G1 --&gt; R[&quot;GenerationBatchResult&quot;]
+    G2 --&gt; R
+    G3 --&gt; R
+    R --&gt; S1[&quot;next_draft_input → batch.spec_info&quot;]
+    R --&gt; S2[&quot;new_seq_lens → batch.seq_lens&quot;]
+    R --&gt; S3[&quot;cache update / CPU result&quot;]
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart TD
+    A[&quot;Scheduler.run_batch(batch)&quot;] --&gt; B{&quot;batch.spec_algorithm&quot;}
+    B --&gt;|&quot;NONE&quot;| C[&quot;TpModelWorker.forward_batch_generation()&quot;]
+    B --&gt;|&quot;DFLASH / DSPARK / EAGLE&quot;| D[&quot;resolve_forward_inputs()&quot;]
+    D --&gt; E[&quot;_forward_isolation(overlap=False)&quot;]
+    E --&gt; F[&quot;model_worker.forward_batch_generation()&quot;]
+    F --&gt; G1[&quot;DFlashWorkerV2&quot;]
+    F --&gt; G2[&quot;DSparkWorkerV2&quot;]
+    F --&gt; G3[&quot;EAGLEWorkerV2&quot;]
+    G1 --&gt; R[&quot;GenerationBatchResult&quot;]
+    G2 --&gt; R
+    G3 --&gt; R
+    R --&gt; S1[&quot;next_draft_input → batch.spec_info&quot;]
+    R --&gt; S2[&quot;new_seq_lens → batch.seq_lens&quot;]
+    R --&gt; S3[&quot;cache update / CPU result&quot;]
+</code></pre></details></figcaption></figure>
+<p>此处的“同步驱动 V2 worker”是 Python 控制流意义上的 non-overlap 调用方式，不自动等价于每个
+CUDA kernel 都已经同步到 CPU；具体 D2H 和 event 语义仍由 <code>GenerationBatchResult</code> 后续处理。</p>
+<h2 id="6-_forward_isolation-为什么必须存在">6. <code>_forward_isolation()</code> 为什么必须存在</h2>
+<p>投机 worker 为了本轮 Draft/Verify，可以临时重新绑定传入的同一个 <code>ScheduleBatch</code> 字段，
+例如：</p>
+<pre class="codehilite"><code class="language-text">forward_mode
+input_ids
+spec_info
+out_cache_loc
+seq_lens_cpu / seq_lens_sum
+sampling_info
+</code></pre>
+<p>但 <code>ScheduleBatch</code> 还是 Scheduler 跨轮管理请求的持久对象，不能把“为了本次 target verify
+临时拼出的字段绑定”全部泄漏为下一轮调度状态。</p>
+<p><code>Scheduler._forward_isolation()</code> 的关键代码在 <code>scheduler.py:3343-3367</code>：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">snapshot_v2_full</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">batch</span><span class="o">.</span><span class="n">spec_algorithm</span><span class="o">.</span><span class="n">is_none</span><span class="p">()</span>
+<span class="n">sched_snapshot</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="p">{</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">fields</span><span class="p">(</span><span class="n">batch</span><span class="p">)}</span>
+    <span class="k">if</span> <span class="n">snapshot_v2_full</span>
+    <span class="k">else</span> <span class="kc">None</span>
+<span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="k">yield</span>
+<span class="k">finally</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">snapshot_v2_full</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">sched_snapshot</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+</code></pre>
+<p>这里的 <code>sched_snapshot</code> 是<strong>字段值/对象引用的浅快照</strong>，不是 Tensor 数据和嵌套对象的深拷贝。
+因此它可以撤销：</p>
+<pre class="codehilite"><code class="language-python"><span class="n">batch</span><span class="o">.</span><span class="n">forward_mode</span> <span class="o">=</span> <span class="n">ForwardMode</span><span class="o">.</span><span class="n">TARGET_VERIFY</span>
+<span class="n">batch</span><span class="o">.</span><span class="n">input_ids</span> <span class="o">=</span> <span class="n">verify_input_ids</span>
+<span class="n">batch</span><span class="o">.</span><span class="n">spec_info</span> <span class="o">=</span> <span class="n">verify_input</span>
+</code></pre>
+<p>这类“字段重新指向另一个值/对象”的 rebind；但如果 worker 对快照和 batch 共同指向的同一个
+Tensor 或可变对象做原地修改，<code>setattr(batch, name, old_reference)</code> 不能回滚对象内部的数据。
+是否允许这种原地副作用，仍要在具体 worker 和下一位消费者处核对。</p>
+<p>完整的字段绑定交接是：</p>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="sequenceDiagram
+    participant S as Scheduler
+    participant B as ScheduleBatch
+    participant W as Spec Worker
+    participant R as GenerationBatchResult
+
+    S-&gt;&gt;B: 保存 dataclass 字段值/引用的浅快照
+    S-&gt;&gt;W: forward_batch_generation(B)
+    W-&gt;&gt;B: 临时改成 Draft/Verify 所需字段
+    W--&gt;&gt;R: 返回 next_draft_input/new_seq_lens/结果
+    S-&gt;&gt;B: finally 恢复字段绑定
+    S-&gt;&gt;B: 选择性写回 R 中应跨轮保存的状态
+">sequenceDiagram
+    participant S as Scheduler
+    participant B as ScheduleBatch
+    participant W as Spec Worker
+    participant R as GenerationBatchResult
+
+    S-&gt;&gt;B: 保存 dataclass 字段值/引用的浅快照
+    S-&gt;&gt;W: forward_batch_generation(B)
+    W-&gt;&gt;B: 临时改成 Draft/Verify 所需字段
+    W--&gt;&gt;R: 返回 next_draft_input/new_seq_lens/结果
+    S-&gt;&gt;B: finally 恢复字段绑定
+    S-&gt;&gt;B: 选择性写回 R 中应跨轮保存的状态
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>sequenceDiagram
+    participant S as Scheduler
+    participant B as ScheduleBatch
+    participant W as Spec Worker
+    participant R as GenerationBatchResult
+
+    S-&gt;&gt;B: 保存 dataclass 字段值/引用的浅快照
+    S-&gt;&gt;W: forward_batch_generation(B)
+    W-&gt;&gt;B: 临时改成 Draft/Verify 所需字段
+    W--&gt;&gt;R: 返回 next_draft_input/new_seq_lens/结果
+    S-&gt;&gt;B: finally 恢复字段绑定
+    S-&gt;&gt;B: 选择性写回 R 中应跨轮保存的状态
+</code></pre></details></figcaption></figure>
+<p>因此需要区分：</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>状态类型</th>
+<th>例子</th>
+<th>返回后处理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>本轮临时字段绑定</td>
+<td>临时 <code>TARGET_VERIFY</code>、verify <code>input_ids</code>、临时 host length bound</td>
+<td>恢复原字段引用，不直接遗留</td>
+</tr>
+<tr>
+<td>已确认的跨轮状态</td>
+<td><code>next_draft_input</code>、接受后的 <code>new_seq_lens</code>、cache 更新</td>
+<td>由 <code>batch_result</code> 明确返回并写回</td>
+</tr>
+</tbody>
+</table></div>
+<p>注意：上表描述字段 rebind；同一 Tensor/嵌套对象的原地写入不由浅快照自动撤销。</p>
+<p><code>batch.input_ids = None</code> 也不是丢失了输入；它表示下一轮不得误用本轮临时 verify Tensor，而要
+根据新的 draft/spec 状态重新构造实际输入。</p>
+<h2 id="7-进入协调器后三种算法的一级分支">7. 进入协调器后，三种算法的一级分支</h2>
+<h3 id="71-dspark">7.1 dSpark</h3>
+<p><code>DSparkWorkerV2.forward_batch_generation()</code> 位于
+<code>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:361-377</code>：</p>
+<pre class="codehilite"><code class="language-python"><span class="k">if</span> <span class="n">batch</span><span class="o">.</span><span class="n">forward_mode</span><span class="o">.</span><span class="n">is_extend</span><span class="p">()</span> <span class="ow">or</span> <span class="n">batch</span><span class="o">.</span><span class="n">is_extend_in_batch</span><span class="p">:</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forward_prefill</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">on_publish</span><span class="p">)</span>
+
+<span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forward_decode</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">on_publish</span><span class="p">,</span> <span class="n">grammar_barrier</span><span class="p">)</span>
+</code></pre>
+<p>这里的 <code>_forward_prefill()</code> 是 target prompt prefill，并为后续 draft 状态准备 target hidden；
+真正的投机 Decode 主线从 <code>_forward_decode()</code> 开始。</p>
+<h3 id="72-dflash">7.2 dFlash</h3>
+<p><code>DFlashWorkerV2.forward_batch_generation()</code> 从
+<code>python/sglang/srt/speculative/dflash_worker_v2.py:1387</code> 开始；Prompt 分支位于
+<code>1387-1456</code>，Decode/Draft/Target Verify 主体从 <code>1458</code> 继续到该方法返回：</p>
+<pre class="codehilite"><code class="language-text">Extend / is_extend_in_batch
+  → Target prompt prefill
+  → 捕获 target hidden
+  → 准备下一轮 DFlashDraftInputV2
+
+否则
+  → Draft block
+  → Target verify
+  → Accept/bonus
+</code></pre>
+<h3 id="73-eagle">7.3 EAGLE</h3>
+<p><code>EAGLEWorkerV2.forward_batch_generation()</code> 位于
+<code>python/sglang/srt/speculative/eagle_worker_v2.py:1122-1217</code>：</p>
+<pre class="codehilite"><code class="language-text">Extend / is_extend_in_batch
+  → Target prefill
+  → _draft_extend_for_prefill()
+
+否则
+  → draft_worker.draft()
+  → verify()
+  → _draft_extend_for_decode()
+</code></pre>
+<p>因此三者有共同的外层骨架，但不能把内部布局视为相同：</p>
+<pre class="codehilite"><code class="language-text">Prompt 阶段：target prefill + 准备 draft 状态
+Decode 阶段：draft proposal + target verify + 下一轮状态
+</code></pre>
+<p>dFlash/dSpark 更接近线性 block；EAGLE 还可能是 top-k tree，并具有独立 <code>draft_extend()</code>。</p>
+<h2 id="8-一个重要边界target_verify-不是模型所有权标签">8. 一个重要边界：<code>TARGET_VERIFY</code> 不是模型所有权标签</h2>
+<p>从枚举注释看，<code>TARGET_VERIFY</code> 用于 target model verification；但当前 dFlash/dSpark 实现还会
+在 draft 侧复用这种块状 ForwardMode：</p>
+<ul>
+<li>dSpark：<code>python/sglang/srt/speculative/dspark_components/dspark_draft.py:398-415</code>
+构造 <code>ForwardBatch(forward_mode=TARGET_VERIFY)</code>，随后调用
+<code>draft_model_runner.forward(draft_forward_batch)</code>；</li>
+<li>dFlash：<code>python/sglang/srt/speculative/dflash_worker_v2.py:1618-1635</code> 同样构造该 mode，随后
+调用 <code>draft_model_runner.forward(forward_batch)</code>；真正的 target verify 在后面的
+<code>verify_input.prepare_for_verify(..., self.target_worker)</code> 和
+<code>self.target_worker.forward_batch_generation(...)</code>。</li>
+</ul>
+<p>所以判断“这一次 forward 是 draft 模型还是 target 模型”时，必须同时看：</p>
+<pre class="codehilite"><code class="language-text">ForwardMode：描述本轮执行语义/数据形态
+实际 receiver：draft_model_runner 还是 target_worker
+spec_info/mask：描述具体 block/tree 验证布局
+</code></pre>
+<p>不能只看到 <code>TARGET_VERIFY</code> 四个字就停止追调用者。</p>
+<h2 id="9-当前单请求的已知时间线">9. 当前单请求的已知时间线</h2>
+<p>假设请求 <code>R0</code> 已完成 Prompt Prefill，正在进入 dSpark 投机 Decode：</p>
+<pre class="codehilite"><code class="language-ini"><span class="na">batch.forward_mode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">DECODE</span>
+<span class="na">batch.spec_algorithm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">DSPARK</span>
+<span class="na">batch.seq_lens</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">[22]</span>
+<span class="na">batch.spec_info</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">上一轮留下的 DraftInput，其中 bonus/anchor 为 Y</span>
+</code></pre>
+<p>当前已经确认的外层时间线：</p>
+<pre class="codehilite"><code class="language-text">时刻 0：Scheduler 持有普通 Decode 形态的 ScheduleBatch
+
+时刻 1：run_batch() 发现 batch.spec_algorithm != NONE
+        self.model_worker 实际是 DSparkWorkerV2
+
+时刻 2：进入 _forward_isolation()
+        DSparkWorkerV2 可临时改造同一个 ScheduleBatch
+
+时刻 3：DSparkWorkerV2.forward_batch_generation()
+        因不是 Prompt Extend，进入 _forward_decode()
+
+时刻 4：内部完成 Draft → Target Verify → Accept/Reject
+        返回 GenerationBatchResult
+
+时刻 5：_forward_isolation() 恢复 Scheduler 的原始字段绑定
+        注意：这不是嵌套对象/Tensor 数据的深回滚
+
+时刻 6：Scheduler 选择性提交
+        batch.spec_info = batch_result.next_draft_input
+        batch.seq_lens  = batch_result.new_seq_lens
+        batch.input_ids = None
+</code></pre>
+<p>时刻 4 的 dSpark 单请求主链现已完成逐 Tensor 核对，详细记录见
+<a href="sglang-dspark-single-round-decode.html"><code>sglang-dspark-single-round-decode.md</code></a>。固定
+<code>prefix_len=22、anchor=Y、drafts=[a,b,c,d]</code>，若只接受 <code>a</code> 并得到 bonus <code>Z</code>，关键状态是：</p>
+<pre class="codehilite"><code class="language-text">Target verify 输入： [Y,a,b,c,d]
+用户有效输出：      [a,Z]
+Draft KV 新提交：    [Y@22,a@23]
+new_seq_len：        24
+下一轮 anchor：      Z@24
+</code></pre>
+<p>这证明 <code>commit_lens=correct_len+1</code> 在输出和 KV 两个消费者处数值相同、token 内容却错开一位。
+候选物理 KV slot 的具体释放/回收策略仍保留为后续独立内存管理主题，不能由逻辑
+<code>new_seq_lens</code> 直接反推。</p>
+<h2 id="10-当前主题的边界">10. 当前主题的边界</h2>
+<ul>
+<li><strong>硬件后端</strong>：主线按通用 CUDA/ROCm <code>TpModelWorker</code>；MLX/NPU/XPU 只有在改变调用链时再
+单独核对。</li>
+<li><strong>runner</strong>：Scheduler 到 speculative worker 的装配与分发发生在 Eager/Graph 选择之前；
+<code>TARGET_VERIFY → EagerRunner._execute_extend()</code> 只描述已经选择 Eager 的分支。</li>
+<li><strong>调度模式</strong>：当前详细调用点是 non-overlap；overlap 会增加 FutureMap、<code>on_publish</code>、
+stream/event 和两轮 Tensor 生命周期。</li>
+<li><strong>算法</strong>：dFlash、dSpark、EAGLE 只共享外层骨架；anchor、verify window、mask、accept 和 KV
+处理必须分别核对。</li>
+<li><strong>验证级别</strong>：当前是 source-verified、runtime-unvalidated，不能据此声称 GPU 实际性能或
+kernel 完成时序已经测量。</li>
+</ul>
+<h2 id="11-源码动作--改变状态--为什么-小结">11. <code>源码动作 / 改变状态 / 为什么</code> 小结</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>源码动作</th>
+<th>改变的状态</th>
+<th>为什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>init_tp_model_worker()</code></td>
+<td>创建 <code>Scheduler.tp_worker</code></td>
+<td>先建立唯一正式 target 执行者</td>
+</tr>
+<tr>
+<td><code>spec_algorithm.create_worker()</code></td>
+<td>选择 dFlash/dSpark/EAGLE 协调器类型</td>
+<td>把算法差异交给动态分发</td>
+</tr>
+<tr>
+<td>协调器构造函数接收 <code>target_worker</code></td>
+<td>保存 <code>_target_worker</code> 并创建 <code>_draft_worker</code></td>
+<td>一个对象内组织 Draft 和 Target Verify</td>
+</tr>
+<tr>
+<td><code>self.model_worker = self.draft_worker</code></td>
+<td>改变 <code>run_batch()</code> 的统一接收者</td>
+<td>Scheduler 不需要写算法 if/elif 主流程</td>
+</tr>
+<tr>
+<td><code>_forward_isolation()</code></td>
+<td>保存并恢复 <code>ScheduleBatch</code> 字段绑定的浅快照</td>
+<td>隔离 verify 临时 rebind；不承诺回滚对象内部原地写入</td>
+</tr>
+<tr>
+<td>dSpark <code>_forward_decode()</code></td>
+<td>返回 output、<code>next_draft_input/new_seq_lens</code>，并按接受前缀注入 Draft KV</td>
+<td>把单轮验证结果拆成用户输出、KV commit 和下一轮 anchor 三条状态</td>
+</tr>
+<tr>
+<td>写回 <code>next_draft_input/new_seq_lens</code></td>
+<td>更新跨轮投机状态</td>
+<td>只提交已经确认应保留的结果</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="12-复习问题">12. 复习问题</h2>
+<ol>
+<li>开启 dSpark 后，<code>Scheduler.model_worker</code> 指向 <code>TpModelWorker</code> 还是
+<code>DSparkWorkerV2</code>？</li>
+<li><code>DSparkWorkerV2.target_worker</code> 与 <code>Scheduler.tp_worker</code> 是两份模型还是同一个对象？</li>
+<li>为什么 <code>TARGET_VERIFY.is_extend() == True</code> 不能推出“它就是普通 Prompt Prefill”？</li>
+<li>为什么只看 <code>forward_mode == TARGET_VERIFY</code> 仍不足以判断本轮由 draft model 还是 target
+model 执行？</li>
+<li><code>_forward_isolation()</code> 恢复字段绑定后，下一轮真正需要的状态通过什么对象重新写回？它能否
+自动回滚同一个 Tensor 的原地修改？</li>
+</ol>
+<p>答案分别是：投机协调器；同一个 target worker；业务语义和多-token 数据形态不同；当前
+dFlash/dSpark draft 侧也复用该 mode，必须看实际 runner；通过 <code>GenerationBatchResult</code> 中的
+<code>next_draft_input / new_seq_lens</code> 等字段重新写回，并且浅快照不能自动回滚同一对象的原地
+修改。</p>
+<p>专题阅读路线见 <a href="index.html">投机索引</a>；跨模块位置见 <a href="../index.html">SGLang 全景图</a>。</p>
+</article>
+
+            
+
+            <footer class="sf-footer"><span>投机解码源码专题</span><span>纯静态 · 本地依赖 · 可离线分享</span></footer>
+            <p class="print-only">投机解码源码专题 · SGLang Draft → Target Verify 生命周期 · None</p>
+          </div>
+
+          <aside class="sf-page-toc" aria-label="本页目录">
+            <p class="sf-page-toc__title">On this page</p>
+            <ol data-page-toc-list><li><a href="#1-先给出当前已经确定的结论" data-level="2">1. 先给出当前已经确定的结论</a></li><li><a href="#2-为什么已知-draft-token-后可以像-prefill-一样并行评分" data-level="2">2. 为什么已知 draft token 后可以像 Prefill 一样并行评分</a></li><li><a href="#3-先认清-scheduler-中三个名字相似的-worker" data-level="2">3. 先认清 Scheduler 中三个名字相似的 worker</a></li><li><a href="#4-初始化时如何装配-target协调器和真正的-draft-worker" data-level="2">4. 初始化时如何装配 target、协调器和真正的 draft worker</a></li><li><a href="#5-non-overlap-run_batch-的实际投机调用" data-level="2">5. non-overlap run_batch() 的实际投机调用</a></li><li><a href="#6-_forward_isolation-为什么必须存在" data-level="2">6. _forward_isolation() 为什么必须存在</a></li><li><a href="#7-进入协调器后三种算法的一级分支" data-level="2">7. 进入协调器后，三种算法的一级分支</a></li><li><a href="#8-一个重要边界target_verify-不是模型所有权标签" data-level="2">8. 一个重要边界：TARGET_VERIFY 不是模型所有权标签</a></li><li><a href="#9-当前单请求的已知时间线" data-level="2">9. 当前单请求的已知时间线</a></li><li><a href="#10-当前主题的边界" data-level="2">10. 当前主题的边界</a></li><li><a href="#11-源码动作--改变状态--为什么-小结" data-level="2">11. 源码动作 / 改变状态 / 为什么 小结</a></li><li><a href="#12-复习问题" data-level="2">12. 复习问题</a></li></ol>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="search-dialog" id="course-search-dialog" data-search-dialog aria-labelledby="course-search-title">
+    <div class="search-dialog__head"><strong id="course-search-title">搜索课程</strong><button class="sf-icon-button" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+    <form class="search-dialog__form" data-search-form role="search"><label class="sr-only" for="course-search-input">搜索对象、方法、状态或章节</label><input id="course-search-input" type="search" data-search-input autocomplete="off" placeholder="例如：running_batch、ForwardBatch、TARGET_VERIFY"><button class="sf-button" type="submit">搜索</button></form>
+    <p class="search-dialog__status" data-search-status aria-live="polite"></p><ol class="search-results" data-search-results></ol>
+  </dialog>
+
+  <dialog class="diagram-viewer" id="diagram-viewer-dialog" data-diagram-dialog aria-labelledby="diagram-viewer-title">
+    <div class="diagram-viewer__head"><div><strong id="diagram-viewer-title" data-diagram-title>图解沉浸阅读</strong> <span class="diagram-viewer__zoom" data-diagram-zoom>100%</span></div><div class="diagram-viewer__tools"><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-in" aria-label="放大">＋</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-out" aria-label="缩小">−</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="fit">看全图</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="reset">100%</button><button class="sf-button" type="button" data-diagram-action="close">关闭 ×</button></div></div>
+    <div class="diagram-viewer__viewport" data-diagram-viewport><div class="diagram-viewer__canvas mermaid" data-diagram-canvas></div></div>
+  </dialog>
+
+  <script src="visualizations/sglang-course-v2/assets/data/search-index.js" defer></script>
+  <script src="course/assets/vendor/mermaid.min.js" defer></script>
+  <script src="course/assets/js/site-shell.js" defer></script>
+  <script src="course/assets/js/toc-search.js" defer></script>
+  <script src="course/assets/js/diagram-viewer.js" defer></script>
+  <script src="course/assets/js/source-microscope.js" defer></script>
+  <script src="course/assets/js/labs.js" defer></script>
+  <script src="course/assets/js/lesson-components.js" defer></script>
+  
+  <script defer src="course/assets/notes/reading.js"></script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>dSpark V2 · 折叠捕获与回放</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="assets/dspark-visual-system.css">
+  <style>
+    .capture-swim{display:grid;grid-template-columns:190px repeat(6,minmax(175px,1fr));min-width:1290px;border-top:1px solid var(--line);border-left:1px solid var(--line)}.capture-swim>*{min-width:0;min-height:92px;padding:11px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:rgba(5,13,24,.78);font:12px/1.35 var(--mono)}.capture-head{background:var(--surface-2);color:var(--guard);font-weight:800}.capture-label{background:var(--surface);color:var(--data);font-weight:800}.capture-event{--tone:var(--main);border-left:4px solid var(--tone)!important}.capture-event[data-kind="data"]{--tone:var(--data)}.capture-event[data-kind="guard"]{--tone:var(--guard);border-left-style:dashed!important}.capture-event[data-kind="cuda"]{--tone:var(--cuda);border-left-style:dashed!important}.capture-event[data-kind="fail"]{--tone:var(--fail);border-left-style:double!important}.capture-event b{display:block;color:var(--tone)}.capture-event span{display:block;margin-top:6px;color:var(--muted)}.buffer-rounds{display:grid;grid-template-columns:180px repeat(4,minmax(190px,1fr));min-width:980px;border-top:1px solid var(--line);border-left:1px solid var(--line)}.buffer-rounds>*{min-height:78px;padding:11px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface);font:12px/1.35 var(--mono)}.buffer-rounds__head{color:var(--guard);background:var(--surface-2);font-weight:800}.buffer-rounds__label{color:var(--data);font-weight:800}.buffer-rounds [data-kind="main"]{color:var(--main)}.buffer-rounds [data-kind="guard"]{color:var(--guard);border-style:dashed}.buffer-rounds [data-kind="fail"]{color:var(--fail);border-style:double}.buffer-rounds [data-kind="cuda"]{color:var(--cuda);border-style:dashed}.buffer-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.buffer-card{padding:14px;border:1px solid var(--data);background:var(--surface)}.buffer-card[data-kind="guard"]{border-color:var(--guard);border-style:dashed}.buffer-card[data-kind="cuda"]{border-color:var(--cuda);border-style:dashed}.buffer-card b{display:block;color:var(--data);font:800 12px/1.3 var(--mono)}.buffer-card[data-kind="guard"] b{color:var(--guard)}.buffer-card[data-kind="cuda"] b{color:var(--cuda)}.buffer-card span{display:block;margin-top:7px;color:var(--muted);font-size:12px}@media(max-width:760px){.buffer-list{grid-template-columns:1fr}}
+  </style>
+  <link rel="stylesheet" href="assets/dspark-source-studio.css">
+  <script src="assets/dspark-site.js" defer></script>
+  <script src="assets/dspark-learning-layer.js" defer></script>
+  <script src="assets/dspark-source-studio.js" defer></script>
+  <script src="assets/dspark-stepper.js" defer></script>
+</head>
+<body data-page="08A">
+  <nav data-site-nav aria-label="dSpark 学习站导航"></nav>
+  <main class="page page--wide">
+    <header class="hero">
+      <span class="topic-badge">08 的专题页 · 静态 buffer 生命周期</span>
+      <p class="eyebrow">08A · 折叠捕获与回放</p>
+      <h1>构造期先分配核心 buffer，warm-up 补齐 strided 输出，再 capture 记录</h1>
+      <p class="lead">CUDA Graph 回放不会重新执行 <code>capture_hook()</code> 的 Python 函数体。它只重放已经记录的 device 操作，因此本轮 <code>verify_lens/inject_gate</code> 必须在 Target launch 前写进静态 buffer。</p>
+      <div class="evidence-strip"><span><strong>后端</strong> NVIDIA CUDA dSpark V2 folded epilogue</span><span><strong>关键不变量</strong> capture 中禁止首次分配 strided 输出</span><span><strong>证据范围</strong> 静态源码；未执行 graph capture/replay</span></div>
+      <div class="route-switch" aria-label="选择讲解路线"><button type="button" data-route-choice="static-greedy">STATIC · 贪心</button><button type="button" data-route-choice="compact-sampling">COMPACT · 随机采样</button><button type="button" data-route-choice="folded-greedy">FOLDED · 贪心</button></div>
+      <div data-semantic-legend></div>
+    </header>
+    <section class="handoff" aria-label="本页边界">
+      <div class="handoff__item"><b>一次性准备</b><span><code>DsparkVerifyEpilogue.__init__</code> 分配 verify/draft/accept/out 核心 buffer；warm-up 的 <code>_ensure_out()</code> 只补 <code>strided_logits/strided_hidden</code></span></div>
+      <div class="handoff__item"><b>捕获阶段</b><span>只记录读取既有 buffer 的 scatter/accept/optional commit device 操作</span></div>
+      <div class="handoff__item"><b>每轮输入</b><span><code>begin_step()</code> 写 <code>verify_lens_buf / inject_gate_buf</code>，runner 装载静态输入</span></div>
+      <div class="handoff__item"><b>每轮输出</b><span><code>read_accept(bs)</code> 返回静态 buffer 切片 view；随后重新汇入普通尾部</span></div>
+    </section>
+
+    <section class="section" id="capture-timeline">
+      <div class="section__head"><p class="section__kicker">主视图 · Python/CPU 与 CUDA stream 泳道</p><h2>六个阶段不能合并：strided 输出必须在 capture 前由 warm-up 补齐</h2></div>
+      <div class="visual stepper" data-stepper data-steps="6">
+        <div class="visual__bar"><strong>构造 → warm-up → capture → begin_step → replay → read/rejoin</strong><button class="zoom-button" type="button" data-zoom-target="#capture-swim">放大主图</button></div>
+        <div class="stepper__toolbar"><div class="stepper__buttons"><button type="button" data-step-action="prev">上一步</button><button type="button" data-step-action="next">下一步</button><button type="button" data-step-action="play">播放</button><button type="button" data-step-action="reset">重置</button></div><div class="stepper__progress"><span data-step-progress></span></div><div class="stepper__status" data-step-status></div></div>
+        <div class="visual__body canvas-scroll"><div class="capture-swim" id="capture-swim" aria-label="folded warm-up、capture 与 replay 时序泳道">
+          <div class="capture-head">泳道 / 阶段</div><div class="capture-head">1 · 构造</div><div class="capture-head">2 · warm-up</div><div class="capture-head">3 · capture</div><div class="capture-head">4 · 每轮 pre-replay</div><div class="capture-head">5 · graph replay</div><div class="capture-head">6 · read / rejoin</div>
+          <div class="capture-label">Python / CPU<br><code>DSparkWorkerV2</code></div>
+          <div class="capture-event" data-kind="guard" data-step-node="0"><b>安装 hooks + 构造核心 buffers</b><span><code>DsparkVerifyEpilogue.__init__</code> 已分配 verify/draft/accept/out；只把 strided logits/hidden 留作延迟分配。</span></div>
+          <div class="capture-event" data-kind="data" data-step-node="1"><b><code>_ensure_out()</code></b><span>非 capture warm-up 中根据真实 logits/hidden shape 首次分配 <code>strided_logits/strided_hidden</code>。</span></div>
+          <div class="capture-event" data-kind="guard" data-step-node="2"><b>执行 capture hook</b><span>Python 只在捕获时运行；断言输出早已分配。</span></div>
+          <div class="capture-event" data-kind="guard" data-step-node="3"><b><code>begin_step()</code></b><span>写本轮 verify_lens 与 inject gate；runner <code>load_batch()</code> 刷新输入。</span></div>
+          <div class="capture-event" data-kind="off" data-step-node="4"><b>不重新跑 Python body</b><span>这里只 enqueue 已捕获 graph。</span></div>
+          <div class="capture-event" data-step-node="5"><b><code>read_accept(bs)</code></b><span>取得静态 Tensor 的 batch slice view；不是长期独立 copy。</span></div>
+          <div class="capture-label">CUDA stream / graph</div>
+          <div class="capture-event" data-kind="off" data-step-node="0"><b>尚未捕获</b><span>只有普通 warm-up execution。</span></div>
+          <div class="capture-event" data-kind="cuda" data-step-node="1"><b>warm-up kernels</b><span>校验 shape/路径；输出 buffer 已存在后才进入 capture。</span></div>
+          <div class="capture-event" data-kind="cuda" data-step-node="2"><b>记录 device ops</b><span>Target → scatter → greedy accept/finalize → 可选 gated commit。</span></div>
+          <div class="capture-event" data-kind="off" data-step-node="3"><b>等待本轮 launch</b><span>静态输入 buffer 已由 CPU/Python 更新。</span></div>
+          <div class="capture-event" data-kind="cuda" data-step-node="4"><b><code>backend.replay()</code></b><span>异步入队整张 graph；device ops 读取当前 buffer 内容。</span></div>
+          <div class="capture-event" data-kind="cuda" data-step-node="5"><b>stream dependency</b><span>后续 Tensor 消费遵循 PyTorch/CUDA stream 依赖，不等于 CPU memcpy。</span></div>
+          <div class="capture-label">静态 buffers</div>
+          <div class="capture-event" data-kind="data" data-step-node="0"><b>核心 storage 已分配</b><span>verify_lens、draft tokens、accept/finalize/out buffers 地址已经稳定。</span></div>
+          <div class="capture-event" data-kind="data" data-step-node="1"><b>补齐 strided storage</b><span>只新增 logits/hidden 的 fixed-stride 输出；后续 capture/replay 复用地址。</span></div>
+          <div class="capture-event" data-kind="cuda" data-step-node="2"><b>地址进入 graph</b><span>verify_lens/gate 是运行时可改的 device inputs。</span></div>
+          <div class="capture-event" data-kind="guard" data-step-node="3"><b>写 N 轮值</b><span><code>verify_lens_buf=N_lens</code><br><code>inject_gate_buf=N_gate</code></span></div>
+          <div class="capture-event" data-kind="cuda" data-step-node="4"><b>覆盖输出</b><span>strided logits、correct_len、bonus、commit_lens 等写回同一 storage。</span></div>
+          <div class="capture-event" data-kind="data" data-step-node="5"><b>view 被当前轮消费</b><span>下次 replay 会复用/覆盖，不能跨轮长期持有。</span></div>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="section" id="buffer-generations">
+      <div class="section__head"><p class="section__kicker">辅助视图 · N / N+1 两轮状态</p><h2>省略 <code>begin_step()</code>，最先读到的是上一轮 lens/gate</h2></div>
+      <div class="visual"><div class="visual__bar"><strong>静态地址不变，内容必须逐轮更新</strong></div><div class="visual__body canvas-scroll"><div class="buffer-rounds" aria-label="N 与 N+1 两轮静态 buffer 对照">
+        <div class="buffer-rounds__head">对象</div><div class="buffer-rounds__head">N 轮 begin_step</div><div class="buffer-rounds__head">N 轮 replay 后</div><div class="buffer-rounds__head">N+1 正确路径</div><div class="buffer-rounds__head">N+1 漏写的错误路径</div>
+        <div class="buffer-rounds__label">verify_lens_buf</div><div data-kind="guard">写 [2,2]</div><div data-kind="cuda">graph 读取 [2,2]</div><div data-kind="guard">先覆盖为 [3,1]</div><div data-kind="fail">仍是 [2,2] → 错 cutoff/shape 语义</div>
+        <div class="buffer-rounds__label">inject_gate_buf</div><div data-kind="guard">写 1</div><div data-kind="cuda">允许本轮 fused commit</div><div data-kind="guard">语义 guard 失败则先写 0</div><div data-kind="fail">遗留 1 → 可能错误提交</div>
+        <div class="buffer-rounds__label">accept/output buffers</div><div data-kind="off">N-1 旧内容</div><div data-kind="main">被 N 轮结果覆盖</div><div data-kind="cuda">N+1 replay 再覆盖</div><div data-kind="fail">若 replay 未命中却读取 → 陈旧结果</div>
+      </div></div></div>
+      <div class="buffer-list" style="margin-top:18px">
+        <article class="buffer-card" data-kind="guard"><b>图中执行了 ≠ Worker 会采用</b><span><code>folded_accept=false</code> 时忽略 accept buffers，回到 06 普通接受；<code>inject_gate=0</code> 使可选图内提交长度为零。</span></article>
+        <article class="buffer-card" data-kind="cuda"><b>capture 记录操作，不保存 Python 控制流</b><span>replay 只 enqueue device graph；不会再次调用 <code>capture_hook()</code> 来决定当前轮参数。</span></article>
+        <article class="buffer-card"><b><code>read_accept(bs)</code> 是 view</b><span>它切出当前 batch 的静态 Tensor 视图，不是独立副本；下一轮回放可能覆盖同一底层 storage。</span></article>
+      </div>
+      <details class="source-details"><summary>为什么 / 如果省略 / 源码锚点</summary><div class="source-details__body">
+        <div class="callouts"><div class="callout" data-kind="fail"><b>不能在 capture 中首次分配</b><p>静态 graph 要绑定稳定地址；源码在 capture 期间对未初始化输出做断言，而不是临时创建 Tensor。</p></div><div class="callout" data-kind="guard"><b>快路失败是正常 fallback</b><p>未命中 graph 或任何 guard 为 false 都回到普通 scatter/accept/commit；token、长度与下一 anchor 合同不变。</p></div></div>
+        <div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_verify.py:453–655</code><span><code>DsparkVerifyEpilogue</code> 的输出分配、capture hook、<code>begin_step()</code> 输入 gates、graph 输出与 <code>read_accept()</code>。</span></div>
+        <div class="source-anchor"><code>python/sglang/srt/model_executor/runner/decode_cuda_graph_runner.py:920–989, 1072–1288</code><span>capture tail hook、每轮 static buffer 装载、graph key、<code>execute() → backend.replay()</code> 与输出视图边界。</span></div>
+        <div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:570–659</code><span>Target launch 前传入 <code>inject_gate</code>，回放后计算 <code>folded_accept/folded_commit</code> 并选择是否读取结果。</span></div>
+      </div></details>
+    </section>
+    <nav class="pager" aria-label="相邻章节"><a data-nav href="dspark-folded-fast-path.html">← 08 · 折叠快路</a><a data-nav href="dspark-complete-execution-flow.html">回到 00 · 完整执行地图 ↺</a></nav>
+    <footer class="site-footer">专题边界 · 以上是当前源码的静态 buffer 生命周期；未在本机实际执行 CUDA Graph capture/replay。</footer>
+  </main>
+</body>
+</html>

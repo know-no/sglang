@@ -1,0 +1,204 @@
+site:
+  title: 投机解码源码专题
+  short_title: 投机解码专题
+  subtitle: Draft proposal → Target verify → accept → KV commit
+  snapshot: f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes
+  evidence_notice: 保留原投机解码资料与核对日期。页面重建与链接检查不增加 GPU 或端到端验证证据。
+sections:
+- id: speculative
+  number: '01'
+  title: Speculative Decoding 全家族
+  directory: .
+  domain: speculative
+  purpose: 先建立 draft/target/verify/accept 共同坐标，再分别追踪 EAGLE、DFlash、DSpark 和其他算法。
+  role: 解释草稿提案怎样进入 target verify，以及接受结果如何改变输出与两侧 KV frontier。
+  study_outcome: 能独立追踪 EAGLE、DFlash、DSpark，并指出它们真正共享和不共享的合同。
+  visual_overview:
+    lead: 先用共同 proposal → target verify → accept → KV finalize 主线固定四个长度与两个 frontier；再看它如何改写普通
+      Scheduler / ModelRunner / Attention，最后把共享 worker 合同与算法专属组件分层。
+    lenses:
+    - id: flow
+      kicker: Proposal-to-commit flow
+      short_title: 投机解码总流程
+      title: 候选在哪里提出、由谁验证、何时接受，两侧 KV frontier 怎样前进
+      question: Draft 的 proposal、Target 的 verified、accept 的 emitted 和 KV committed
+        为什么必须分开？
+      kind: code
+      kind_label: 流程大图
+      caption: Draft 只提出候选；Target verify 与 accept 决定可输出 token。EAGLE、DFlash、DSpark
+        的 Draft 修复不同，NGram / Frozen-KV 等边界也不能继承双 KV 假设。
+      route_ids:
+      - spec-common-contract
+      - eagle-tree
+      - dflash-block
+      - dspark-bootstrap-proposal
+      - dspark-confidence-layout
+      - dspark-verify-accept-kv
+      - dspark-folded-overlap
+      - spec-boundary-matrix
+      mermaid: "flowchart LR\n  INIT[Scheduler init<br/>target TpModelWorker] -->\
+        \ FACT[SpeculativeAlgorithm.create_worker]\n  FACT --> COMP[composite model_worker<br/>target\
+        \ + draft]\n  COMP --> PF[Target prefill<br/>hidden / bootstrap seed]\n  PF\
+        \ --> PREP[spec_prepare_for_decode<br/>reserve verify positions]\n  PREP -->\
+        \ PROP[Draft proposal<br/>EAGLE tree / DFlash block / DSpark block]\n  PROP\
+        \ --> LAYOUT[verify input / layout<br/>mask / positions / ragged tier]\n \
+        \ LAYOUT --> VERIFY[Target TARGET_VERIFY<br/>logits + hidden]\n  VERIFY -->\
+        \ ACCEPT[accept / finalize<br/>accepted path + bonus]\n  ACCEPT --> REPAIR[算法专属修复<br/>draft_extend\
+        \ / hidden → Draft KV]\n  ACCEPT --> RET[GenerationBatchResult<br/>tokens\
+        \ / accept_lens / new_seq_lens]\n  REPAIR --> RET\n  RET --> CPU[_resolve_spec_v2_tokens<br/>padded\
+        \ → per-Req lists]\n  CPU --> COMMIT[Req.output_ids / kv_committed_len<br/>reclaim\
+        \ rejected tail]\n  REPAIR -->|next_draft_input / anchor| PROP\n  COMMIT -->|next\
+        \ ScheduleBatch| PREP"
+    - id: interactions
+      kicker: Runtime injection points
+      short_title: 跨子系统交互
+      title: Spec 在 Scheduler、runner、Attention/KV、分布式与 overlap 哪里改写普通 decode
+      question: composite worker 取得哪些职责，又必须把哪些状态交还 Scheduler 与 BatchResultProcessor？
+      kind: component
+      kind_label: 组件交互图
+      caption: Spec 通过替换 model_worker、准备 verify layout、调用 Target ModelRunner、维护双 frontier
+        并返回 accept_lens 改写 decode；Req 生命周期与最终输出 commit 仍回到 Scheduler 主线。
+      route_ids:
+      - spec-common-contract
+      - eagle-tree
+      - dflash-block
+      - dspark-confidence-layout
+      - dspark-verify-accept-kv
+      - dspark-folded-overlap
+      - spec-boundary-matrix
+      mermaid: "flowchart TB\n  SCHED[Scheduler<br/>Req / ScheduleBatch / result queue]\
+        \ -->|model_worker replaced| COMP[Spec composite worker]\n  SCHED -->|spec_prepare\
+        \ / reserve / spec_info| KV[mapping + Target-Draft KV frontiers]\n  DRAFT[Draft\
+        \ model / CPU NGram] -->|tokens / hidden / confidence| COMP\n  COMP -->|TARGET_VERIFY\
+        \ ForwardBatch| TARGET[Target ModelRunner]\n  TARGET --> ATTN[Attention backend<br/>custom\
+        \ mask / ragged metadata]\n  ATTN --> KV\n  GRAM[Grammar + Sampler] -->|mask\
+        \ / adjustment / fold guard| COMP\n  DIST[TP / DP / PP / PD] -->|rank consistency\
+        \ / idle participation / tier sync| COMP\n  OVER[overlap streams + FutureMap]\
+        \ <-->|new_seq_lens / confidence relay| COMP\n  COMP -->|GenerationBatchResult\
+        \ + accept_lens| RESULT[BatchResultProcessor]\n  RESULT -->|Req commit / stream\
+        \ output| SCHED\n  OBS[metrics / traces] -. accept length / timing / boundary\
+        \ evidence .-> COMP"
+    - id: hierarchy
+      kicker: Shared contract vs algorithms
+      short_title: 架构层级 / 所有权
+      title: 真正共享的是哪一层合同，差异又从哪一个 concrete worker 开始
+      question: Algorithm registry、BaseSpecWorker、SpecInput、具体 worker、执行 substrate
+        与 KV state 分别拥有什么？
+      kind: architecture
+      kind_label: 架构层级图
+      caption: Scheduler 持有 composite model_worker；共同层只约束 SpecInput、verify layout、accept_lens
+        与 next_draft_input。proposal 几何、Draft 修复和 KV 语义从具体算法 worker 开始分叉。
+      route_ids:
+      - spec-common-contract
+      - eagle-tree
+      - dflash-block
+      - dspark-bootstrap-proposal
+      - dspark-confidence-layout
+      - dspark-verify-accept-kv
+      - dspark-folded-overlap
+      - spec-boundary-matrix
+      mermaid: "flowchart TB\n  FACT[L0 算法选择<br/>SpeculativeAlgorithm + create_worker]\
+        \ --> ROOT[L1 Scheduler.model_worker<br/>BaseSpecWorker composite owner]\n\
+        \  SCHED[Scheduler<br/>Req / ScheduleBatch / KV lifecycle] --> ROOT\n  ROOT\
+        \ --> CONTRACT[L2 共同合同<br/>SpecInput / verify layout / accept_lens / next_draft_input]\n\
+        \  CONTRACT --> E[L3 EAGLE / EAGLE3<br/>tree / retrieve / draft_extend]\n\
+        \  CONTRACT --> D[L3 DFlash<br/>fixed block / target hidden injection]\n \
+        \ CONTRACT --> S[L3 DSpark<br/>proposer / planner / verifier / injector]\n\
+        \  CONTRACT --> O[L3 Frozen / Standalone / NGram / Custom]\n  E --> EXEC[L4\
+        \ 执行 substrate<br/>target-draft ModelRunner / attention backend]\n  D -->\
+        \ EXEC\n  S --> EXEC\n  O --> EXEC\n  EXEC --> STATE[L5 状态与内存<br/>req_to_token\
+        \ / Target-Draft KV / masks / relay]\n  STATE --> RETURN[L6 返回与提交<br/>GenerationBatchResult\
+        \ → BatchResultProcessor]\n  RETURN --> SCHED"
+    evidence:
+    - path: python/sglang/srt/speculative/spec_info.py
+      symbol: SpeculativeAlgorithm / create_worker(...)
+      note: 算法注册、能力 guard 与 concrete worker 工厂。
+    - path: python/sglang/srt/speculative/base_spec_worker.py
+      symbol: BaseSpecWorker
+      note: Scheduler 持有的共同 composite worker 边界。
+    - path: python/sglang/srt/speculative/eagle_worker_common.py
+      symbol: build_eagle_verify_input(...) / run_eagle_verify(...)
+      note: EAGLE verify 输入与 Target verify 的共享实现入口。
+    - path: python/sglang/srt/speculative/dspark_components/dspark_verify.py
+      symbol: TargetVerifyExecutor / accept_and_finalize(...)
+      note: DSpark 的 Target verify、接受和 finalize 具体 owner。
+  chapters:
+  - id: spec-common-contract
+    related_notes:
+    - path: notes/speculative/sglang-draft-target-verify-lifecycle.md
+      title: Draft → Target Verify 完整调用链
+    path: common-contract.html
+    title: Draft 只提案：共同 worker 合同与四个长度
+    summary: 区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker
+      替换为 spec worker。
+    tier: core
+    lesson_kind: mechanism
+  - id: eagle-tree
+    related_notes:
+    - path: notes/speculative/sglang-draft-target-verify-lifecycle.md
+      title: EAGLE 协调器入口与执行边界
+      anchor: 73-eagle
+    path: eagle-tree.html
+    title: EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask
+    summary: 展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和
+      Draft KV 修复。
+    tier: core
+    lesson_kind: mechanism
+  - id: dflash-block
+    related_notes:
+    - path: notes/speculative/sglang-draft-target-verify-lifecycle.md
+      title: dFlash 协调器入口与执行边界
+      anchor: 72-dflash
+    path: dflash-block.html
+    title: DFlash fixed-block draft、hidden injection 与 compact cache
+    summary: 追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。
+    tier: core
+    lesson_kind: mechanism
+  - id: dspark-bootstrap-proposal
+    related_notes:
+    - path: notes/speculative/sglang-dspark-single-round-decode.md
+      title: dSpark 从 bootstrap 到下一轮 anchor
+    path: dspark-bootstrap-proposal.html
+    title: DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer
+    summary: 解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。
+    tier: core
+    lesson_kind: mechanism
+  - id: dspark-confidence-layout
+    related_notes:
+    - path: notes/speculative/sglang-dspark-single-round-decode.md
+      title: dSpark confidence、cap 与实际 verify layout
+    path: dspark-confidence-layout.html
+    title: DSpark confidence、history、per-step budget 与 ragged layout
+    summary: 用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。
+    tier: core
+    lesson_kind: mechanism
+  - id: dspark-verify-accept-kv
+    related_notes:
+    - path: notes/speculative/sglang-dspark-verify-visual-guide.md
+      title: Verify 固定案例与坐标变换图解
+    path: dspark-verify-accept-kv.html
+    title: DSpark Target verify、accept/finalize 与 KV commit/reclaim
+    summary: 追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier
+      与 reject 回收。
+    tier: core
+    lesson_kind: mechanism
+  - id: dspark-folded-overlap
+    related_notes:
+    - path: notes/speculative/sglang-dspark-single-round-decode.md
+      title: dSpark accept、commit 与 overlap 顺序
+    path: dspark-folded-overlap.html
+    title: DSpark folded fast path、capture/replay 与 overlap
+    summary: 展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact
+      tier 一致性。
+    tier: core
+    lesson_kind: mechanism
+  - id: spec-boundary-matrix
+    related_notes:
+    - path: notes/speculative/sglang-dflash-dspark-startup-args-and-migration.md
+      title: 启动参数、路径选择与迁移边界
+    path: boundary-matrix.html
+    title: Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec
+    summary: 用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD
+      边界。
+    tier: extended
+    lesson_kind: mechanism

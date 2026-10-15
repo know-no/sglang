@@ -1,0 +1,265 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Draft proposal → Target verify → accept → KV commit">
+  <link rel="icon" href="data:,">
+  <title>dSpark V2 · 拒绝采样修正实验室 · 投机解码专题</title>
+  <link rel="stylesheet" href="../course/assets/css/specforge-course.css">
+  <link rel="stylesheet" href="../course/assets/css/labs.css">
+  <link rel="stylesheet" href="../course/assets/css/print.css">
+  
+  <!-- Generated from notes/speculative/visualizations/sources/dspark-sampling-rejection-lab.html.jinja by notes/speculative/course/build.py; source-sha256=26b037335d60f637c75fc7e8aec738037618276133785796f8a5ef2ef1102881. -->
+  <link rel="stylesheet" href="assets/dspark-visual-system.css">
+<style>@scope (.dspark-lab) {
+
+    .dist-lab{min-width:980px;display:grid;grid-template-columns:repeat(3,minmax(285px,1fr));gap:16px}.dist-card{--tone:var(--data);padding:15px;border:1px solid var(--tone);background:var(--surface)}.dist-card[data-kind="main"]{--tone:var(--main)}.dist-card[data-kind="guard"]{--tone:var(--guard);border-style:dashed}.dist-card h3{margin:0 0 12px;color:var(--tone);font:800 13px/1.35 var(--mono)}.mini-bar{display:grid;grid-template-columns:24px 1fr 52px;gap:8px;align-items:center;margin:8px 0;font:12px/1.2 var(--mono)}.mini-bar i{height:18px;border:1px solid var(--line);background:linear-gradient(90deg,var(--tone) var(--p),transparent var(--p));font-style:normal}.math-chain{display:grid;grid-template-columns:repeat(5,minmax(170px,1fr));gap:25px;min-width:1020px}.math-node{--tone:var(--data);position:relative;min-height:150px;padding:14px;border:1px solid var(--tone);background:var(--surface)}.math-node[data-kind="main"]{--tone:var(--main)}.math-node[data-kind="guard"]{--tone:var(--guard);border-style:dashed}.math-node[data-kind="fail"]{--tone:var(--fail);border-style:double}.math-node:not(:last-child)::after{content:"→";position:absolute;right:-20px;top:44%;color:var(--main);font:900 18px/1 var(--mono)}.math-node b{display:block;color:var(--tone);font:800 12px/1.3 var(--mono)}.math-node code,.math-node span{display:block;margin-top:8px;color:var(--muted);font-size:12px}.cdf{position:relative;height:76px;margin-top:14px;border:1px solid var(--line);display:grid;grid-template-columns:5fr 1fr}.cdf__b{display:grid;place-items:center;background:rgba(98,245,154,.12);color:var(--main);border-right:2px solid var(--guard)}.cdf__c{display:grid;place-items:center;background:rgba(93,159,255,.15);color:var(--data)}.cdf__marker{position:absolute;left:90%;top:-8px;bottom:-8px;width:2px;background:var(--fail);transition:left .2s}.cdf__marker::before{content:"u";position:absolute;top:-18px;left:-4px;color:var(--fail);font:800 11px/1 var(--mono)}.sample-control{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-top:16px;padding:14px;border:1px dashed var(--guard);background:rgba(255,208,96,.04)}.sample-control input{width:100%;accent-color:var(--guard)}.sample-result{min-width:180px;color:var(--main);font:800 13px/1.35 var(--mono)}.compare-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.compare-card{padding:14px;border:1px solid var(--line);background:var(--surface)}.compare-card b{display:block;color:var(--data)}.compare-card span{display:block;margin-top:7px;color:var(--muted);font-size:12px}@media(max-width:760px){.compare-grid{grid-template-columns:1fr}.sample-control{grid-template-columns:1fr}}
+  
+}</style>
+<link rel="stylesheet" href="assets/dspark-source-studio.css">
+<script src="assets/dspark-site.js" defer></script>
+<script src="assets/dspark-learning-layer.js" defer></script>
+<script src="assets/dspark-source-studio.js" defer></script>
+<script src="assets/dspark-stepper.js" defer></script>
+  <link rel="stylesheet" href="assets/dspark-course-shell.css">
+
+</head>
+<body class="sf-course-page sf-lab-page" data-root-url="sglang-course-v2/index.html"
+      data-nav-open="false" data-nav-pinned="false"
+      data-page-id="lab-dspark-sampling-rejection-lab" data-chapter-id="lab-dspark-sampling-rejection-lab"
+      data-section-id="lab"
+      data-page="06A"
+      style="--page-accent: var(--domain-speculative, var(--domain-entry))">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+
+  <div class="sf-shell">
+    <div class="sf-navigation">
+      <nav class="sf-rail" aria-label="课程工具">
+        <button class="sf-rail__button sf-rail__menu" type="button" data-nav-toggle aria-controls="course-navigation" aria-expanded="false">
+          <span aria-hidden="true">☰</span><span class="sr-only">打开课程目录</span>
+        </button>
+        <a class="sf-rail__brand" href="sglang-course-v2/index.html" aria-label="回到 SGLang 课程地图">S</a>
+        <div class="sf-rail__spacer"></div>
+        <button class="sf-rail__button" type="button" data-search-open aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span class="sr-only">搜索课程</span></button>
+        <button class="sf-rail__button" type="button" data-theme-toggle><span aria-hidden="true">◐</span><span class="sr-only" data-theme-label>深色</span></button>
+      </nav>
+
+      <aside class="sf-drawer" id="course-navigation" aria-label="全部课程目录">
+        <header class="sf-drawer__head">
+          <div><p class="sf-drawer__eyebrow">SGLang source course</p><a href="sglang-course-v2/index.html">投机解码专题</a></div>
+          <button class="sf-icon-button" type="button" data-nav-close aria-label="关闭课程目录">×</button>
+        </header>
+        <div class="sf-drawer__tools">
+          <button class="sf-button sf-button--quiet" type="button" data-search-open><span aria-hidden="true">⌕</span> 搜索</button>
+          <button class="sf-button sf-button--quiet" type="button" data-theme-toggle><span aria-hidden="true">◐</span> <span data-theme-label>深色</span></button>
+          <button class="sf-button sf-button--quiet sf-drawer__pin" type="button" data-nav-pin aria-pressed="false"><span aria-hidden="true">⌖</span> <span data-nav-pin-label>固定目录</span></button>
+        </div>
+        <p class="sf-drawer__context"><b>dSpark 交互实验</b><span>dSpark V2 · 拒绝采样修正实验室</span></p>
+        <nav class="sf-drawer__tree" aria-label="全部章节"><div class="sf-course-tree">
+    
+      <details class="sf-course-tree__section">
+        <summary><span class="sf-course-tree__number">01</span><span>Speculative Decoding 全家族</span></summary>
+        <ul class="sf-course-tree__children sf-course-tree__children--section">
+          <li class="sf-course-tree__overview"><a href="sglang-course-v2/index.html" data-course-link data-chapter-id="speculative"
+     data-search-title="Speculative Decoding 全家族" data-search-section="Speculative Decoding 全家族"
+     
+     
+     >Speculative Decoding 全家族</a></li>
+          <li><a href="sglang-course-v2/common-contract.html" data-course-link data-chapter-id="spec-common-contract"
+     data-search-title="Draft 只提案：共同 worker 合同与四个长度" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。"
+     
+     >Draft 只提案：共同 worker 合同与四个长度</a></li><li><a href="sglang-course-v2/eagle-tree.html" data-course-link data-chapter-id="eagle-tree"
+     data-search-title="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。"
+     
+     >EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a></li><li><a href="sglang-course-v2/dflash-block.html" data-course-link data-chapter-id="dflash-block"
+     data-search-title="DFlash fixed-block draft、hidden injection 与 compact cache" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。"
+     
+     >DFlash fixed-block draft、hidden injection 与 compact cache</a></li><li><a href="sglang-course-v2/dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"
+     data-search-title="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。"
+     
+     >DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a></li><li><a href="sglang-course-v2/dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"
+     data-search-title="DSpark confidence、history、per-step budget 与 ragged layout" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。"
+     
+     >DSpark confidence、history、per-step budget 与 ragged layout</a></li><li><a href="sglang-course-v2/dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"
+     data-search-title="DSpark Target verify、accept/finalize 与 KV commit/reclaim" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。"
+     
+     >DSpark Target verify、accept/finalize 与 KV commit/reclaim</a></li><li><a href="sglang-course-v2/dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"
+     data-search-title="DSpark folded fast path、capture/replay 与 overlap" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。"
+     
+     >DSpark folded fast path、capture/replay 与 overlap</a></li><li><a href="sglang-course-v2/boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"
+     data-search-title="Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。"
+     
+     >Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a></li>
+          
+        </ul>
+      </details>
+    
+  </div></nav>
+      </aside>
+    </div>
+
+    <button class="sf-nav-backdrop" type="button" data-nav-backdrop aria-label="关闭课程目录"></button>
+
+    <div class="sf-main-frame">
+      <main class="sf-main sf-main--wide" id="main-content" tabindex="-1">
+        <div class="sf-page-grid">
+          <div class="sf-content-column">
+            
+              <nav aria-label="面包屑"><ol class="sf-breadcrumbs">
+                <li><a href="sglang-course-v2/index.html">投机解码专题</a></li><li><a href="index.html">投机实验路线</a></li><li><span aria-current="page">dSpark V2 · 拒绝采样修正实验室</span></li>
+              </ol></nav>
+            
+
+            
+  <nav class="sf-hero__actions" aria-label="实验源文件"><a href="sources/dspark-sampling-rejection-lab.html.jinja" download>下载实验 HTML 源文件</a></nav>
+
+
+            <nav class="sf-hero__actions" aria-label="关联阅读入口" data-repository-companion><a href="../../index.html">SGLang 全景图</a></nav>
+            
+
+            
+
+            
+            
+
+            
+  <div class="dspark-lab" data-toc-source>
+<!-- lab-content:start -->
+  <nav data-site-nav aria-label="dSpark 学习站导航"></nav>
+  <div class="page page--wide" data-dspark-main>
+    <header class="hero">
+      <span class="topic-badge">06 的专题页 · 接受概率与 residual</span>
+      <p class="eyebrow">06A · 拒绝采样修正实验室</p>
+      <h1>拒绝之后不是取 argmax；而是从残差分布随机抽一个 token</h1>
+      <p class="lead">下面把一次 draft=A 的拒绝拆成可手算的五步。多个 token 有正 residual 概率，只表示它们都可能被抽中；一次调用仍只返回一个 bonus。</p>
+      <div class="evidence-strip"><span><strong>教学分布</strong> vocab={A,B,C,D}</span><span><strong>源码语义</strong> q 是当时真实 proposal 分布；p 是 Target 参数化后的分布</span><span><strong>边界</strong> 数值例用于解释算法，不是运行时 Tensor dump</span></div>
+      <div class="route-switch" aria-label="选择讲解路线"><button type="button" data-route-choice="static-greedy">STATIC · 贪心</button><button type="button" data-route-choice="compact-sampling">COMPACT · 随机采样</button><button type="button" data-route-choice="folded-greedy">FOLDED · 贪心</button></div>
+      <div data-semantic-legend></div>
+    </header>
+    <section class="handoff" aria-label="本页边界">
+      <div class="handoff__item"><b>输入</b><span><code>q=[.50,.20,.20,.10]</code>、<code>p=[.20,.45,.25,.10]</code>、draft=A</span></div>
+      <div class="handoff__item"><b>先判断</b><span>接受率 <code>min(1,p(A)/q(A))=.4</code>；本例 <code>u_accept=.70</code>，因此拒绝</span></div>
+      <div class="handoff__item"><b>再修正</b><span><code>normalize(max(p-q,0))=[0,.8333,.1667,0]</code></span></div>
+      <div class="handoff__item"><b>输出</b><span>默认 residual 随机数 <code>u=.90</code> 落到 C；Target argmax 则是 B</span></div>
+    </section>
+
+    <section class="section" id="rejection-lab">
+      <div class="section__head"><p class="section__kicker">主视图 · 五步演算</p><h2>draft 多给 A 的概率被拒绝减掉，Target 多给 B/C 的概率由 residual 补回</h2></div>
+      <div class="visual stepper" data-stepper data-steps="5">
+        <div class="visual__bar"><strong>q / p → 接受率 → 拒绝 → residual → 随机 bonus</strong><button class="zoom-button" type="button" data-zoom-target="#sampling-chain">放大主图</button></div>
+        <div class="stepper__toolbar"><div class="stepper__buttons"><button type="button" data-step-action="prev">上一步</button><button type="button" data-step-action="next">下一步</button><button type="button" data-step-action="play">播放</button><button type="button" data-step-action="reset">重置</button></div><div class="stepper__progress"><span data-step-progress></span></div><div class="stepper__status" data-step-status></div></div>
+        <div class="visual__body canvas-scroll"><div class="math-chain" id="sampling-chain" aria-label="拒绝采样修正五步图">
+          <article class="math-node" data-step-node="0"><b>1 · 重建真实分布</b><code>q=softmax(corrected_logits/T_D)</code><code>p=Target(T,top_k,top_p)</code><span>没有真实 q，就无法精确修正。</span></article>
+          <article class="math-node" data-kind="guard" data-step-node="1"><b>2 · A 的接受率</b><code>min(1,.20/.50)=.40</code><span><code>u_accept=.70 &gt; .40</code>，本例拒绝 A。</span></article>
+          <article class="math-node" data-kind="fail" data-step-node="2"><b>3 · 减去 Draft 多给的质量</b><code>max(p-q,0)</code><code>=[0,.25,.05,0]</code><span>A 的多余概率不会再进入 bonus。</span></article>
+          <article class="math-node" data-kind="data" data-step-node="3"><b>4 · 归一化 residual</b><code>[0,.8333,.1667,0]</code><span>B、C 均有正概率；总和为 1。</span></article>
+          <article class="math-node" data-kind="main" data-step-node="4"><b>5 · 随机返回一个 bonus</b><code>u=.90 → C</code><span>p 的 argmax 是 B，但本次 residual draw 是 C。</span></article>
+        </div></div>
+        <div class="visual__bar"><strong>三组概率条 · 长度直接对应概率质量</strong></div>
+        <div class="visual__body canvas-scroll"><div class="dist-lab">
+          <article class="dist-card" data-step-node="0"><h3>Draft proposal q</h3><div class="mini-bar"><b>A</b><i style="--p:50%"></i><span>.50</span></div><div class="mini-bar"><b>B</b><i style="--p:20%"></i><span>.20</span></div><div class="mini-bar"><b>C</b><i style="--p:20%"></i><span>.20</span></div><div class="mini-bar"><b>D</b><i style="--p:10%"></i><span>.10</span></div></article>
+          <article class="dist-card" data-kind="main" data-step-node="0"><h3>Target p · argmax=B</h3><div class="mini-bar"><b>A</b><i style="--p:20%"></i><span>.20</span></div><div class="mini-bar"><b>B</b><i style="--p:45%"></i><span>.45</span></div><div class="mini-bar"><b>C</b><i style="--p:25%"></i><span>.25</span></div><div class="mini-bar"><b>D</b><i style="--p:10%"></i><span>.10</span></div></article>
+          <article class="dist-card" data-kind="guard" data-step-node="3"><h3>拒绝后的 residual</h3><div class="mini-bar"><b>A</b><i style="--p:0%"></i><span>0</span></div><div class="mini-bar"><b>B</b><i style="--p:83.33%"></i><span>.8333</span></div><div class="mini-bar"><b>C</b><i style="--p:16.67%"></i><span>.1667</span></div><div class="mini-bar"><b>D</b><i style="--p:0%"></i><span>0</span></div></article>
+        </div></div>
+        <div class="visual__bar"><strong>Residual CDF · 拖动随机数观察只返回一个 token</strong></div>
+        <div class="visual__body" data-step-node="4">
+          <div class="cdf" aria-label="Residual 累积分布：B 占 0 到 0.8333，C 占 0.8333 到 1"><div class="cdf__b">B · [0,.8333)</div><div class="cdf__c">C · [.8333,1]</div><span class="cdf__marker" data-cdf-marker></span></div>
+          <label class="sample-control"><span><b>residual 随机数 u</b><br><input type="range" min="0" max="1" value="0.90" step="0.01" data-residual-u></span><output class="sample-result" data-sample-result>u=.90 → bonus=C</output></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="boundaries">
+      <div class="section__head"><p class="section__kicker">辅助视图 · 三种语义</p><h2>greedy、sampling、mixed 不要互相套用结论</h2></div>
+      <div class="compare-grid">
+        <article class="compare-card" data-routes="static-greedy folded-greedy"><b>greedy</b><span>Draft 与 Target 都是点质量；首个 mismatch 后，bonus 就是该边界的 Target argmax，不需要概率修正。</span></article>
+        <article class="compare-card" data-routes="compact-sampling"><b>sampling</b><span>逐步按 p/q 接受；首次拒绝时从 residual 随机选一个。多个 token 可选不等于同时接受多个。</span></article>
+        <article class="compare-card"><b>mixed batch</b><span>同批先得到 greedy 与 sampling 两套结果，再由 <code>greedy_mask[req]</code> 逐请求选用。</span></article>
+      </div>
+      <details class="source-details"><summary>为什么 / 易错边界 / 源码锚点</summary><div class="source-details__body">
+        <div class="callouts"><div class="callout" data-kind="fail"><b>为什么拒绝后不能继续用后置 Target 行</b><p>后置行的 causal context 已包含被拒绝的 draft token；它不再对应最后已接受前缀。</p></div><div class="callout" data-kind="guard"><b>全接受时的 bonus</b><p>若所有 draft 都通过，最后一个 token 直接从 Target p 的终点分布随机采样；仍不是强制 argmax。</p></div></div>
+        <div class="source-anchor"><code>python/sglang/kernels/ops/speculative/dspark/dspark_accept.py:80–174</code><span>构造 Target p、调用 chain rejection sampling，并按接受索引取得随机 predicts/bonus。</span></div>
+        <div class="source-anchor"><code>python/sglang/kernels/ops/speculative/reject_sampling.py:48–160</code><span><code>u*q(d)&lt;p(d)</code> 的接受测试与首次拒绝后的归一化 <code>max(p-q,0)</code> 采样。</span></div>
+        <div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_verify.py:679–722</code><span>由 <code>corrected_logits/temperature</code> 重建 proposal q，并处理 sampling/mixed 分派。</span></div>
+      </div></details>
+    </section>
+    <nav class="pager" aria-label="相邻章节"><a data-nav href="dspark-accept-finalize.html">← 06 · 接受 / 收尾</a><a data-nav href="dspark-target-hidden-kv-explainer.html">07 · 隐藏状态 / Draft KV / 滚动锚点 →</a></nav>
+    <footer class="site-footer">专题边界 · 数值例用于解释当前源码实现的精确分布修正；未执行 GPU kernel 运行时采样。</footer>
+  </div>
+  <script>
+    addEventListener("DOMContentLoaded",()=>{const input=document.querySelector("[data-residual-u]");const marker=document.querySelector("[data-cdf-marker]");const output=document.querySelector("[data-sample-result]");if(!input||!marker||!output)return;const render=()=>{const u=Number(input.value);const token=u<.8333?"B":"C";marker.style.left=`${u*100}%`;output.textContent=`u=${u.toFixed(2)} → bonus=${token}`};input.addEventListener("input",render);render()});
+  </script>
+<!-- lab-content:end -->
+  </div>
+
+
+            
+
+            <footer class="sf-footer"><span>投机解码源码专题</span><span>纯静态 · 本地依赖 · 可离线分享</span></footer>
+            <p class="print-only">投机解码源码专题 · dSpark V2 · 拒绝采样修正实验室 · None</p>
+          </div>
+
+          <aside class="sf-page-toc" aria-label="本页目录">
+            <p class="sf-page-toc__title">On this page</p>
+            <ol data-page-toc-list></ol>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="search-dialog" id="course-search-dialog" data-search-dialog aria-labelledby="course-search-title">
+    <div class="search-dialog__head"><strong id="course-search-title">搜索课程</strong><button class="sf-icon-button" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+    <form class="search-dialog__form" data-search-form role="search"><label class="sr-only" for="course-search-input">搜索对象、方法、状态或章节</label><input id="course-search-input" type="search" data-search-input autocomplete="off" placeholder="例如：running_batch、ForwardBatch、TARGET_VERIFY"><button class="sf-button" type="submit">搜索</button></form>
+    <p class="search-dialog__status" data-search-status aria-live="polite"></p><ol class="search-results" data-search-results></ol>
+  </dialog>
+
+  <dialog class="diagram-viewer" id="diagram-viewer-dialog" data-diagram-dialog aria-labelledby="diagram-viewer-title">
+    <div class="diagram-viewer__head"><div><strong id="diagram-viewer-title" data-diagram-title>图解沉浸阅读</strong> <span class="diagram-viewer__zoom" data-diagram-zoom>100%</span></div><div class="diagram-viewer__tools"><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-in" aria-label="放大">＋</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-out" aria-label="缩小">−</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="fit">看全图</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="reset">100%</button><button class="sf-button" type="button" data-diagram-action="close">关闭 ×</button></div></div>
+    <div class="diagram-viewer__viewport" data-diagram-viewport><div class="diagram-viewer__canvas mermaid" data-diagram-canvas></div></div>
+  </dialog>
+
+  <script src="sglang-course-v2/assets/data/search-index.js" defer></script>
+  <script src="../course/assets/vendor/mermaid.min.js" defer></script>
+  <script src="../course/assets/js/site-shell.js" defer></script>
+  <script src="../course/assets/js/toc-search.js" defer></script>
+  <script src="../course/assets/js/diagram-viewer.js" defer></script>
+  <script src="../course/assets/js/source-microscope.js" defer></script>
+  <script src="../course/assets/js/labs.js" defer></script>
+  <script src="../course/assets/js/lesson-components.js" defer></script>
+  
+  
+</body>
+</html>

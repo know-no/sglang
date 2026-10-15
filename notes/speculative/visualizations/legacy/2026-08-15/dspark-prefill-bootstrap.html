@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>02 · dSpark Prefill Bootstrap</title>
+  <style>
+    :root{color-scheme:dark;--bg:#02050b;--bg2:#06101d;--panel:#07101f;--panel2:#0a1528;--ink:#eff7ff;--muted:#9aabc4;--line:#263957;--main:#62f59a;--data:#5d9fff;--guard:#ffd060;--fail:#ff5e7f;--cuda:#c36cff;--off:#71809a;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;--sans:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    *{box-sizing:border-box;min-width:0}html,body{margin:0;max-width:100%;overflow-x:hidden;background:var(--bg);color:var(--ink)}html{scroll-behavior:smooth}body{font-family:var(--sans);line-height:1.55;background:radial-gradient(circle at 8% 0,rgba(72,184,255,.15),transparent 26rem),radial-gradient(circle at 92% 4%,rgba(196,119,255,.13),transparent 28rem),linear-gradient(rgba(86,133,173,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(86,133,173,.045) 1px,transparent 1px),var(--bg);background-size:auto,auto,26px 26px,26px 26px,auto}a{color:inherit;text-underline-offset:3px}a:focus-visible{outline:2px solid var(--data);outline-offset:3px}code,pre,.mono{font-family:var(--mono);overflow-wrap:anywhere;word-break:break-word}.shell{width:min(1480px,100%);margin:auto;padding:18px clamp(10px,2vw,28px) 48px}.crumb{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 10px;color:var(--muted);font:12px/1.4 var(--mono)}.crumb a{color:var(--data)}
+    .hero{padding:clamp(20px,3vw,38px);border:1px solid #315778;border-radius:22px;background:linear-gradient(135deg,rgba(8,25,42,.96),rgba(4,8,16,.98));box-shadow:0 0 45px rgba(72,184,255,.08),inset 0 0 55px rgba(196,119,255,.04)}.kicker{margin:0 0 8px;color:var(--main);font:700 12px/1.3 var(--mono);letter-spacing:.14em;text-transform:uppercase}.hero h1{margin:0;font-size:clamp(30px,5vw,60px);line-height:1.02;letter-spacing:-.045em}.grad{background:linear-gradient(90deg,var(--data),#d9f7ff 42%,var(--cuda));background-clip:text;-webkit-background-clip:text;color:transparent}.lead{max-width:1050px;margin:15px 0 0;color:#bfd1e1;font-size:clamp(14px,1.6vw,18px)}
+    .routes,.legend{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:17px}.route{padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#06101c;color:var(--muted);text-decoration:none;font:11px/1.3 var(--mono)}.route[aria-current=true]{border-color:var(--data);color:var(--ink);box-shadow:inset 0 -2px var(--data),0 0 16px rgba(72,184,255,.12)}.route-status{color:var(--guard);font:11px/1.4 var(--mono)}.tag{display:inline-flex;align-items:center;gap:6px;color:var(--tone);font:700 10px/1.2 var(--mono);letter-spacing:.08em}.tag:before{content:"";width:18px;border-top:3px solid var(--tone)}.tag.guard:before{border-top-style:dashed}.tag.fail:before{border-top-style:double}.tag.off:before{border-top-style:dotted}.main{--tone:var(--main)}.data{--tone:var(--data)}.guard{--tone:var(--guard)}.fail{--tone:var(--fail)}.cuda{--tone:var(--cuda)}.off{--tone:var(--off)}
+    .atlas{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:6px;margin:14px 0}.atlas a{min-height:58px;padding:8px;border:1px solid var(--line);background:#06101b;color:var(--muted);text-decoration:none;font-size:11px}.atlas b{display:block;color:var(--data);font:700 10px/1.2 var(--mono)}.atlas span{display:block;margin-top:4px}.atlas a[aria-current=page]{border-color:var(--main);color:var(--ink);box-shadow:inset 0 -2px var(--main)}
+    .section{margin-top:14px;padding:clamp(14px,2vw,22px);border:1px solid var(--line);border-radius:16px;background:linear-gradient(145deg,rgba(8,20,34,.96),rgba(4,10,18,.98))}.section h2{margin:0;font-size:clamp(20px,2.5vw,30px);line-height:1.18}.sub{margin:6px 0 0;color:var(--muted);font-size:13px}.contract{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:14px}.contract article,.fact,.state{padding:12px;border:1px solid var(--line);background:var(--panel)}.contract strong,.fact strong{display:block;color:var(--tone);font:700 10px/1.3 var(--mono);letter-spacing:.08em}.contract p,.fact p{margin:7px 0 0;color:#c0d1df;font-size:12px}.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px 10px;margin-top:15px}.node{position:relative;padding:12px;border:1px solid var(--line);border-left:4px solid var(--tone);background:var(--panel);overflow-wrap:anywhere}.node.guard{border-style:dashed;border-left-style:dashed}.node.off{border-style:dotted}.node:not(:last-child):after{content:"→";position:absolute;right:-14px;top:50%;color:var(--data);font:700 18px/1 var(--mono)}.node .tag{margin-bottom:7px}.fqcn{display:block;color:#eef8ff;font:700 11px/1.42 var(--mono)}.instance{display:block;margin-top:5px;color:var(--data);font:11px/1.4 var(--mono)}.action{display:block;margin-top:7px;color:#b7cadb;font-size:12px}.return{display:block;margin-top:7px;padding-top:7px;border-top:1px solid var(--line);color:var(--main);font:10px/1.45 var(--mono)}
+    .transition{display:grid;grid-template-columns:minmax(0,1fr) 58px minmax(0,1fr);gap:10px;align-items:stretch;margin-top:14px}.state label{display:block;color:var(--data);font:700 10px/1.3 var(--mono);letter-spacing:.1em}.state pre{margin:8px 0 0;white-space:pre-wrap;color:#eaf5ff;font-size:12px}.writes{display:grid;place-items:center;color:var(--main);font:700 24px/1 var(--mono)}.writes small{display:block;writing-mode:vertical-rl;color:var(--muted);font:9px/1 var(--mono)}.tokens{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.tok{padding:7px 9px;border:1px solid var(--line);background:#071423;font:700 12px/1 var(--mono)}.tok.input{color:var(--data);border-color:rgba(72,184,255,.55)}.tok.anchor{color:var(--main);border-color:rgba(69,245,154,.6)}.mini-note{margin-top:10px;padding:10px;border-left:3px solid var(--tone);background:rgba(255,255,255,.025);color:#c6d5e2;font-size:12px}
+    .facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:13px}.source-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:11px;margin-top:13px}.codebox{margin:0;padding:14px;border:1px solid var(--line);background:#02070d;color:#d8eaff;font:11px/1.6 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}.sources{display:grid;gap:8px}.source{padding:10px;border-left:3px solid var(--data);background:#06111e;color:#c7d7e5;font:11px/1.5 var(--mono);overflow-wrap:anywhere}.source b{display:block;color:var(--data)}.boundary{margin-top:14px;padding:12px;border:1px dashed var(--guard);color:#dfd0a4;background:rgba(255,200,90,.045);font-size:12px}.page-nav{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.page-nav a{padding:12px;border:1px solid var(--line);background:#06101b;text-decoration:none}.page-nav a:last-child{text-align:right}.page-nav small{display:block;color:var(--muted);font:10px/1.3 var(--mono)}.page-nav strong{display:block;margin-top:4px;color:var(--data);font-size:13px}
+    /* CUDA is device execution: purple plus dashed stroke; DATA remains blue plus solid stroke. */
+    .tag.cuda:before{border-top-style:dashed}.node.cuda{border-style:dashed;border-left-style:dashed}
+    @media(max-width:1120px){.atlas{grid-template-columns:repeat(3,minmax(0,1fr))}.flow{grid-template-columns:repeat(2,minmax(0,1fr))}.node:nth-child(2n):after{display:none}.contract{grid-template-columns:repeat(2,minmax(0,1fr))}.source-grid{grid-template-columns:1fr}}
+    @media(max-width:736px){.shell{padding:10px 9px 34px}.hero{border-radius:15px;padding:18px 14px}.atlas{grid-template-columns:repeat(3,minmax(0,1fr))}.atlas a{min-height:52px;padding:7px 6px}.flow,.contract,.facts{grid-template-columns:1fr}.node:after{content:"↓"!important;display:block!important;right:50%!important;top:auto!important;bottom:-17px!important}.node:last-child:after{display:none!important}.transition{grid-template-columns:1fr}.writes{min-height:32px;transform:rotate(90deg)}.writes small{display:none}.page-nav{grid-template-columns:1fr}.page-nav a:last-child{text-align:left}}
+    @media(max-width:420px){.atlas{grid-template-columns:repeat(2,minmax(0,1fr))}.hero h1{font-size:31px}.route{width:100%}.tag{font-size:9px}.section{padding:13px 10px}.page-nav{gap:7px}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  </style>
+</head>
+<body>
+<main class="shell">
+  <nav class="crumb" aria-label="面包屑"><a class="route-propagate" href="dspark-complete-execution-flow.html">dSpark V2 学习地图</a><span>/</span><span>02 Prefill bootstrap</span></nav>
+  <header class="hero">
+    <p class="kicker">02 · Owner page · Prefill / Extend only</p>
+    <h1><span class="grad">先让 Target 完成 Prefill</span><br>再把首个 bonus 交给 Draft</h1>
+    <p class="lead">这一页只追踪 <code>DSparkWorkerV2._forward_prefill()</code>：Target 用 <code>CaptureHiddenMode.FULL</code> 跑真实 prompt/extend，Target hidden 在边界处注入 Draft KV，Target 采出的 <code>X</code> 被封装成第一份跨轮 <code>DFlashDraftInputV2</code>。注入内部留给 07，不提前展开。</p>
+    <div class="routes" aria-label="执行路线">
+      <a class="route route-choice" data-route="static-greedy" href="?route=static-greedy">STATIC · greedy</a>
+      <a class="route route-choice" data-route="compact-sampling" href="?route=compact-sampling">COMPACT · sampling</a>
+      <a class="route route-choice" data-route="folded-greedy" href="?route=folded-greedy">Folded · greedy</a>
+      <span class="route-status" id="routeStatus">当前路线只影响后续 decode；Prefill bootstrap 三条路线共用。</span>
+    </div>
+    <div class="legend" aria-label="固定语义图例">
+      <span class="tag main">MAIN 主路径</span><span class="tag data">DATA 数据</span><span class="tag guard">GUARD 分支</span><span class="tag fail">FAIL 失败</span><span class="tag cuda">CUDA 设备执行</span><span class="tag off">OFF 本页不展开</span>
+    </div>
+  </header>
+
+  <nav class="atlas" aria-label="00 至 08 学习导航">
+    <a class="route-propagate" href="dspark-complete-execution-flow.html"><b>00</b><span>总览</span></a>
+    <a class="route-propagate" href="dspark-forward-isolation.html"><b>01</b><span>隔离</span></a>
+    <a class="route-propagate" href="dspark-prefill-bootstrap.html" aria-current="page"><b>02</b><span>Prefill</span></a>
+    <a class="route-propagate" href="dspark-draft-proposal.html"><b>03</b><span>Draft</span></a>
+    <a class="route-propagate" href="dspark-confidence-budget-layout.html"><b>04</b><span>Budget</span></a>
+    <a class="route-propagate" href="dspark-verify-step-through.html"><b>05</b><span>Verify</span></a>
+    <a class="route-propagate" href="dspark-accept-finalize.html"><b>06</b><span>Accept</span></a>
+    <a class="route-propagate" href="dspark-target-hidden-kv-explainer.html"><b>07</b><span>Hidden/KV</span></a>
+    <a class="route-propagate" href="dspark-folded-fast-path.html"><b>08</b><span>Folded</span></a>
+  </nav>
+
+  <section class="section">
+    <p class="kicker">method contract</p>
+    <h2>输入、写入、返回、下一位消费者</h2>
+    <div class="contract">
+      <article class="data"><strong>RECEIVES</strong><p><code>batch: sglang.srt.managers.schedule_batch.ScheduleBatch</code>；实例仍是 <code>batch_to_run</code>，模式为 PREFILL/EXTEND，持有 <code>extend_lens</code>、<code>prefix_lens</code>、<code>out_cache_loc</code>。</p></article>
+      <article class="main"><strong>MUTATES</strong><p>Draft KV 对应 prompt/extend 的位置被写入；<code>batch_output.logits_output.hidden_states</code> 随后置为 <code>None</code>，避免把大张量带回 Scheduler。</p></article>
+      <article class="main"><strong>RETURNS</strong><p>同一个 <code>GenerationBatchResult batch_output</code>，新增 <code>new_seq_lens</code> 与 <code>next_draft_input: DFlashDraftInputV2</code>。</p></article>
+      <article class="data"><strong>NEXT CONSUMER</strong><p>Scheduler 在 01 的隔离边界外显式提交 <code>batch.spec_info = batch_output.next_draft_input</code>；下一轮 <code>DSparkWorkerV2._forward_decode()</code> 读取 bonus anchor。</p></article>
+    </div>
+  </section>
+
+  <section class="section">
+    <p class="kicker">caller → callee → return → next</p>
+    <h2>具体类、实例与关键调用边界</h2>
+    <p class="sub">框内第一行是语义标签，第二行是完全限定类/函数，蓝字是运行时实例名；箭头表示 Python 调用/返回顺序。</p>
+    <div class="flow">
+      <article class="node main"><span class="tag main">MAIN</span><span class="fqcn">sglang.srt.speculative.dspark_components.dspark_worker_v2.DSparkWorkerV2.forward_batch_generation</span><span class="instance">实例：scheduler.model_worker === self</span><span class="action">收到 <code>batch_to_run</code>，检测 extend。</span><span class="return">guard true → self._forward_prefill(batch, on_publish)</span></article>
+      <article class="node guard"><span class="tag guard">GUARD</span><span class="fqcn">sglang.srt.speculative.dspark_components.dspark_worker_v2.DSparkWorkerV2._forward_prefill</span><span class="instance">实例：self</span><span class="action"><code>batch.forward_mode.is_idle()</code> 是单独的 DP 参与分支；正常 extend 继续 Target。</span><span class="return">normal extend → target_worker</span></article>
+      <article class="node main"><span class="tag main">MAIN</span><span class="fqcn">sglang.srt.managers.tp_worker.TpModelWorker.forward_batch_generation</span><span class="instance">实例：self.target_worker === self._target_worker === scheduler.tp_worker</span><span class="action">调用参数 <code>capture_hidden_mode=CaptureHiddenMode.FULL</code>。</span><span class="return">→ batch_output: GenerationBatchResult</span></article>
+      <article class="node cuda"><span class="tag cuda">CUDA</span><span class="fqcn">sglang.srt.model_executor.model_runner.ModelRunner.forward</span><span class="instance">实例：self.target_worker.model_runner === self.model_runner</span><span class="action">在 <code>_forward_raw()</code> 选择 split prefill（<code>ModelRunner.forward_split_prefill()</code>）、<code>sglang.srt.model_executor.runner.prefill_cuda_graph_runner.PrefillCudaGraphRunner.execute()</code>，或 <code>sglang.srt.model_executor.runner.eager_runner.EagerRunner.execute() → _execute_extend()</code>；产出 logits 与 FULL aux hidden。</span><span class="return">→ LogitsProcessorOutput；此时尚无 next_token_ids</span></article>
+      <article class="node main"><span class="tag main">MAIN</span><span class="fqcn">sglang.srt.model_executor.model_runner.ModelRunner.sample</span><span class="instance">caller：self.target_worker: TpModelWorker</span><span class="action"><code>TpModelWorker.forward_batch_generation()</code> 收到 logits 后调用 <code>self.model_runner.sample(logits_output, forward_batch)</code>。</span><span class="return">next_token_ids → GenerationBatchResult</span></article>
+      <article class="node guard"><span class="tag guard">GUARD</span><span class="fqcn">on_publish: Optional[Callable]</span><span class="instance">overlap 实例：partial(scheduler.future_map.publish, future_indices)</span><span class="action">设置 <code>batch_output.new_seq_lens</code> 后立即发布；non-overlap 中为 <code>None</code>。</span><span class="return">publish 后才校验 hidden 并注入 Draft KV</span></article>
+      <article class="node data"><span class="tag data">DATA</span><span class="fqcn">sglang.srt.speculative.dspark_components.dspark_kv_inject.TargetHiddenKvInjector.inject_target_hidden</span><span class="instance">实例：self._kv_injector</span><span class="action">接收 Target hidden、<code>batch.out_cache_loc</code> 与 extend positions，写 Draft KV。</span><span class="return">returns None；内部细节 → 07</span></article>
+      <article class="node main"><span class="tag main">MAIN</span><span class="fqcn">sglang.srt.speculative.dspark_components.dspark_draft.make_next_draft_input</span><span class="instance">函数结果：batch_output.next_draft_input</span><span class="action"><code>bonus_tokens=next_token_ids</code>，<code>new_seq_lens=batch.seq_lens</code>。</span><span class="return">→ DFlashDraftInputV2</span></article>
+      <article class="node off"><span class="tag off">OFF</span><span class="fqcn">sglang.srt.managers.scheduler.Scheduler.run_batch</span><span class="instance">实例：scheduler；对象：batch_to_run</span><span class="action">隔离 finally 恢复后，再把白名单结果提交给同一 ScheduleBatch。</span><span class="return">详见 01 · forward isolation</span></article>
+      <article class="node data"><span class="tag data">DATA</span><span class="fqcn">sglang.srt.speculative.dspark_components.dspark_worker_v2.DSparkWorkerV2._forward_decode</span><span class="instance">下一轮：self；draft_input = batch.spec_info</span><span class="action">读取 <code>DFlashDraftInputV2.bonus_tokens=[X]</code>，让 <code>X</code> 成为 Draft block 的首个 anchor。</span><span class="return">→ 03 · Draft proposal</span></article>
+    </div>
+  </section>
+
+  <section class="section">
+    <p class="kicker">before → writes → after</p>
+    <h2>贯穿例子：Target 采出 <code>X</code>，但 <code>X</code> 还不是 KV 输入行</h2>
+    <div class="transition">
+      <article class="state"><label>BEFORE · Target prefill input</label><pre>batch.forward_mode = EXTEND
+batch.seq_lens = [20]
+batch.extend_lens = [20]
+batch.prefix_lens = [0]
+Target input = [p0 … p18, p19]</pre><div class="tokens"><span class="tok input">p0</span><span class="tok input">…</span><span class="tok input">p19</span></div></article>
+      <div class="writes" aria-label="写入 Draft KV 并构造跨轮状态">→<small>FULL hidden · inject · wrap bonus</small></div>
+      <article class="state"><label>AFTER · first cross-round state</label><pre>Draft KV committed inputs = [p0 … p19]
+Target sampled next_token_ids = [X]
+next_draft_input.bonus_tokens = [X]
+next_draft_input.new_seq_lens = [20]</pre><div class="tokens"><span class="tok input">Draft KV: prompt</span><span class="tok anchor">bonus X @ position 20</span></div></article>
+    </div>
+    <div class="mini-note data"><strong>DATA：</strong><code>X</code> 是 Target 基于最后一个 prompt 输入预测出来的输出/下一轮 anchor；它尚未作为 Target 或 Draft 的输入行写入 KV。03 会把它放到 <code>[X, MASK, MASK, MASK]</code> 的第 0 列。</div>
+    <div class="mini-note off"><strong>OFF：</strong><code>inject_target_hidden()</code> 如何把 FULL aux hidden 变成 Draft K/V，以及未提交 suffix 为何保持未写/逻辑不可见，统一在 <a class="route-propagate" href="dspark-target-hidden-kv-explainer.html">07 · Hidden/KV</a> 展开。</div>
+  </section>
+
+  <section class="section">
+    <p class="kicker">why here / omitted failure</p>
+    <h2>为什么必须在这里 bootstrap</h2>
+    <div class="facts">
+      <article class="fact main"><strong>WHY HERE</strong><p>只有 Target prefill 完成后，真实 prompt 的 aux hidden、Target 采样出的首个 token 和最终 <code>seq_lens</code> 才同时可用；此时注入可让 Draft 从同一 prefix 状态开始 decode。</p></article>
+      <article class="fact fail"><strong>FAIL · NO FULL HIDDEN</strong><p><code>logits_output.hidden_states is None</code> 立即抛 <code>RuntimeError</code>。继续执行会让 Draft 缺少 prompt KV，后续 proposal 的上下文错误，这是正确性失败，不只是变慢。</p></article>
+      <article class="fact fail"><strong>FAIL · NO EXPLICIT STATE</strong><p>若不构造/提交 <code>DFlashDraftInputV2</code>，下一轮 <code>_forward_decode()</code> 没有 bonus anchor 与跨轮长度；若把本轮 <code>DFlashVerifyInput</code> 当跨轮状态，则模式与所有权都错。</p></article>
+    </div>
+  </section>
+
+  <section class="section">
+    <p class="kicker">decisive source</p>
+    <h2>方法内的两次关键写入</h2>
+    <div class="source-grid">
+      <pre class="codebox"># DSparkWorkerV2.forward_batch_generation
+if batch.forward_mode.is_extend() or batch.is_extend_in_batch:
+    self._verify_planner.note_non_decode_step()
+    self._observers.note_prefill_step()
+    return self._forward_prefill(batch, on_publish)
+
+# DSparkWorkerV2._forward_prefill
+batch_output = self.target_worker.forward_batch_generation(
+    batch, capture_hidden_mode=CaptureHiddenMode.FULL
+)
+logits_output = batch_output.logits_output
+next_token_ids = batch_output.next_token_ids
+batch_output.new_seq_lens = batch.seq_lens
+if on_publish is not None:
+    on_publish(batch_output.new_seq_lens)
+
+self._kv_injector.inject_target_hidden(
+    target_hidden=logits_output.hidden_states,
+    cache_loc=batch.out_cache_loc,
+    positions=positions,
+)
+logits_output.hidden_states = None
+
+batch_output.next_draft_input = make_next_draft_input(
+    bonus_tokens=next_token_ids,
+    new_seq_lens=batch.seq_lens,
+)
+return batch_output</pre>
+      <div class="sources">
+        <div class="source"><b>Dispatch + owner method</b>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:361–432</div>
+        <div class="source"><b>Cross-round constructor</b>python/sglang/srt/speculative/dspark_components/dspark_draft.py:158–163</div>
+        <div class="source"><b>State type</b>python/sglang/srt/speculative/dflash_info_v2.py:34–63</div>
+        <div class="source"><b>Target runner dispatch</b>python/sglang/srt/model_executor/model_runner.py:1479–1580 · python/sglang/srt/model_executor/runner/eager_runner.py:252–338</div>
+        <div class="source"><b>Injection boundary only</b>python/sglang/srt/speculative/dspark_components/dspark_kv_inject.py:13–78</div>
+      </div>
+    </div>
+    <div class="boundary"><strong>Evidence boundary：</strong>当前 checkout <code>f01a0c7f97ec</code>；假设 CUDA dSpark V2、PP=1。上述 Python 分派、字段写入和类型契约已做静态源码核验；本机未运行 GPU/CUDA Graph/attention kernel。Target prefill 的 graph/eager 选择不改变本页的 bootstrap 契约。</div>
+  </section>
+
+  <nav class="page-nav" aria-label="上一页与下一页">
+    <a class="route-propagate" href="dspark-forward-isolation.html"><small>← PREV · 01</small><strong>Scheduler _forward_isolation</strong></a>
+    <a class="route-propagate" href="dspark-draft-proposal.html"><small>NEXT · 03 →</small><strong>Verify window + Draft proposal</strong></a>
+  </nav>
+</main>
+<script>
+(() => {
+  const allowed = new Set(['static-greedy','compact-sampling','folded-greedy']);
+  const query = new URLSearchParams(location.search);
+  const route = allowed.has(query.get('route')) ? query.get('route') : 'compact-sampling';
+  document.documentElement.dataset.route = route;
+  document.querySelectorAll('.route-choice').forEach((a) => {
+    a.setAttribute('aria-current', String(a.dataset.route === route));
+    a.href = '?route=' + encodeURIComponent(a.dataset.route);
+  });
+  const labels = {
+    'static-greedy':'STATIC · greedy：Prefill 共用；下一轮走完整 Target verify。',
+    'compact-sampling':'COMPACT · sampling：Prefill 共用；下一轮再计算 confidence/layout。',
+    'folded-greedy':'Folded · greedy：Prefill 共用；folded 条件从 Draft decode 才开始。'
+  };
+  document.getElementById('routeStatus').textContent = labels[route];
+  document.querySelectorAll('a.route-propagate').forEach((a) => {
+    const u = new URL(a.getAttribute('href'), location.href);
+    u.searchParams.set('route', route);
+    a.href = u.href;
+  });
+})();
+</script>
+</body>
+</html>

@@ -406,7 +406,7 @@ def debug_check_symmetric_mempool(
                 stack,
             )
 
-
+# 在当前设备临时申请大块显存以预热内存池、减轻碎片；符合 CUDA/TP 条件时使用 NCCL symmetric memory pool。
 def prealloc_symmetric_memory_pool(
     *,
     is_draft_worker: bool,
@@ -418,7 +418,7 @@ def prealloc_symmetric_memory_pool(
     if (
         is_draft_worker
         or not enable_symm_mem
-        or envs.SGLANG_SYMM_MEM_PREALLOC_GB_SIZE.get() <= 0
+        or envs.SGLANG_SYMM_MEM_PREALLOC_GB_SIZE.get() <= 0 # 未覆盖此环境变量时默认 -1，跳过预分配。
     ):
         return
 
@@ -428,8 +428,8 @@ def prealloc_symmetric_memory_pool(
     with torch.get_device_module(device).stream(forward_stream):
         logger.info(
             f"Pre-allocating symmetric memory pool with {envs.SGLANG_SYMM_MEM_PREALLOC_GB_SIZE.get()} GiB"
-        )
-        with use_symmetric_memory(get_tp_group()):
+        ) # 每个执行到此处的 rank 临时分配指定 GiB；Tensor 未保留，释放后由池缓存可复用的存储。
+        with use_symmetric_memory(get_tp_group()): # 满足 CUDA、TP>1 等条件才切换对称池；TP=1 时 context 为空，但下面的 torch.empty 仍走普通分配器。
             torch.empty(
                 (envs.SGLANG_SYMM_MEM_PREALLOC_GB_SIZE.get() * 1024 * 1024 * 1024,),
                 dtype=torch.uint8,

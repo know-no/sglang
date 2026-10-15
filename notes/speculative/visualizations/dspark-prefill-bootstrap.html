@@ -1,0 +1,315 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Draft proposal → Target verify → accept → KV commit">
+  <link rel="icon" href="data:,">
+  <title>02 · Prefill 启动桥接 · dSpark V2 · 投机解码专题</title>
+  <link rel="stylesheet" href="../course/assets/css/specforge-course.css">
+  <link rel="stylesheet" href="../course/assets/css/labs.css">
+  <link rel="stylesheet" href="../course/assets/css/print.css">
+  
+  <!-- Generated from notes/speculative/visualizations/sources/dspark-prefill-bootstrap.html.jinja by notes/speculative/course/build.py; source-sha256=8c40c7100e982ef8e68bbfc52adfd2046a8c2c874e5fee1cbf610f7f7d311fc1. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; style-src 'self' 'unsafe-inline' file:; script-src 'self' file:; img-src 'self' data: file:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'">
+<link rel="stylesheet" href="assets/dspark-visual-system.css">
+<style>@scope (.dspark-lab) {
+
+    .bootstrap-board { min-width:1480px; }
+    .boot-head,.boot-row { display:grid; grid-template-columns:86px repeat(7,minmax(0,1fr)); border-left:1px solid var(--line); }
+    .boot-head > div,.boot-row > div { min-width:0; border-right:1px solid var(--line); border-bottom:1px solid var(--line); }
+    .boot-head { border-top:1px solid var(--line); }
+    .boot-head > div { min-height:142px; padding:11px; background:var(--surface-2); }
+    .boot-head__corner { display:grid; align-content:end; color:var(--faint); font:800 12px/1.3 var(--mono); }
+    .boot-head .instance { display:block; color:var(--data); font:800 12px/1.32 var(--mono); overflow-wrap:anywhere; }
+    .boot-head .fqcn { display:block; margin-top:7px; color:var(--muted); font:11px/1.35 var(--mono); overflow-wrap:anywhere; }
+    .boot-time { padding:11px 9px; color:var(--ui); background:var(--surface); font:800 11px/1.35 var(--mono); }
+    .boot-cell { position:relative; min-height:96px; padding:8px; background:color-mix(in srgb,var(--surface) 73%,transparent); }
+    .boot-event { --tone:var(--main); min-height:76px; padding:9px; border:1px solid var(--tone); border-left:4px solid var(--tone); background:var(--surface); color:var(--muted); font:11px/1.43 var(--mono); overflow-wrap:anywhere; }
+    .boot-event[data-kind="data"] { --tone:var(--data); }
+    .boot-event[data-kind="guard"] { --tone:var(--guard); border-style:dashed; }
+    .boot-event[data-kind="cuda"] { --tone:var(--cuda); border-style:dashed; }
+    .boot-event[data-kind="return"] { --tone:var(--main); border-style:dotted; }
+    .boot-event b { display:block; margin-bottom:5px; color:var(--tone); }
+    .boot-arrow::after { content:"→"; position:absolute; right:-9px; top:41%; z-index:2; color:var(--main); font:800 17px/1 var(--mono); }
+    .runner-branches { display:grid; grid-template-columns:repeat(3,minmax(260px,1fr)); gap:14px; min-width:850px; margin-top:18px; }
+    .runner-branch { --tone:var(--cuda); padding:13px; border-top:3px dashed var(--tone); background:var(--surface); }
+    .runner-branch[data-kind="guard"] { --tone:var(--guard); }
+    .runner-branch b { display:block; color:var(--tone); font:800 12px/1.35 var(--mono); }
+    .runner-branch span { display:block; margin-top:7px; color:var(--muted); font-size:12px; }
+    .rails { min-width:1080px; display:grid; grid-template-columns:190px 1.45fr .9fr .9fr 1fr; border-top:1px solid var(--line); border-left:1px solid var(--line); }
+    .rail-head,.rail-label,.rail-cell { min-width:0; border-right:1px solid var(--line); border-bottom:1px solid var(--line); }
+    .rail-head { min-height:56px; padding:10px; background:var(--surface-2); color:var(--guard); font:800 12px/1.3 var(--mono); }
+    .rail-label { padding:12px; background:var(--surface); color:var(--data); font:800 12px/1.35 var(--mono); }
+    .rail-label span { display:block; margin-top:5px; color:var(--muted); font-weight:400; }
+    .rail-cell { min-height:78px; padding:11px; background:color-mix(in srgb,var(--surface) 72%,transparent); color:var(--muted); font:12px/1.45 var(--mono); }
+    .rail-cell[data-kind="main"] { color:var(--main); }
+    .rail-cell[data-kind="data"] { color:var(--data); }
+    .rail-cell[data-kind="guard"] { color:var(--guard); border-style:dashed; }
+    .rail-cell[data-kind="off"] { color:var(--off); border-style:dotted; }
+    .rail-cell b { display:block; margin-bottom:4px; }
+    .step-copyline { min-height:58px; margin-bottom:15px; padding:11px 13px; border-left:4px solid var(--guard); background:color-mix(in srgb,var(--guard) 4%,transparent); color:var(--muted); }
+    .step-copyline b { color:var(--guard); }
+    .branch-note { margin-top:18px; padding:12px 14px; border-left:4px dashed var(--guard); background:color-mix(in srgb,var(--guard) 4%,transparent); color:var(--muted); font-size:12px; }
+    .failure-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+    @media(max-width:700px){.failure-grid{grid-template-columns:1fr}}
+  
+}</style>
+<link rel="stylesheet" href="assets/dspark-source-studio.css">
+<script src="assets/dspark-site.js" defer></script>
+<script src="assets/dspark-learning-layer.js" defer></script>
+<script src="assets/dspark-source-studio.js" defer></script>
+<script src="assets/dspark-stepper.js" defer></script>
+  <link rel="stylesheet" href="assets/dspark-course-shell.css">
+
+</head>
+<body class="sf-course-page sf-lab-page" data-root-url="sglang-course-v2/index.html"
+      data-nav-open="false" data-nav-pinned="false"
+      data-page-id="lab-dspark-prefill-bootstrap" data-chapter-id="lab-dspark-prefill-bootstrap"
+      data-section-id="lab"
+      data-page="02"
+      style="--page-accent: var(--domain-speculative, var(--domain-entry))">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+
+  <div class="sf-shell">
+    <div class="sf-navigation">
+      <nav class="sf-rail" aria-label="课程工具">
+        <button class="sf-rail__button sf-rail__menu" type="button" data-nav-toggle aria-controls="course-navigation" aria-expanded="false">
+          <span aria-hidden="true">☰</span><span class="sr-only">打开课程目录</span>
+        </button>
+        <a class="sf-rail__brand" href="sglang-course-v2/index.html" aria-label="回到 SGLang 课程地图">S</a>
+        <div class="sf-rail__spacer"></div>
+        <button class="sf-rail__button" type="button" data-search-open aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span class="sr-only">搜索课程</span></button>
+        <button class="sf-rail__button" type="button" data-theme-toggle><span aria-hidden="true">◐</span><span class="sr-only" data-theme-label>深色</span></button>
+      </nav>
+
+      <aside class="sf-drawer" id="course-navigation" aria-label="全部课程目录">
+        <header class="sf-drawer__head">
+          <div><p class="sf-drawer__eyebrow">SGLang source course</p><a href="sglang-course-v2/index.html">投机解码专题</a></div>
+          <button class="sf-icon-button" type="button" data-nav-close aria-label="关闭课程目录">×</button>
+        </header>
+        <div class="sf-drawer__tools">
+          <button class="sf-button sf-button--quiet" type="button" data-search-open><span aria-hidden="true">⌕</span> 搜索</button>
+          <button class="sf-button sf-button--quiet" type="button" data-theme-toggle><span aria-hidden="true">◐</span> <span data-theme-label>深色</span></button>
+          <button class="sf-button sf-button--quiet sf-drawer__pin" type="button" data-nav-pin aria-pressed="false"><span aria-hidden="true">⌖</span> <span data-nav-pin-label>固定目录</span></button>
+        </div>
+        <p class="sf-drawer__context"><b>dSpark 交互实验</b><span>02 · Prefill 启动桥接 · dSpark V2</span></p>
+        <nav class="sf-drawer__tree" aria-label="全部章节"><div class="sf-course-tree">
+    
+      <details class="sf-course-tree__section">
+        <summary><span class="sf-course-tree__number">01</span><span>Speculative Decoding 全家族</span></summary>
+        <ul class="sf-course-tree__children sf-course-tree__children--section">
+          <li class="sf-course-tree__overview"><a href="sglang-course-v2/index.html" data-course-link data-chapter-id="speculative"
+     data-search-title="Speculative Decoding 全家族" data-search-section="Speculative Decoding 全家族"
+     
+     
+     >Speculative Decoding 全家族</a></li>
+          <li><a href="sglang-course-v2/common-contract.html" data-course-link data-chapter-id="spec-common-contract"
+     data-search-title="Draft 只提案：共同 worker 合同与四个长度" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。"
+     
+     >Draft 只提案：共同 worker 合同与四个长度</a></li><li><a href="sglang-course-v2/eagle-tree.html" data-course-link data-chapter-id="eagle-tree"
+     data-search-title="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。"
+     
+     >EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a></li><li><a href="sglang-course-v2/dflash-block.html" data-course-link data-chapter-id="dflash-block"
+     data-search-title="DFlash fixed-block draft、hidden injection 与 compact cache" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。"
+     
+     >DFlash fixed-block draft、hidden injection 与 compact cache</a></li><li><a href="sglang-course-v2/dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"
+     data-search-title="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。"
+     
+     >DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a></li><li><a href="sglang-course-v2/dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"
+     data-search-title="DSpark confidence、history、per-step budget 与 ragged layout" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。"
+     
+     >DSpark confidence、history、per-step budget 与 ragged layout</a></li><li><a href="sglang-course-v2/dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"
+     data-search-title="DSpark Target verify、accept/finalize 与 KV commit/reclaim" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。"
+     
+     >DSpark Target verify、accept/finalize 与 KV commit/reclaim</a></li><li><a href="sglang-course-v2/dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"
+     data-search-title="DSpark folded fast path、capture/replay 与 overlap" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。"
+     
+     >DSpark folded fast path、capture/replay 与 overlap</a></li><li><a href="sglang-course-v2/boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"
+     data-search-title="Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。"
+     
+     >Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a></li>
+          
+        </ul>
+      </details>
+    
+  </div></nav>
+      </aside>
+    </div>
+
+    <button class="sf-nav-backdrop" type="button" data-nav-backdrop aria-label="关闭课程目录"></button>
+
+    <div class="sf-main-frame">
+      <main class="sf-main sf-main--wide" id="main-content" tabindex="-1">
+        <div class="sf-page-grid">
+          <div class="sf-content-column">
+            
+              <nav aria-label="面包屑"><ol class="sf-breadcrumbs">
+                <li><a href="sglang-course-v2/index.html">投机解码专题</a></li><li><a href="index.html">投机实验路线</a></li><li><span aria-current="page">02 · Prefill 启动桥接 · dSpark V2</span></li>
+              </ol></nav>
+            
+
+            
+  <nav class="sf-hero__actions" aria-label="实验源文件"><a href="sources/dspark-prefill-bootstrap.html.jinja" download>下载实验 HTML 源文件</a></nav>
+
+
+            <nav class="sf-hero__actions" aria-label="关联阅读入口" data-repository-companion><a href="../../index.html">SGLang 全景图</a></nav>
+            
+
+            
+
+            
+            
+
+            
+  <div class="dspark-lab" data-toc-source>
+<!-- lab-content:start -->
+  <nav data-site-nav aria-label="dSpark 学习页面"></nav>
+  <div class="page page--wide" data-dspark-main>
+    <header class="hero">
+      <p class="eyebrow">02 · Prefill 启动桥接</p>
+      <h1>先由 Target 为真实 prompt 建立语义，再把 Target auxiliary hidden 投影成 Draft KV</h1>
+      <p class="lead"><code>DSparkWorkerV2._forward_prefill()</code> 同时完成三件事：让 Target 正常 prefill 并采出首个 token <code>X</code>；把 prompt 输入行的 FULL auxiliary hidden 注入 Draft KV；把 <code>X@20</code> 封装为下一轮 Draft anchor。<code>X</code> 此刻还没有自己的 hidden/KV。</p>
+      <div class="evidence-strip"><span><strong>运行时接收者</strong> <code>scheduler.model_worker : DSparkWorkerV2</code> → <code>self.target_worker : TpModelWorker</code></span><span><strong>固定例子</strong> 单请求 · <code>prefix_lens=[0]</code> · <code>extend_lens=[20]</code> · <code>seq_lens=[20]</code></span><span><strong>后端假设</strong> CUDA dSpark V2 · PP=1；MLX/NPU/XPU 覆盖路径不由本页推断</span></div>
+      <div class="route-switch" aria-label="选择后续 decode 路线"><button type="button" data-route-choice="static-greedy">STATIC · 贪心</button><button type="button" data-route-choice="compact-sampling">COMPACT · 随机采样</button><button type="button" data-route-choice="folded-greedy">FOLDED · 贪心</button></div>
+      <div data-semantic-legend></div>
+    </header>
+
+    <section class="handoff" aria-label="Prefill 启动交接契约">
+      <div class="handoff__item"><b>输入</b><span><code>batch_to_run : ScheduleBatch</code>，<code>forward_mode=EXTEND/MIXED</code>，含 <code>extend_lens/prefix_lens/out_cache_loc</code></span></div>
+      <div class="handoff__item"><b>关键捕获</b><span><code>capture_hidden_mode=CaptureHiddenMode.FULL</code>，必须得到 Target auxiliary hidden</span></div>
+      <div class="handoff__item"><b>状态变化</b><span>Draft KV 写入 prompt/extend 输入行；大 <code>hidden_states</code> 随后清空引用</span></div>
+      <div class="handoff__item"><b>输出</b><span><code>GenerationBatchResult(next_draft_input=DFlashDraftInputV2(bonus_tokens=[X],new_seq_lens=[20]))</code></span></div>
+    </section>
+
+    <section class="section" id="bootstrap-call-flow">
+      <div class="section__head"><p class="section__kicker">主视图 · 启动桥接调用泳道</p><h2><code>DSparkWorkerV2 → TpModelWorker → ModelRunner → Target backend → KV injector → Draft KV</code></h2><p class="section__intro">每条泳道标明实例与具体类；紫色表示模型/设备执行，蓝色表示 tensor/object 交接。三条站点 route 在 Prefill 阶段共用此流程，差异从后续 decode 才出现。</p></div>
+      <div class="visual stepper" data-stepper data-steps="9">
+        <div class="visual__bar"><strong>正常 extend · 非 DP-idle 分支</strong><button class="zoom-button" type="button" data-zoom-target="#bootstrap-board">放大主图</button></div>
+        <div class="visual__body">
+          <div class="stepper__toolbar"><div class="stepper__buttons"><button type="button" data-step-action="prev">上一步</button><button type="button" data-step-action="next">下一步</button><button type="button" data-step-action="play">播放</button><button type="button" data-step-action="reset">重置</button></div><div class="stepper__progress" aria-hidden="true"><span data-step-progress></span></div><div class="stepper__status" data-step-status aria-live="polite"></div></div>
+          <div class="step-copyline" aria-live="polite"><div data-step-copy="0"><b>第 1 步 · 分派</b> <code>forward_mode.is_extend() || is_extend_in_batch</code> 命中，planner/observer 记录非 decode，然后进入 <code>_forward_prefill()</code>。</div><div data-step-copy="1"><b>第 2 步 · 构造 Target ForwardBatch</b> <code>TpModelWorker</code> 以 <code>CaptureHiddenMode.FULL</code> 调用 <code>ForwardBatch.init_new()</code>。</div><div data-step-copy="2"><b>第 3 步 · runner 分支</b> <code>ModelRunner._forward_raw()</code> 在 split prefill、prefill CUDA graph、eager extend 中选一条。</div><div data-step-copy="3"><b>第 4 步 · metadata / attention</b> 当前 runner 在需要时初始化 backend metadata，并执行 Target 模型；输出 logits 与 FULL auxiliary hidden。</div><div data-step-copy="4"><b>第 5 步 · 采样 X</b> <code>TpModelWorker</code> 用 Target logits 采样 <code>X</code> 并构造 <code>GenerationBatchResult</code>。</div><div data-step-copy="5"><b>第 6 步 · 发布长度</b> 设置 <code>new_seq_lens=batch.seq_lens=[20]</code>；overlap 在这里提前调用 <code>on_publish()</code>。</div><div data-step-copy="6"><b>第 7 步 · 注入 prompt hidden</b> 校验 hidden/extend/prefix/cache loc，计算 prompt 输入位置，再把 Target auxiliary hidden 投影写入 Draft KV。</div><div data-step-copy="7"><b>第 8 步 · 释放大引用</b> 注入完成后立即 <code>logits_output.hidden_states=None</code>，避免结果对象把整块 tensor 带回 Scheduler。</div><div data-step-copy="8"><b>第 9 步 · 首个滚动锚点</b> <code>make_next_draft_input()</code> 保存 <code>bonus_tokens=[X]</code> 与 <code>new_seq_lens=[20]</code>，下一轮 Draft 读取。</div></div>
+          <div class="swim-scroll" id="bootstrap-board"><div class="bootstrap-board" role="table" aria-label="dSpark Prefill 启动桥接调用泳道">
+            <div class="boot-head" role="row"><div class="boot-head__corner">阶段</div><div><span class="instance">self : DSparkWorkerV2</span><span class="fqcn">sglang.srt.speculative.dspark_components.dspark_worker_v2.DSparkWorkerV2</span></div><div><span class="instance">target_worker : TpModelWorker</span><span class="fqcn">sglang.srt.managers.tp_worker.TpModelWorker</span></div><div><span class="instance">target_model_runner : ModelRunner</span><span class="fqcn">sglang.srt.model_executor.model_runner.ModelRunner</span></div><div><span class="instance">attn_backend : AttentionBackend</span><span class="fqcn">sglang.srt.layers.attention.base_attn_backend.AttentionBackend</span></div><div><span class="instance">self._kv_injector : TargetHiddenKvInjector</span><span class="fqcn">sglang.srt.speculative.dspark_components.dspark_kv_inject.TargetHiddenKvInjector</span></div><div><span class="instance">draft_kv_pool : BaseTokenToKVPool</span><span class="fqcn">self.draft_model_runner.token_to_kv_pool</span></div><div><span class="instance">batch_output : GenerationBatchResult</span><span class="fqcn">sglang.srt.managers.utils.GenerationBatchResult</span></div></div>
+            <div class="boot-row" data-step-node="0"><div class="boot-time">T0<br>dispatch</div><div class="boot-cell"><div class="boot-event boot-arrow"><b>forward_batch_generation(batch,on_publish)</b><code>is_extend() || is_extend_in_batch</code> → note non-decode/prefill → <code>_forward_prefill()</code></div></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div></div>
+            <div class="boot-row" data-step-node="1"><div class="boot-time">T1<br>package</div><div class="boot-cell"><div class="boot-event boot-arrow"><b>target_worker.forward_batch_generation()</b><code>capture_hidden_mode=FULL</code></div></div><div class="boot-cell"><div class="boot-event boot-arrow" data-kind="data"><b>ForwardBatch.init_new(batch,...)</b>把 <code>ScheduleBatch</code> 装配为 Target <code>ForwardBatch</code>。</div></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div></div>
+            <div class="boot-row" data-step-node="2"><div class="boot-time">T2<br>runner</div><div class="boot-cell"></div><div class="boot-cell"><div class="boot-event boot-arrow"><b>self.model_runner.forward(forward_batch)</b></div></div><div class="boot-cell"><div class="boot-event" data-kind="guard"><b>ModelRunner._forward_raw()</b>split prefill | prefill CUDA graph | eager extend；先做 live-batch padding/normalization。</div></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div></div>
+            <div class="boot-row" data-step-node="3"><div class="boot-time">T3<br>Target forward</div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"><div class="boot-event boot-arrow" data-kind="cuda"><b>selected runner.execute()</b><code>model.forward(input_ids,positions,forward_batch)</code>；要求返回 FULL auxiliary hidden。</div></div><div class="boot-cell"><div class="boot-event" data-kind="cuda"><b>init_forward_metadata() / attention</b>由具体 runner 与 <code>needs_forward_metadata_init()</code> 决定初始化位置。</div></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div></div>
+            <div class="boot-row" data-step-node="4"><div class="boot-time">T4<br>sample</div><div class="boot-cell"></div><div class="boot-cell"><div class="boot-event boot-arrow"><b>model_runner.sample(logits_output,forward_batch)</b>正常 prefill 不是 <code>is_verify=True</code>，所以采样首个 token <code>X</code>。</div></div><div class="boot-cell"><div class="boot-event" data-kind="return"><b>Target 输出</b><code>next_token_logits</code> + <code>hidden_states[20,H_aux]</code></div></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"><div class="boot-event" data-kind="data"><b>GenerationBatchResult</b><code>next_token_ids=[X]</code><br><code>logits_output.hidden_states=H_prompt</code></div></div></div>
+            <div class="boot-row" data-step-node="5"><div class="boot-time">T5<br>publish</div><div class="boot-cell"><div class="boot-event" data-kind="guard"><b>new_seq_lens=batch.seq_lens</b><code>[20]</code>；overlap 时立即 <code>on_publish([20])</code>，non-overlap 仅写结果对象。</div></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"><div class="boot-event" data-kind="data"><b>batch_output.new_seq_lens=[20]</b>注意：采出的 <code>X</code> 还没成为输入 KV，所以长度仍是 20。</div></div></div>
+            <div class="boot-row" data-step-node="6"><div class="boot-time">T6<br>inject</div><div class="boot-cell"><div class="boot-event boot-arrow"><b>compute_position(prefix_lens,extend_lens)</b>校验 FULL hidden、长度字段与 <code>out_cache_loc</code> 后调用 injector。</div></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"><div class="boot-event boot-arrow" data-kind="data"><b>inject_target_hidden()</b><code>target_hidden=H_prompt</code><br><code>cache_loc=batch.out_cache_loc</code><br><code>positions=0..19</code></div></div><div class="boot-cell"><div class="boot-event" data-kind="data"><b>write_target_hidden_kv()</b>只写 prompt/extend 输入行的 Draft K/V；标准池与 MLA/SWA 池内部实现不同，契约相同。</div></div><div class="boot-cell"></div></div>
+            <div class="boot-row" data-step-node="7"><div class="boot-time">T7<br>release</div><div class="boot-cell"><div class="boot-event" data-kind="data"><b>logits_output.hidden_states=None</b>注入完成后解除结果对象对大 tensor 的持有。</div></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"><div class="boot-event" data-kind="return"><b>保留 logits/next token</b>只清 FULL hidden 引用，不丢失已采样的 <code>X</code>。</div></div></div>
+            <div class="boot-row" data-step-node="8"><div class="boot-time">T8<br>wrap / return</div><div class="boot-cell"><div class="boot-event boot-arrow"><b>make_next_draft_input()</b><code>bonus_tokens=[X]</code><br><code>new_seq_lens=[20]</code></div></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"></div><div class="boot-cell"><div class="boot-event" data-kind="data"><b>下一轮 Draft KV</b>已有 prompt positions <code>0..19</code>；位置 20 尚未写。</div></div><div class="boot-cell"><div class="boot-event" data-kind="return"><b>return batch_output</b><code>next_draft_input=DFlashDraftInputV2(X,[20])</code></div></div></div>
+          </div></div>
+          <div class="canvas-scroll"><div class="runner-branches" aria-label="Target Prefill runner 分支"><div class="runner-branch" data-kind="guard"><b>Split Prefill</b><span><code>forward_mode.is_split_prefill()</code> → <code>ModelRunner.forward_split_prefill()</code>；不进入 eager runner。启用 pDMux 时，Scheduler 还可能更早直接调用 <code>TpModelWorker.forward_batch_split_prefill()</code>，不经过本页的 dSpark owner 主链。</span></div><div class="runner-branch"><b>Prefill CUDA Graph</b><span>extend + runner 存在 + <code>can_run_graph()</code> + 无 CP strategy → <code>PrefillCudaGraphRunner.execute()</code>。</span></div><div class="runner-branch"><b>Eager Extend</b><span><code>EagerRunner.execute() → _execute_extend()</code>；若 <code>ForwardBatch.needs_forward_metadata_init()</code>，在此调用 <code>attn_backend.init_forward_metadata()</code>。</span></div></div></div>
+          <div class="branch-note"><strong>DP-idle 边界：</strong><code>batch.forward_mode.is_idle()</code> 时，只有启用 DP attention 才让 Target worker 做参与式 FULL-hidden forward，随后直接返回 <code>_decode_idle_result()</code>；不会执行正常请求的 hidden 校验、Draft KV 注入和 anchor 构造。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="token-kv-rails">
+      <div class="section__head"><p class="section__kicker">辅助视图 · 五条同步 token / KV 状态轨</p><h2><code>prefix_lens=[0], extend_lens=[20]</code>：Target 预测 <code>X</code>，但 Draft KV 只拥有本轮输入</h2><p class="section__intro">本例明确假设没有 prefix-cache 命中，因此 positions 是 0–19；存在缓存前缀时应从对应 <code>prefix_lens</code> 起算。“Target 预测了 X”“用户看到了 X”“X 是下一轮 anchor”都不意味着本轮已经写入 <code>K/V(X)</code>。</p></div>
+      <div class="visual"><div class="visual__bar"><strong>位置 0–19 的输入，与位置 20 的下一轮锚点</strong><button class="zoom-button" type="button" data-zoom-target="#prefill-rails">放大辅图</button></div><div class="visual__body canvas-scroll"><div class="rails" id="prefill-rails" role="table" aria-label="Prefill 后 Target 输入、输出、Draft KV 与下一轮锚点">
+        <div class="rail-head">状态轨</div><div class="rail-head">位置 0–18</div><div class="rail-head">位置 19</div><div class="rail-head">本轮边界 · 位置 20</div><div class="rail-head">下一轮 · 位置 20</div>
+        <div class="rail-label">Target 输入<span>产生 hidden/KV 的真实输入行</span></div><div class="rail-cell" data-kind="data"><b>p0 … p18</b>prompt 输入</div><div class="rail-cell" data-kind="data"><b>p19</b>最后一个 prompt 输入</div><div class="rail-cell" data-kind="off"><b>无 X 输入行</b>本轮 forward 到此结束</div><div class="rail-cell" data-kind="main"><b>X</b>下一轮才作为输入锚点</div>
+        <div class="rail-label">Target next-token prediction<span>logits 的语义</span></div><div class="rail-cell" data-kind="off">中间位置 logits 不作为本例首 token</div><div class="rail-cell" data-kind="data"><b>P<sub>T</sub>(· | p0…p19)</b></div><div class="rail-cell" data-kind="main"><b>sample → X</b>由 p19 行的 next-token logits 产生</div><div class="rail-cell" data-kind="off">下一组 logits 尚未计算</div>
+        <div class="rail-label">用户可见输出<span>Req.output_ids</span></div><div class="rail-cell" data-kind="off">prompt 是用户输入</div><div class="rail-cell" data-kind="off">prompt 是用户输入</div><div class="rail-cell" data-kind="main"><b>[X]</b>prefill 结果处理后成为首个输出 token</div><div class="rail-cell" data-kind="off">X 已输出；内部被复用为 anchor</div>
+        <div class="rail-label">Draft KV commit<span>由 Target auxiliary hidden 投影</span></div><div class="rail-cell" data-kind="main"><b>K/V(p0…p18)</b>已写</div><div class="rail-cell" data-kind="main"><b>K/V(p19)</b>已写</div><div class="rail-cell" data-kind="off"><b>不写 K/V(X)</b>也不清零；该位置逻辑上不可见</div><div class="rail-cell" data-kind="guard"><b>X 尚无自己的 hidden/KV</b></div>
+        <div class="rail-label">下一轮 anchor<span>DFlashDraftInputV2</span></div><div class="rail-cell" data-kind="off">—</div><div class="rail-cell" data-kind="off">—</div><div class="rail-cell" data-kind="guard"><b>bonus_tokens=[X]</b><br><code>new_seq_lens=[20]</code></div><div class="rail-cell" data-kind="main"><b>Draft 读取 X@20</b>构造 <code>[X,MASK,MASK,MASK]</code></div>
+      </div></div></div>
+    </section>
+
+    <section class="section" id="why-boundary">
+      <div class="section__head"><p class="section__kicker">为什么 / 如果省略 / 功能边界</p><h2>bootstrap 的正确性条件，比“跑一次 Target”更严格</h2></div>
+      <div class="failure-grid">
+        <article class="callout" data-kind="data"><b>为什么必须在 Target prefill 之后注入？</b><p>只有此时真实 prompt 的 auxiliary hidden、最终位置映射、Target 采样出的首个 token 与 <code>seq_lens</code> 同时可用，Draft 才能从与 Target 对齐的 prefix 状态开始。</p></article>
+        <article class="callout" data-kind="fail"><b>没有 FULL hidden</b><p><code>logits_output.hidden_states is None</code> 会立即抛 <code>RuntimeError</code>。若忽略它，Draft 缺少 prompt KV，后续 proposal 的上下文错误；这是正确性失败。</p></article>
+        <article class="callout" data-kind="fail"><b>把 X 提前写入 KV</b><p>本轮 Target 只计算了 prompt 输入行；<code>X</code> 是这些行预测出来的下一个 token，没有对应的 Target auxiliary hidden。伪造 <code>K/V(X)</code> 会把输出侧 token 与输入侧 hidden 错位。</p></article>
+        <article class="callout" data-kind="guard"><b>overlap 提前发布与 hidden 清理</b><p><code>on_publish(new_seq_lens)</code> 在 hidden 校验/注入前触发，让 schedule 准备与后续注入重叠；但 worker 仍会校验并完成注入才返回。注入后把 hidden 设为 <code>None</code> 是显存生命周期优化，不会删除已写 Draft KV。</p></article>
+      </div>
+      <details class="source-details"><summary>源码锚点与关键分支</summary><div class="source-details__body">
+        <div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:361–432</code><span>extend 分派、DP-idle 边界、Target FULL hidden forward、提前 publish、三组运行时校验、位置计算、KV 注入、hidden 清理与下一轮输入构造。</span></div>
+        <div class="source-anchor"><code>python/sglang/srt/managers/tp_worker.py:532–621</code><span><code>TpModelWorker.forward_batch_generation()</code> 从 <code>ScheduleBatch</code> 构造 <code>ForwardBatch</code>，执行 <code>ModelRunner.forward()</code> 并在普通 prefill 路径采样 next token。</span></div>
+        <div class="source-anchor"><code>python/sglang/srt/model_executor/model_runner.py:1335–1580</code><span><code>ModelRunner.forward() → _forward_raw()</code> 选择 decode graph、split prefill、prefill graph 或 eager runner；本页只展开 extend 相关三支。</span></div>
+        <div class="source-anchor"><code>python/sglang/srt/model_executor/runner/eager_runner.py:252–338</code><span>eager extend 在 <code>needs_forward_metadata_init()</code> 为真时规划 backend metadata，再调用模型前向。</span></div>
+        <div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_kv_inject.py:13–78</code><span><code>TargetHiddenKvInjector.inject_target_hidden()</code> 统一输入类型/设备并分派标准 Draft KV 或 MLA/SWA 写入。</span></div>
+        <div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_draft.py:158–163</code><span><code>make_next_draft_input()</code> 只接受 <code>bonus_tokens/new_seq_lens</code>，建立明确的跨轮状态边界。</span></div>
+      </div></details>
+    </section>
+
+    <div class="pager"><a data-nav href="dspark-overlap-nonoverlap-timeline.html">← 01A · overlap / non-overlap</a><a data-nav href="dspark-draft-proposal.html">03 · Draft 提案 →</a></div>
+    <footer class="site-footer">证据边界 · 当前源码 f01a0c7f97ec · CUDA dSpark V2 / PP=1 · 已核验 Python 分派与字段写入 · 未执行 GPU/attention kernel/CUDA Graph 运行时验证</footer>
+  </div>
+<!-- lab-content:end -->
+  </div>
+
+
+            
+
+            <footer class="sf-footer"><span>投机解码源码专题</span><span>纯静态 · 本地依赖 · 可离线分享</span></footer>
+            <p class="print-only">投机解码源码专题 · 02 · Prefill 启动桥接 · dSpark V2 · None</p>
+          </div>
+
+          <aside class="sf-page-toc" aria-label="本页目录">
+            <p class="sf-page-toc__title">On this page</p>
+            <ol data-page-toc-list></ol>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="search-dialog" id="course-search-dialog" data-search-dialog aria-labelledby="course-search-title">
+    <div class="search-dialog__head"><strong id="course-search-title">搜索课程</strong><button class="sf-icon-button" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+    <form class="search-dialog__form" data-search-form role="search"><label class="sr-only" for="course-search-input">搜索对象、方法、状态或章节</label><input id="course-search-input" type="search" data-search-input autocomplete="off" placeholder="例如：running_batch、ForwardBatch、TARGET_VERIFY"><button class="sf-button" type="submit">搜索</button></form>
+    <p class="search-dialog__status" data-search-status aria-live="polite"></p><ol class="search-results" data-search-results></ol>
+  </dialog>
+
+  <dialog class="diagram-viewer" id="diagram-viewer-dialog" data-diagram-dialog aria-labelledby="diagram-viewer-title">
+    <div class="diagram-viewer__head"><div><strong id="diagram-viewer-title" data-diagram-title>图解沉浸阅读</strong> <span class="diagram-viewer__zoom" data-diagram-zoom>100%</span></div><div class="diagram-viewer__tools"><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-in" aria-label="放大">＋</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-out" aria-label="缩小">−</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="fit">看全图</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="reset">100%</button><button class="sf-button" type="button" data-diagram-action="close">关闭 ×</button></div></div>
+    <div class="diagram-viewer__viewport" data-diagram-viewport><div class="diagram-viewer__canvas mermaid" data-diagram-canvas></div></div>
+  </dialog>
+
+  <script src="sglang-course-v2/assets/data/search-index.js" defer></script>
+  <script src="../course/assets/vendor/mermaid.min.js" defer></script>
+  <script src="../course/assets/js/site-shell.js" defer></script>
+  <script src="../course/assets/js/toc-search.js" defer></script>
+  <script src="../course/assets/js/diagram-viewer.js" defer></script>
+  <script src="../course/assets/js/source-microscope.js" defer></script>
+  <script src="../course/assets/js/labs.js" defer></script>
+  <script src="../course/assets/js/lesson-components.js" defer></script>
+  
+  
+</body>
+</html>

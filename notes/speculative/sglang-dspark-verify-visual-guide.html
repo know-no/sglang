@@ -1,0 +1,649 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Draft proposal → Target verify → accept → KV commit">
+  <link rel="icon" href="data:,">
+  <title>SGLang dSpark Verify 可视化拆解 · 投机解码专题</title>
+  <link rel="stylesheet" href="course/assets/css/specforge-course.css">
+  <link rel="stylesheet" href="course/assets/css/labs.css">
+  <link rel="stylesheet" href="course/assets/css/print.css">
+  
+  <!-- Generated from notes/speculative/sglang-dspark-verify-visual-guide.md by notes/speculative/course/build.py. -->
+  <link rel="stylesheet" href="course/assets/notes/navigation.css">
+  <link rel="stylesheet" href="course/assets/notes/syntax.css">
+  
+
+</head>
+<body class="sf-course-page sf-note-page" data-root-url="visualizations/sglang-course-v2/index.html"
+      data-nav-open="false" data-nav-pinned="false"
+      data-page-id="note-sglang-dspark-verify-visual-guide" data-chapter-id="note-sglang-dspark-verify-visual-guide"
+      data-section-id="note"
+      
+      style="--page-accent: var(--domain-speculative, var(--domain-entry))">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+
+  <div class="sf-shell">
+    <div class="sf-navigation">
+      <nav class="sf-rail" aria-label="课程工具">
+        <button class="sf-rail__button sf-rail__menu" type="button" data-nav-toggle aria-controls="course-navigation" aria-expanded="false">
+          <span aria-hidden="true">☰</span><span class="sr-only">打开课程目录</span>
+        </button>
+        <a class="sf-rail__brand" href="visualizations/sglang-course-v2/index.html" aria-label="回到 SGLang 课程地图">S</a>
+        <div class="sf-rail__spacer"></div>
+        <button class="sf-rail__button" type="button" data-search-open aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span class="sr-only">搜索课程</span></button>
+        <button class="sf-rail__button" type="button" data-theme-toggle><span aria-hidden="true">◐</span><span class="sr-only" data-theme-label>深色</span></button>
+      </nav>
+
+      <aside class="sf-drawer" id="course-navigation" aria-label="全部课程目录">
+        <header class="sf-drawer__head">
+          <div><p class="sf-drawer__eyebrow">SGLang source course</p><a href="visualizations/sglang-course-v2/index.html">投机解码专题</a></div>
+          <button class="sf-icon-button" type="button" data-nav-close aria-label="关闭课程目录">×</button>
+        </header>
+        <div class="sf-drawer__tools">
+          <button class="sf-button sf-button--quiet" type="button" data-search-open><span aria-hidden="true">⌕</span> 搜索</button>
+          <button class="sf-button sf-button--quiet" type="button" data-theme-toggle><span aria-hidden="true">◐</span> <span data-theme-label>深色</span></button>
+          <button class="sf-button sf-button--quiet sf-drawer__pin" type="button" data-nav-pin aria-pressed="false"><span aria-hidden="true">⌖</span> <span data-nav-pin-label>固定目录</span></button>
+        </div>
+        <p class="sf-drawer__context"><b>深入源码笔记</b><span>SGLang dSpark Verify 可视化拆解</span></p>
+        <nav class="sf-drawer__tree" aria-label="全部章节"><div class="sf-course-tree">
+    
+      <details class="sf-course-tree__section">
+        <summary><span class="sf-course-tree__number">01</span><span>Speculative Decoding 全家族</span></summary>
+        <ul class="sf-course-tree__children sf-course-tree__children--section">
+          <li class="sf-course-tree__overview"><a href="visualizations/sglang-course-v2/index.html" data-course-link data-chapter-id="speculative"
+     data-search-title="Speculative Decoding 全家族" data-search-section="Speculative Decoding 全家族"
+     
+     
+     >Speculative Decoding 全家族</a></li>
+          <li><a href="visualizations/sglang-course-v2/common-contract.html" data-course-link data-chapter-id="spec-common-contract"
+     data-search-title="Draft 只提案：共同 worker 合同与四个长度" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。"
+     
+     >Draft 只提案：共同 worker 合同与四个长度</a></li><li><a href="visualizations/sglang-course-v2/eagle-tree.html" data-course-link data-chapter-id="eagle-tree"
+     data-search-title="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。"
+     
+     >EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a></li><li><a href="visualizations/sglang-course-v2/dflash-block.html" data-course-link data-chapter-id="dflash-block"
+     data-search-title="DFlash fixed-block draft、hidden injection 与 compact cache" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。"
+     
+     >DFlash fixed-block draft、hidden injection 与 compact cache</a></li><li><a href="visualizations/sglang-course-v2/dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"
+     data-search-title="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。"
+     
+     >DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a></li><li><a href="visualizations/sglang-course-v2/dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"
+     data-search-title="DSpark confidence、history、per-step budget 与 ragged layout" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。"
+     
+     >DSpark confidence、history、per-step budget 与 ragged layout</a></li><li><a href="visualizations/sglang-course-v2/dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"
+     data-search-title="DSpark Target verify、accept/finalize 与 KV commit/reclaim" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。"
+     
+     >DSpark Target verify、accept/finalize 与 KV commit/reclaim</a></li><li><a href="visualizations/sglang-course-v2/dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"
+     data-search-title="DSpark folded fast path、capture/replay 与 overlap" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。"
+     
+     >DSpark folded fast path、capture/replay 与 overlap</a></li><li><a href="visualizations/sglang-course-v2/boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"
+     data-search-title="Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。"
+     
+     >Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a></li>
+          
+        </ul>
+      </details>
+    
+  </div></nav>
+      </aside>
+    </div>
+
+    <button class="sf-nav-backdrop" type="button" data-nav-backdrop aria-label="关闭课程目录"></button>
+
+    <div class="sf-main-frame">
+      <main class="sf-main sf-main--wide" id="main-content" tabindex="-1">
+        <div class="sf-page-grid">
+          <div class="sf-content-column">
+            
+              <nav aria-label="面包屑"><ol class="sf-breadcrumbs">
+                <li><a href="visualizations/sglang-course-v2/index.html">投机解码专题</a></li><li><a href="../index.html">SGLang 全景图</a></li><li><span aria-current="page">SGLang dSpark Verify 可视化拆解</span></li>
+              </ol></nav>
+            
+
+            
+  <header class="sf-note-meta">
+    <p class="sf-hero__eyebrow">投机解码 · 深入源码与专题笔记</p>
+    <nav class="sf-hero__actions" aria-label="笔记操作"><a href="index.html">主题阅读顺序</a><a href="sglang-dspark-verify-visual-guide.md" download>下载 Markdown 源文</a></nav>
+  </header>
+
+
+            <nav class="sf-hero__actions" aria-label="关联阅读入口" data-repository-companion><a href="../index.html">SGLang 全景图</a></nav>
+            
+
+            
+
+            
+            <details class="sf-mobile-toc"><summary>本页目录</summary><ol><li><a href="#1-固定一组贯穿全页的数据">1. 固定一组贯穿全页的数据</a></li><li><a href="#2-一张图先看完整闭环">2. 一张图先看完整闭环</a></li><li><a href="#3-视图一矩形-candidates-如何变成-compact-flat-rails">3. 视图一：矩形 candidates 如何变成 compact flat rails</a></li><li><a href="#4-视图二2--4--5--10-是四个不同维度">4. 视图二：2 / 4 / 5 / 10 是四个不同维度</a></li><li><a href="#5-视图三从-worker-到-target-的时序">5. 视图三：从 Worker 到 Target 的时序</a></li><li><a href="#6-视图四target-每行-logits-在预测什么">6. 视图四：Target 每行 logits 在预测什么</a></li><li><a href="#7-视图五compact-5-为什么又变成-strided-10">7. 视图五：compact [5,...] 为什么又变成 strided [10,...]</a></li><li><a href="#8-视图六accept输出kv下一-anchor-必须拆成三条线">8. 视图六：Accept、输出、KV、下一 anchor 必须拆成三条线</a></li><li><a href="#9-视图七一个-token-的-target-hidden-如何变成-draft-多层-kv">9. 视图七：一个 token 的 Target hidden 如何变成 Draft 多层 K/V</a></li><li><a href="#10-模式矩阵什么会改变什么不会">10. 模式矩阵：什么会改变，什么不会</a></li><li><a href="#11-源码动作--改变状态--为什么">11. 源码动作 / 改变状态 / 为什么</a></li><li><a href="#12-对照主文完成练习">12. 对照主文完成练习</a></li></ol></details>
+
+            <article class="sf-article sf-note-article" data-toc-source><h1 id="sglang-dspark-verify-可视化拆解">SGLang dSpark Verify 可视化拆解</h1>
+<blockquote>
+<p>用途：配合
+<a href="sglang-dspark-single-round-decode.html"><code>sglang-dspark-single-round-decode.md</code></a> 第 7～12 节阅读，
+用同一组多请求数据观察 <code>layout → compact Target forward → strided accept → KV commit → rolling anchor</code>。本页只负责建立视觉坐标；源码证明和 feature boundary 以主文档为准。</p>
+<p>当前源码基线：本地 checkout <code>f01a0c7f97ec</code>，核对日期 2026-08-13。</p>
+<p>验证级别：source-verified、runtime-unvalidated。本文没有运行 CUDA/Triton。</p>
+<p>交互版本：<a href="visualizations/dspark-verify-step-through.html"><code>dSpark Verify 源码逐步执行讲解器</code></a>。
+这是可本地离线打开的项目内 HTML 页面，共用课程的目录、搜索和明暗主题。分享时保留整个 <code>notes/</code> 的相对目录关系，包含实验 <code>assets/</code> 与课程公共资源；无需 iframe、CDN 或对话临时路径。
+它按真实调用链拆为 12 步，每步同时展示 caller/callee、当前源码、输入、状态写入、返回值、
+下一消费者以及同一 token 的跨阶段坐标；本页下面的静态图作为快速复习保留。</p>
+<p>Target hidden 如何变成 Draft 多层 K/V，可单独打开
+<a href="visualizations/dspark-target-hidden-kv-explainer.html"><code>dSpark Target Hidden → Draft KV 逐步讲解器</code></a>。</p>
+</blockquote>
+<p>前置：<a href="sglang-dspark-single-round-decode.html#verify-layout">单轮 Decode 主文 §7–12</a>。</p>
+<p>本文负责：固定双请求的坐标练习和交互入口；完成后回到 <a href="sglang-dspark-single-round-decode.html#two-rounds">两轮时间线</a> 验证状态能继续消费。</p>
+<h2 id="1-固定一组贯穿全页的数据">1. 固定一组贯穿全页的数据</h2>
+<pre class="codehilite"><code class="language-text">B = 2                         真实请求数
+G = gamma = 4                 每请求 draft 数
+W = G + 1 = 5                 anchor + 4 drafts
+prefix_lens = [22,10]
+raw budget = 2                mandatory anchor floor 之外的 batch-global extra slots
+
+req0 candidates = [Y0,a,b,c,d]
+req1 candidates = [Y1,e,f,g,h]
+
+current survival top-2 = req1-pos0、req0-pos0
+verify_lens             = [2,2]
+qo_indptr               = [0,2,4]
+extend_start_loc        = [0,2]
+logical total           = 4
+graph_num_tokens        = 5
+</code></pre>
+<p><code>verify_lens</code> 包含 anchor。因此 <code>[2,2]</code> 表示每请求验证 <code>anchor + 第一个 draft</code>，每请求最多接受
+的 draft 数是 <code>verify_len-1=1</code>。</p>
+<h2 id="2-一张图先看完整闭环">2. 一张图先看完整闭环</h2>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart LR
+    C[&quot;完整 candidates&lt;br/&gt;2 req × 5 cols = 10 slots&quot;] --&gt; L[&quot;schedule_layout&lt;br/&gt;verify_lens=[2,2]&quot;]
+    L --&gt; R[&quot;逻辑 compact&lt;br/&gt;4 real rows&quot;]
+    R --&gt; P[&quot;物理 Target rail&lt;br/&gt;5 rows，含 1 padding&quot;]
+    P --&gt; T[&quot;Target forward&lt;br/&gt;compact logits/hidden [5,...]&quot;]
+    T --&gt; S[&quot;compact → strided&lt;br/&gt;[10,...]，只做接口重排&quot;]
+    S --&gt; A[&quot;Accept&lt;br/&gt;correct_len + bonus&quot;]
+    A --&gt; F[&quot;Finalize&lt;br/&gt;commit_lens + new_seq_lens&quot;]
+    F --&gt; O[&quot;用户输出&lt;br/&gt;accepted drafts + bonus&quot;]
+    F --&gt; K[&quot;Draft KV 提交&lt;br/&gt;old anchor + accepted drafts&quot;]
+    F --&gt; N[&quot;下一轮 anchor&lt;br/&gt;bonus&quot;]
+    N -. &quot;next round&quot; .-&gt; C
+">flowchart LR
+    C[&quot;完整 candidates&lt;br/&gt;2 req × 5 cols = 10 slots&quot;] --&gt; L[&quot;schedule_layout&lt;br/&gt;verify_lens=[2,2]&quot;]
+    L --&gt; R[&quot;逻辑 compact&lt;br/&gt;4 real rows&quot;]
+    R --&gt; P[&quot;物理 Target rail&lt;br/&gt;5 rows，含 1 padding&quot;]
+    P --&gt; T[&quot;Target forward&lt;br/&gt;compact logits/hidden [5,...]&quot;]
+    T --&gt; S[&quot;compact → strided&lt;br/&gt;[10,...]，只做接口重排&quot;]
+    S --&gt; A[&quot;Accept&lt;br/&gt;correct_len + bonus&quot;]
+    A --&gt; F[&quot;Finalize&lt;br/&gt;commit_lens + new_seq_lens&quot;]
+    F --&gt; O[&quot;用户输出&lt;br/&gt;accepted drafts + bonus&quot;]
+    F --&gt; K[&quot;Draft KV 提交&lt;br/&gt;old anchor + accepted drafts&quot;]
+    F --&gt; N[&quot;下一轮 anchor&lt;br/&gt;bonus&quot;]
+    N -. &quot;next round&quot; .-&gt; C
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart LR
+    C[&quot;完整 candidates&lt;br/&gt;2 req × 5 cols = 10 slots&quot;] --&gt; L[&quot;schedule_layout&lt;br/&gt;verify_lens=[2,2]&quot;]
+    L --&gt; R[&quot;逻辑 compact&lt;br/&gt;4 real rows&quot;]
+    R --&gt; P[&quot;物理 Target rail&lt;br/&gt;5 rows，含 1 padding&quot;]
+    P --&gt; T[&quot;Target forward&lt;br/&gt;compact logits/hidden [5,...]&quot;]
+    T --&gt; S[&quot;compact → strided&lt;br/&gt;[10,...]，只做接口重排&quot;]
+    S --&gt; A[&quot;Accept&lt;br/&gt;correct_len + bonus&quot;]
+    A --&gt; F[&quot;Finalize&lt;br/&gt;commit_lens + new_seq_lens&quot;]
+    F --&gt; O[&quot;用户输出&lt;br/&gt;accepted drafts + bonus&quot;]
+    F --&gt; K[&quot;Draft KV 提交&lt;br/&gt;old anchor + accepted drafts&quot;]
+    F --&gt; N[&quot;下一轮 anchor&lt;br/&gt;bonus&quot;]
+    N -. &quot;next round&quot; .-&gt; C
+</code></pre></details></figcaption></figure>
+<h2 id="3-视图一矩形-candidates-如何变成-compact-flat-rails">3. 视图一：矩形 candidates 如何变成 compact flat rails</h2>
+<h3 id="31-完整候选矩形">3.1 完整候选矩形</h3>
+<pre class="codehilite"><code class="language-text">logical candidate column   0       1       2       3       4
+                           anchor  draft1  draft2  draft3  draft4
+
+req0                       Y0      a       b       c       d
+req1                       Y1      e       f       g       h
+</code></pre>
+<p>这只是完整 <code>[B,W]</code> 候选空间，不代表 COMPACT 本轮一定 forward 10 行。</p>
+<h3 id="32-verify_lens22-选择每请求的连续前缀">3.2 <code>verify_lens=[2,2]</code> 选择每请求的连续前缀</h3>
+<pre class="codehilite"><code class="language-text">req0  [Y0, a | b, c, d]
+       └ valid ┘  本轮不验证
+
+req1  [Y1, e | f, g, h]
+       └ valid ┘  本轮不验证
+</code></pre>
+<p>只能选择前缀，不能选择不连续位置。<code>d2</code> 的 Target 上下文依赖 <code>d1</code>；跳过 <code>d1</code> 而单独验证
+<code>d2</code> 没有正确的 causal history。</p>
+<h3 id="33-gather-为三条对齐的-flat-rail">3.3 gather 为三条对齐的 flat rail</h3>
+<pre class="codehilite"><code class="language-text">compact row                0       1       2       3       4
+request/within             r0/0    r0/1    r1/0    r1/1    padding
+
+verify_ids                 Y0      a       Y1      e       0
+positions                  22      23      10      11      0
+verify_cache_loc           L0_22   L0_23   L1_10   L1_11   0
+</code></pre>
+<p>这里：</p>
+<pre class="codehilite"><code class="language-text">qo_indptr=[0,2,4]       → req0 compact rows [0,2)，req1 rows [2,4)
+extend_start_loc=[0,2]  → 两个真实请求在上述 flat rails 中的起点
+graph_num_tokens=5      → 物理 rail 容量；row 4 是 graph-tier padding
+</code></pre>
+<p>padding 的 <code>verify_cache_loc=0</code> 只是物理占位值，没有真实请求/KV 语义；它和后面 scatter 实现用于
+吸收无效写入的 <code>sink</code> row 不是同一个对象。</p>
+<h2 id="4-视图二2--4--5--10-是四个不同维度">4. 视图二：<code>2 / 4 / 5 / 10</code> 是四个不同维度</h2>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart TD
+    B[&quot;2&lt;br/&gt;ForwardBatch.batch_size&lt;br/&gt;真实请求数&quot;]
+    Q[&quot;4&lt;br/&gt;sum(verify_lens)&lt;br/&gt;逻辑 Target query rows&quot;]
+    G[&quot;5&lt;br/&gt;graph_num_tokens&lt;br/&gt;物理 Target rows / graph key&quot;]
+    X[&quot;10&lt;br/&gt;B × W&lt;br/&gt;公共 strided accept 容量&quot;]
+
+    B --&gt;|&quot;每请求 lens=[2,2]&quot;| Q
+    Q --&gt;|&quot;round up to graph tier&quot;| G
+    G --&gt;|&quot;scatter 到固定 request-major stride&quot;| X
+">flowchart TD
+    B[&quot;2&lt;br/&gt;ForwardBatch.batch_size&lt;br/&gt;真实请求数&quot;]
+    Q[&quot;4&lt;br/&gt;sum(verify_lens)&lt;br/&gt;逻辑 Target query rows&quot;]
+    G[&quot;5&lt;br/&gt;graph_num_tokens&lt;br/&gt;物理 Target rows / graph key&quot;]
+    X[&quot;10&lt;br/&gt;B × W&lt;br/&gt;公共 strided accept 容量&quot;]
+
+    B --&gt;|&quot;每请求 lens=[2,2]&quot;| Q
+    Q --&gt;|&quot;round up to graph tier&quot;| G
+    G --&gt;|&quot;scatter 到固定 request-major stride&quot;| X
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart TD
+    B[&quot;2&lt;br/&gt;ForwardBatch.batch_size&lt;br/&gt;真实请求数&quot;]
+    Q[&quot;4&lt;br/&gt;sum(verify_lens)&lt;br/&gt;逻辑 Target query rows&quot;]
+    G[&quot;5&lt;br/&gt;graph_num_tokens&lt;br/&gt;物理 Target rows / graph key&quot;]
+    X[&quot;10&lt;br/&gt;B × W&lt;br/&gt;公共 strided accept 容量&quot;]
+
+    B --&gt;|&quot;每请求 lens=[2,2]&quot;| Q
+    Q --&gt;|&quot;round up to graph tier&quot;| G
+    G --&gt;|&quot;scatter 到固定 request-major stride&quot;| X
+</code></pre></details></figcaption></figure>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th style="text-align:right">数量</th>
+<th>是什么</th>
+<th>不是什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:right"><code>2</code></td>
+<td>真实请求数</td>
+<td>不是 Target token 行数</td>
+</tr>
+<tr>
+<td style="text-align:right"><code>4</code></td>
+<td>原始 layout 中属于真实请求的 query 行数</td>
+<td>不是 graph 静态 shape</td>
+</tr>
+<tr>
+<td style="text-align:right"><code>5</code></td>
+<td>Target 本轮处理的物理 compact/padding 行数</td>
+<td>不是 5 个请求</td>
+</tr>
+<tr>
+<td style="text-align:right"><code>10</code></td>
+<td>accept 公共接口的固定 <code>[B,W]</code> 容量</td>
+<td>不是第二次 Target forward 10 行</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="5-视图三从-worker-到-target-的时序">5. 视图三：从 Worker 到 Target 的时序</h2>
+<p>在 <a href="visualizations/dspark-verify-step-through.html">Verify 逐步讲解器</a> 中沿以下三个交接检查坐标。
+完整动态分发、两次 graph <code>load_batch()</code> 与 metadata pre-plan 的源码证明，统一见
+<a href="sglang-dspark-single-round-decode.html#target-verify">主文 §8</a>。</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>交接</th>
+<th>本例应观察到的状态</th>
+<th>练习</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>VerifyPlanner → TargetVerifyExecutor.run_compact()</code></td>
+<td><code>verify_lens=[2,2]</code>，3 条 rails 各长 5</td>
+<td>指出第 5 行为什么不增加请求数</td>
+</tr>
+<tr>
+<td><code>DFlashVerifyInput → Target TpModelWorker</code></td>
+<td><code>batch_size=2</code>，<code>TARGET_VERIFY</code>，输入 5 行</td>
+<td>区分请求轴、物理 token 轴和 runner 选择</td>
+</tr>
+<tr>
+<td>Target worker → verify executor</td>
+<td><code>is_verify=True</code> 返回 logits/hidden <code>[5,...]</code></td>
+<td>找到尚未产生 <code>correct_len/bonus</code> 的返回边界</td>
+</tr>
+</tbody>
+</table></div>
+<p>Graph 不可用时仍可走 eager compact；<code>layout=None</code> 才更早退回 full-width non-compact。
+把“是否 compact”和“是否回放 graph”作为两个独立开关观察。</p>
+<h2 id="6-视图四target-每行-logits-在预测什么">6. 视图四：Target 每行 logits 在预测什么</h2>
+<pre class="codehilite"><code class="language-text">physical row  input token   context                 next-token logits 用途
+0             Y0            ... Y0                  验证 draft a
+1             a             ... Y0 a                req0 边界/bonus 分布
+2             Y1            ... Y1                  验证 draft e
+3             e             ... Y1 e                req1 边界/bonus 分布
+4             padding       synthetic physical row  无真实请求语义
+</code></pre>
+<p>Target 某一行 logits 预测的是“该输入 token 之后”的 token，不是在判断同一行 token。刚从
+<code>_run_ragged()</code> 返回时：</p>
+<pre class="codehilite"><code class="language-text">next_token_logits = [5,V]
+hidden_states     = [5,H_aux]
+</code></pre>
+<p>此时 <code>TargetVerifyResult</code> 还没有 <code>correct_len</code>、<code>bonus</code> 或 <code>commit_lens</code>。</p>
+<h2 id="7-视图五compact-5-为什么又变成-strided-10">7. 视图五：compact <code>[5,...]</code> 为什么又变成 strided <code>[10,...]</code></h2>
+<p>公共 greedy/sampling accept 逻辑按每请求固定宽度 <code>W=5</code> 消费数据，因此 <code>run_compact()</code> 需要把
+有效 compact rows 放回请求主序矩形：</p>
+<pre class="codehilite"><code class="language-text">compact row → strided row
+0 (Y0)      → 0  = req0 col0
+1 (a)       → 1  = req0 col1
+2 (Y1)      → 5  = req1 col0
+3 (e)       → 6  = req1 col1
+4 (padding) → sink，不进入返回的 10 rows
+</code></pre>
+<p>结果：</p>
+<pre class="codehilite"><code class="language-text">req0 strided logits/hidden = [row(Y0), row(a),  Ø, Ø, Ø]
+req1 strided logits/hidden = [row(Y1), row(e),   Ø, Ø, Ø]
+</code></pre>
+<p><code>Ø</code> 是 <code>fill_value=0</code> 的无效 logits/hidden lane，不是 token id 0，也不是“Target 预测概率为 0”。
+<code>5→10</code> 只做数据布局恢复，不会再次执行 Target Transformer。普通路径调用
+<code>ScatterCompactToStrided</code>；graph epilogue 可把相同 scatter 折进 captured graph tail。</p>
+<h2 id="8-视图六accept输出kv下一-anchor-必须拆成三条线">8. 视图六：Accept、输出、KV、下一 anchor 必须拆成三条线</h2>
+<p>为了让两个请求都覆盖一种结果，假设 greedy Target 对齐预测为：</p>
+<pre class="codehilite"><code class="language-text">req0 Target predictions: [a,Z]   → a 匹配
+req1 Target predictions: [Q,R]   → e 在第一步就不匹配
+</code></pre>
+<p>因此：</p>
+<pre class="codehilite"><code class="language-text">correct_len   = [1,0]
+bonus         = [Z,Q]
+commit_lens   = correct_len + 1 = [2,1]
+new_seq_lens  = prefix_lens + commit_lens = [24,11]
+</code></pre>
+<p>三条结果线如下：</p>
+<figure class="note-diagram" data-diagram-frame><div class="diagram-canvas" data-diagram-content><div class="mermaid" data-source="flowchart LR
+    A[&quot;AcceptOuts&lt;br/&gt;correct=[1,0]&lt;br/&gt;bonus=[Z,Q]&quot;] --&gt; O[&quot;用户有效输出&lt;br/&gt;req0 [a,Z]&lt;br/&gt;req1 [Q]&quot;]
+    A --&gt; K[&quot;本轮 Draft KV 新提交&lt;br/&gt;req0 [Y0,a] @ 22,23&lt;br/&gt;req1 [Y1] @ 10&quot;]
+    A --&gt; N[&quot;下一轮 Draft anchor&lt;br/&gt;req0 Z @ 24&lt;br/&gt;req1 Q @ 11&quot;]
+">flowchart LR
+    A[&quot;AcceptOuts&lt;br/&gt;correct=[1,0]&lt;br/&gt;bonus=[Z,Q]&quot;] --&gt; O[&quot;用户有效输出&lt;br/&gt;req0 [a,Z]&lt;br/&gt;req1 [Q]&quot;]
+    A --&gt; K[&quot;本轮 Draft KV 新提交&lt;br/&gt;req0 [Y0,a] @ 22,23&lt;br/&gt;req1 [Y1] @ 10&quot;]
+    A --&gt; N[&quot;下一轮 Draft anchor&lt;br/&gt;req0 Z @ 24&lt;br/&gt;req1 Q @ 11&quot;]
+</div></div><figcaption class="diagram-toolbar"><button type="button" data-diagram-open data-diagram-label="源码图解" disabled>放大图表</button><details><summary>图定义</summary><pre><code>flowchart LR
+    A[&quot;AcceptOuts&lt;br/&gt;correct=[1,0]&lt;br/&gt;bonus=[Z,Q]&quot;] --&gt; O[&quot;用户有效输出&lt;br/&gt;req0 [a,Z]&lt;br/&gt;req1 [Q]&quot;]
+    A --&gt; K[&quot;本轮 Draft KV 新提交&lt;br/&gt;req0 [Y0,a] @ 22,23&lt;br/&gt;req1 [Y1] @ 10&quot;]
+    A --&gt; N[&quot;下一轮 Draft anchor&lt;br/&gt;req0 Z @ 24&lt;br/&gt;req1 Q @ 11&quot;]
+</code></pre></details></figcaption></figure>
+<p>固定 <code>out_tokens[B,W]</code> 工作缓冲可能仍包含未消费尾部；真正有效输出由 <code>accept_lens=commit_lens</code>
+限定。用户输出与 KV 提交即使长度相同，token 内容仍错开一位：</p>
+<pre class="codehilite"><code class="language-text">用户输出：       [accepted drafts, bonus]
+本轮 KV 提交：   [old anchor, accepted drafts]
+下一轮 anchor：  bonus
+</code></pre>
+<p>bonus 本轮只是 Target 输出，没有作为 Transformer 输入，因而尚无自己的 hidden/KV；它在下一轮
+才成为 anchor。</p>
+<p>Sampling 边界：若不是 greedy，第一次拒绝后的 bonus 从修正后的 residual distribution 随机采样，
+不保证等于 Target argmax；三条 rolling-anchor 状态关系不变。</p>
+<h2 id="9-视图七一个-token-的-target-hidden-如何变成-draft-多层-kv">9. 视图七：一个 token 的 Target hidden 如何变成 Draft 多层 K/V</h2>
+<p>本节继续跟踪固定例子中被接受的 <code>a</code>。在
+<a href="visualizations/dspark-target-hidden-kv-explainer.html">Target Hidden → Draft KV 讲解器</a> 中，
+分别指出 token 坐标、Target 层坐标、Draft 层坐标与 KV slot，避免把它们合成一个轴。</p>
+<pre class="codehilite"><code class="language-text">a @ position 23，物理 slot L0_23
+  → 选定 Target layers 的 hidden features
+  → concat + project_target_hidden → 一个 Draft context vector u_a
+  → 各 Draft layer 用自己的 KV projection
+  → 每层各写 K_a / V_a 到该层的 slot L0_23
+</code></pre>
+<p>各 Draft 层拥有不同权重，写入的 K/V 不是同一份值的多份复制。完整选层、feature 融合、RoPE、
+projection 和写入调用链集中在 <a href="sglang-dspark-single-round-decode.html#kv-commit">主文 §11</a>。</p>
+<p>回到本页的 COMPACT + greedy 数据，核对哪些 Target hidden 会被提交：</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>请求</th>
+<th>Target 本轮真实输入</th>
+<th>本轮提交到 Draft KV</th>
+<th>下一 anchor，尚无自己的 hidden/KV</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>req0</td>
+<td><code>[Y0,a]</code></td>
+<td><code>[Y0@22,a@23]</code></td>
+<td><code>Z@24</code></td>
+</tr>
+<tr>
+<td>req1</td>
+<td><code>[Y1,e]</code></td>
+<td><code>[Y1@10]</code>；<code>e</code> 已计算但未接受</td>
+<td><code>Q@11</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>自检：同样被 Target forward 过，为什么 <code>a</code> 写入 Draft KV 而 <code>e</code> 不写？答案必须同时引用
+第 8 节的 <code>correct_len</code> 和本节的输入行坐标。</p>
+<h2 id="10-模式矩阵什么会改变什么不会">10. 模式矩阵：什么会改变，什么不会</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>模式/执行</th>
+<th>Target 实算布局</th>
+<th>layout 的作用</th>
+<th>Accept</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>STATIC</td>
+<td>完整 <code>B×W</code></td>
+<td><code>None</code>；不是跳过 verify</td>
+<td>greedy/sampling 正常执行</td>
+</tr>
+<tr>
+<td>CAP_ACCEPT + layout</td>
+<td>完整 <code>B×W</code></td>
+<td>只提供接受深度 cutoff</td>
+<td>截到 <code>verify_len-1</code></td>
+</tr>
+<tr>
+<td>COMPACT + layout</td>
+<td><code>graph_num_tokens</code>，可能含 padding</td>
+<td>同时控制 gather 与 cutoff</td>
+<td>scatter 后复用公共 accept</td>
+</tr>
+<tr>
+<td>COMPACT + <code>layout=None</code></td>
+<td>完整 <code>B×W</code> non-compact fallback</td>
+<td>无 cutoff</td>
+<td>正常执行</td>
+</tr>
+<tr>
+<td>Decode Graph</td>
+<td>固定 token tier replay</td>
+<td>backend 构造 padded physical metadata</td>
+<td>可选 folded epilogue</td>
+</tr>
+<tr>
+<td>Eager compact</td>
+<td>仍是 compact physical rail</td>
+<td>使用原始 logical geometry</td>
+<td>graph 外 scatter/accept</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>proposal.folded=True</code> 只代表 Draft sampler tail 折进 Draft graph；Target 的 folded accept 还要求
+COMPACT、Target graph replay、greedy、无 grammar/额外 logits adjustment/模拟 accept 等条件。
+folded commit 又要求 KV pool 有融合写接口。优化可以改变执行位置，不能改变输出、commit 和 next
+anchor 的语义。</p>
+<h2 id="11-源码动作--改变状态--为什么">11. 源码动作 / 改变状态 / 为什么</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>源码动作</th>
+<th>改变状态</th>
+<th>为什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ScheduleVerifyLensTopk</code></td>
+<td><code>C_t + budget → verify_lens</code></td>
+<td>历史决定多少，当前决定分给谁</td>
+</tr>
+<tr>
+<td><code>RaggedVerifyLayout</code></td>
+<td><code>[2,2] → offsets + graph tier</code></td>
+<td>同时描述逻辑请求边界与物理容量</td>
+</tr>
+<tr>
+<td><code>BuildRaggedVerifyWindow</code></td>
+<td>矩形 candidates → 三条 compact rails</td>
+<td>Target 只处理选中的连续前缀及 tier padding</td>
+</tr>
+<tr>
+<td><code>prepare_for_verify</code></td>
+<td><code>ScheduleBatch → TARGET_VERIFY ForwardBatch</code></td>
+<td>在 forward 前完成 graph/eager metadata pre-plan</td>
+</tr>
+<tr>
+<td>Target forward</td>
+<td>产生 compact logits/hidden</td>
+<td>为每个候选位置提供 Target 分布和 commit hidden</td>
+</tr>
+<tr>
+<td>compact-to-strided</td>
+<td><code>[5,...] → [10,...]</code></td>
+<td>复用固定宽度公共 accept 接口</td>
+</tr>
+<tr>
+<td>accept/finalize</td>
+<td>产生正确长度、bonus 和新长度</td>
+<td>把候选评分变成正式生成状态</td>
+</tr>
+<tr>
+<td>hidden inject</td>
+<td>提交 <code>[anchor, accepted drafts]</code></td>
+<td>下一轮 Draft 必须拥有已确认历史的 KV</td>
+</tr>
+<tr>
+<td><code>make_next_draft_input</code></td>
+<td>bonus 成为新 anchor</td>
+<td>补上本轮尚未拥有的 bonus hidden/KV</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="12-对照主文完成练习">12. 对照主文完成练习</h2>
+<p>源码索引只在 <a href="sglang-dspark-single-round-decode.html">单轮 Decode 主文</a> 维护；本页按问题跳到对应
+推导，交互页面承担逐步观察。</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>本页练习</th>
+<th>主文中的证明</th>
+<th>交互入口</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>budget → verify_lens</code></td>
+<td><a href="sglang-dspark-single-round-decode.html#verify-layout">§7 layout 与预算</a></td>
+<td><a href="visualizations/dspark-verify-step-through.html">Verify 逐步讲解器</a></td>
+</tr>
+<tr>
+<td><code>2/4/5/10</code> 与 scatter</td>
+<td><a href="sglang-dspark-single-round-decode.html#target-verify">§8 Target Verify</a></td>
+<td><a href="visualizations/dspark-verify-step-through.html">Verify 逐步讲解器</a></td>
+</tr>
+<tr>
+<td><code>correct_len/bonus</code></td>
+<td><a href="sglang-dspark-single-round-decode.html#accept">§9 Accept</a></td>
+<td><a href="visualizations/dspark-verify-step-through.html">Verify 逐步讲解器</a></td>
+</tr>
+<tr>
+<td>输出与 KV 错开一位</td>
+<td><a href="sglang-dspark-single-round-decode.html#kv-commit">§11 KV 提交</a></td>
+<td><a href="visualizations/dspark-target-hidden-kv-explainer.html">Target Hidden → Draft KV</a></td>
+</tr>
+<tr>
+<td>下一轮如何延续</td>
+<td><a href="sglang-dspark-single-round-decode.html#two-rounds">§13 两轮时间线</a></td>
+<td><a href="visualizations/dspark-verify-step-through.html">Verify 逐步讲解器</a></td>
+</tr>
+</tbody>
+</table></div>
+<p>完成前回答：</p>
+<ol>
+<li>为什么 Target 输入容量是 5，<code>ForwardBatch.batch_size</code> 仍是 2？</li>
+<li>compact row 2 在 strided 接口对应哪一行，它的 logits 验证哪个 token？</li>
+<li>req1 的 <code>e</code> 有 Target hidden，为什么不提交到 Draft KV？</li>
+<li>本轮结束时，<code>Z/Q</code> 分别会以什么 position 成为下一轮输入？</li>
+</ol>
+</article>
+
+            
+
+            <footer class="sf-footer"><span>投机解码源码专题</span><span>纯静态 · 本地依赖 · 可离线分享</span></footer>
+            <p class="print-only">投机解码源码专题 · SGLang dSpark Verify 可视化拆解 · None</p>
+          </div>
+
+          <aside class="sf-page-toc" aria-label="本页目录">
+            <p class="sf-page-toc__title">On this page</p>
+            <ol data-page-toc-list><li><a href="#1-固定一组贯穿全页的数据" data-level="2">1. 固定一组贯穿全页的数据</a></li><li><a href="#2-一张图先看完整闭环" data-level="2">2. 一张图先看完整闭环</a></li><li><a href="#3-视图一矩形-candidates-如何变成-compact-flat-rails" data-level="2">3. 视图一：矩形 candidates 如何变成 compact flat rails</a></li><li><a href="#4-视图二2--4--5--10-是四个不同维度" data-level="2">4. 视图二：2 / 4 / 5 / 10 是四个不同维度</a></li><li><a href="#5-视图三从-worker-到-target-的时序" data-level="2">5. 视图三：从 Worker 到 Target 的时序</a></li><li><a href="#6-视图四target-每行-logits-在预测什么" data-level="2">6. 视图四：Target 每行 logits 在预测什么</a></li><li><a href="#7-视图五compact-5-为什么又变成-strided-10" data-level="2">7. 视图五：compact [5,...] 为什么又变成 strided [10,...]</a></li><li><a href="#8-视图六accept输出kv下一-anchor-必须拆成三条线" data-level="2">8. 视图六：Accept、输出、KV、下一 anchor 必须拆成三条线</a></li><li><a href="#9-视图七一个-token-的-target-hidden-如何变成-draft-多层-kv" data-level="2">9. 视图七：一个 token 的 Target hidden 如何变成 Draft 多层 K/V</a></li><li><a href="#10-模式矩阵什么会改变什么不会" data-level="2">10. 模式矩阵：什么会改变，什么不会</a></li><li><a href="#11-源码动作--改变状态--为什么" data-level="2">11. 源码动作 / 改变状态 / 为什么</a></li><li><a href="#12-对照主文完成练习" data-level="2">12. 对照主文完成练习</a></li></ol>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="search-dialog" id="course-search-dialog" data-search-dialog aria-labelledby="course-search-title">
+    <div class="search-dialog__head"><strong id="course-search-title">搜索课程</strong><button class="sf-icon-button" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+    <form class="search-dialog__form" data-search-form role="search"><label class="sr-only" for="course-search-input">搜索对象、方法、状态或章节</label><input id="course-search-input" type="search" data-search-input autocomplete="off" placeholder="例如：running_batch、ForwardBatch、TARGET_VERIFY"><button class="sf-button" type="submit">搜索</button></form>
+    <p class="search-dialog__status" data-search-status aria-live="polite"></p><ol class="search-results" data-search-results></ol>
+  </dialog>
+
+  <dialog class="diagram-viewer" id="diagram-viewer-dialog" data-diagram-dialog aria-labelledby="diagram-viewer-title">
+    <div class="diagram-viewer__head"><div><strong id="diagram-viewer-title" data-diagram-title>图解沉浸阅读</strong> <span class="diagram-viewer__zoom" data-diagram-zoom>100%</span></div><div class="diagram-viewer__tools"><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-in" aria-label="放大">＋</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-out" aria-label="缩小">−</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="fit">看全图</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="reset">100%</button><button class="sf-button" type="button" data-diagram-action="close">关闭 ×</button></div></div>
+    <div class="diagram-viewer__viewport" data-diagram-viewport><div class="diagram-viewer__canvas mermaid" data-diagram-canvas></div></div>
+  </dialog>
+
+  <script src="visualizations/sglang-course-v2/assets/data/search-index.js" defer></script>
+  <script src="course/assets/vendor/mermaid.min.js" defer></script>
+  <script src="course/assets/js/site-shell.js" defer></script>
+  <script src="course/assets/js/toc-search.js" defer></script>
+  <script src="course/assets/js/diagram-viewer.js" defer></script>
+  <script src="course/assets/js/source-microscope.js" defer></script>
+  <script src="course/assets/js/labs.js" defer></script>
+  <script src="course/assets/js/lesson-components.js" defer></script>
+  
+  <script defer src="course/assets/notes/reading.js"></script>
+</body>
+</html>

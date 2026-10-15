@@ -1,0 +1,539 @@
+
+
+
+
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。">
+  <link rel="icon" href="data:,">
+  <title>DSpark confidence、history、per-step budget 与 ragged layout · 投机解码专题</title>
+  <link rel="stylesheet" href="assets/css/specforge-course.css">
+  <link rel="stylesheet" href="assets/css/labs.css">
+  <link rel="stylesheet" href="assets/css/print.css">
+</head>
+<body class="sf-course-page" data-root-url="index.html"
+      data-nav-open="false" data-nav-pinned="false"
+data-page-id="dspark-confidence-layout" data-chapter-id="dspark-confidence-layout"data-section-id="speculative"      style="--page-accent: var(--domain-speculative, var(--domain-entry))">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+
+  <div class="sf-shell">
+    <div class="sf-navigation">
+      <nav class="sf-rail" aria-label="课程工具">
+        <button class="sf-rail__button sf-rail__menu" type="button" data-nav-toggle aria-controls="course-navigation" aria-expanded="false">
+          <span aria-hidden="true">☰</span><span class="sr-only">打开课程目录</span>
+        </button>
+        <a class="sf-rail__brand" href="index.html" aria-label="回到 SGLang 课程地图">S</a>
+        <div class="sf-rail__spacer"></div>
+        <button class="sf-rail__button" type="button" data-search-open aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span class="sr-only">搜索课程</span></button>
+        <button class="sf-rail__button" type="button" data-theme-toggle><span aria-hidden="true">◐</span><span class="sr-only" data-theme-label>深色</span></button>
+      </nav>
+
+      <aside class="sf-drawer" id="course-navigation" aria-label="全部课程目录">
+        <header class="sf-drawer__head">
+          <div><p class="sf-drawer__eyebrow">SGLang source course</p><a href="index.html">投机解码专题</a></div>
+          <button class="sf-icon-button" type="button" data-nav-close aria-label="关闭课程目录">×</button>
+        </header>
+        <div class="sf-drawer__tools">
+          <button class="sf-button sf-button--quiet" type="button" data-search-open><span aria-hidden="true">⌕</span> 搜索</button>
+          <button class="sf-button sf-button--quiet" type="button" data-theme-toggle><span aria-hidden="true">◐</span> <span data-theme-label>深色</span></button>
+          <button class="sf-button sf-button--quiet sf-drawer__pin" type="button" data-nav-pin aria-pressed="false"><span aria-hidden="true">⌖</span> <span data-nav-pin-label>固定目录</span></button>
+        </div>
+        <p class="sf-drawer__context"><b>Speculative Decoding 全家族</b><span>DSpark confidence、history、per-step budget 与 ragged layout</span></p>
+        <nav class="sf-drawer__tree" aria-label="全部章节"><div class="sf-course-tree">
+      <details class="sf-course-tree__section" open>
+        <summary><span class="sf-course-tree__number">01</span><span>Speculative Decoding 全家族</span></summary>
+        <ul class="sf-course-tree__children sf-course-tree__children--section">
+<li class="sf-course-tree__overview"><a href="index.html" data-course-link data-chapter-id="speculative"
+     data-search-title="Speculative Decoding 全家族" data-search-section="Speculative Decoding 全家族"
+aria-current="page">Speculative Decoding 全家族</a></li><li><a href="common-contract.html" data-course-link data-chapter-id="spec-common-contract"
+     data-search-title="Draft 只提案：共同 worker 合同与四个长度" data-search-section="Speculative Decoding 全家族"
+data-search-summary="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。">Draft 只提案：共同 worker 合同与四个长度</a></li><li><a href="eagle-tree.html" data-course-link data-chapter-id="eagle-tree"
+     data-search-title="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask" data-search-section="Speculative Decoding 全家族"
+data-search-summary="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。">EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a></li><li><a href="dflash-block.html" data-course-link data-chapter-id="dflash-block"
+     data-search-title="DFlash fixed-block draft、hidden injection 与 compact cache" data-search-section="Speculative Decoding 全家族"
+data-search-summary="追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。">DFlash fixed-block draft、hidden injection 与 compact cache</a></li><li><a href="dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"
+     data-search-title="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer" data-search-section="Speculative Decoding 全家族"
+data-search-summary="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。">DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a></li><li><a href="dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"
+     data-search-title="DSpark confidence、history、per-step budget 与 ragged layout" data-search-section="Speculative Decoding 全家族"
+data-search-summary="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。"aria-current="page">DSpark confidence、history、per-step budget 与 ragged layout</a></li><li><a href="dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"
+     data-search-title="DSpark Target verify、accept/finalize 与 KV commit/reclaim" data-search-section="Speculative Decoding 全家族"
+data-search-summary="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。">DSpark Target verify、accept/finalize 与 KV commit/reclaim</a></li><li><a href="dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"
+     data-search-title="DSpark folded fast path、capture/replay 与 overlap" data-search-section="Speculative Decoding 全家族"
+data-search-summary="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。">DSpark folded fast path、capture/replay 与 overlap</a></li><li><a href="boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"
+     data-search-title="Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec" data-search-section="Speculative Decoding 全家族"
+data-search-summary="用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。">Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a></li>        </ul>
+      </details>
+  </div></nav>
+      </aside>
+    </div>
+
+    <button class="sf-nav-backdrop" type="button" data-nav-backdrop aria-label="关闭课程目录"></button>
+
+    <div class="sf-main-frame">
+      <main class="sf-main" id="main-content" tabindex="-1">
+        <div class="sf-page-grid">
+          <div class="sf-content-column">
+              <nav aria-label="面包屑"><ol class="sf-breadcrumbs">
+<li><a href="index.html">Speculative Decoding 专题</a></li><li><span aria-current="page">DSpark confidence、history、per-step budget 与 ragged layout</span></li>              </ol></nav>
+
+              <header class="sf-hero">
+                <h1>DSpark confidence、history、per-step budget 与 ragged layout</h1>
+<p class="sf-hero__lead">用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。</p>                <div class="sf-evidence-strip">
+<span><strong>源码版本</strong> f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</span>                </div>
+                <div class="sf-hero__actions"></div>
+              </header>
+
+
+            <nav class="sf-hero__actions" aria-label="关联阅读入口" data-repository-companion><a href="../index.html">投机可视化总入口</a></nav>
+<details class="sf-source-details"><summary>版本与验证范围</summary><p>保留原投机解码资料与核对日期。页面重建与链接检查不增加 GPU 或端到端验证证据。</p></details>
+              <aside class="sf-contract" aria-label="深入源码笔记" data-related-notes data-repository-companion>
+                <div><b>深入源码笔记</b><span>课程负责连贯导览；逐段源码推导与补充讨论在以下主文维护。</span></div>
+<div><a href="../../sglang-dspark-single-round-decode.html">dSpark confidence、cap 与实际 verify layout</a></div>              </aside>
+
+              <nav class="sf-stage-map" aria-label="本章学习路径">
+                <div class="sf-stage-map__head"><span>Stage roadmap</span><b>沿同一组对象，从结论走到源码与边界</b></div>
+                <ol><li><a href="#直接结论"><span>01</span>先钉住结论</a></li><li><a href="#当前路径假设"><span>02</span>前置直觉与运行坐标</a></li><li><a href="#对象与状态"><span>05</span>对象与所有权地图</a></li><li><a href="#当前源码调用链"><span>06</span>当前源码主链</a></li><li><a href="#连续例子"><span>07</span>固定样例 · 连续过程</a></li><li><a href="#边界矩阵"><span>09</span>分支与结论边界</a></li><li><a href="#自测"><span>11</span>自测与复盘</a></li></ol>
+              </nav>
+<details class="sf-mobile-toc"><summary>本页目录</summary><ol><li><a href="#直接结论">直接结论</a></li><li><a href="#当前路径假设">当前路径假设</a></li><li><a href="#输入-本页职责与输出">输入、本页职责与输出</a></li><li><a href="#为什么存在">为什么存在</a></li><li><a href="#对象与状态">对象与状态</a></li><li><a href="#当前源码调用链">当前源码调用链</a></li><li><a href="#连续例子">连续例子</a></li><li><a href="#为什么必须在这里">为什么必须在这里</a></li><li><a href="#边界矩阵">边界矩阵</a></li><li><a href="#source-action-changed-state-why">source action / changed state / why</a></li><li><a href="#自测">自测</a></li><li><a href="#source-evidence">源码引用与上下文</a></li></ol></details>
+<article class="sf-deep-lesson" data-toc-source data-lesson>
+<section class="sf-topic sf-topic--verdict" data-topic-kind="verdict" aria-labelledby="直接结论">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="直接结论"><span class="sf-sec-number" aria-hidden="true">01</span>直接结论</h2>
+    </header>
+
+      <div class="sf-note sf-note--key"><p>DSpark confidence不是“这个请求应该验证几个token”的最终整数，也不是对词表的概率分布。它是 <code>[B,gamma]</code> 的逐位置分数，每项被约束在 <code>[0,1]</code>；按行累乘得到“接受链至少生存到该位置”的survival。planner把历史/lagged survival与SPS耗时表结合，先选一个batch-global <code>verify_token_budget</code>，其语义是“每请求最低anchor/floor之外，还允许验证多少个draft位置”；随后用当前轮confidence的survival做一次全batch top-k，把这些额外名额分配给具体请求，生成每请求 <code>verify_lens</code>。</p>
+<p>因此“多少”和“给谁”是两次不同决策：历史confidence与cost table决定预算标量，当前confidence决定layout。<code>budget=0</code>仍保留每请求至少一个anchor verify；<code>budget=None</code>表示没有可用调度决策，代码会退回uniform/full或无ragged layout，而不是等价于0。<code>sum(verify_lens)</code>是真实计划的target行数，<code>graph_num_tokens</code>是CUDA Graph bucket上界，可能更大；二者都不是最终accept/emit数量。</p>
+</div>
+  </section><section class="sf-topic sf-topic--prereq" data-topic-kind="prereq" aria-labelledby="当前路径假设">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="当前路径假设"><span class="sf-sec-number" aria-hidden="true">02</span>当前路径假设</h2>
+    </header>
+
+      <div class="sf-note sf-note--scope"><p>示例使用CUDA、dense DSpark、<code>B=2</code>、<code>gamma=4</code>、verify width=5、confidence checkpoint存在、STS可选、ragged mode=<code>compact</code>且有已profile SPS table、无DP attention。R0/R1都在decode且generation匹配，当前confidence只是用于layout；budget来自配置lag后的历史confidence。若未提供SPS table，当前compact路径会识别flat/uninitialized table并退化为verify-all的uniform layout，不能拿它当“动态调度已产生收益”。</p>
+<p><code>static</code>、<code>cap-accept</code>、<code>compact</code>必须分开：static不建动态layout；cap-accept仍让target执行full block，只在accept时截断；compact才把各请求有效rows压紧，并按graph token bucket replay。DP attention下还有rank间verify-lens广播、DP-global tier gather与idle参与；当前源码路径可证明协议存在，但本页未运行collective、CUDA Graph或SPS性能实验。</p>
+</div>
+  </section><section class="sf-topic sf-topic--contract" data-topic-kind="contract" aria-labelledby="输入-本页职责与输出">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="输入-本页职责与输出"><span class="sf-sec-number" aria-hidden="true">03</span>输入、本页职责与输出</h2>
+    </header>
+
+      <div class="sf-contract-body"><p>输入是当前proposal的 <code>draft_hidden</code>、anchor、<code>draft_tokens</code>、可选DSV4 confidence tap，以及历史relay的confidence/generation、SPS cost table、ragged mode与capture grid。职责是先把模型分数变成有语义的survival，再区分host预算和device layout，并追踪输出到target executor。输出可为 <code>None</code>（static/缺决策）、或 <code>RaggedVerifyLayout(verify_lens, graph_num_tokens, indptr...)</code>。</p>
+<div class="table-scroll teaching-table"><table>
+<thead>
+<tr>
+<th>量</th>
+<th>B=2,gamma=4 示例</th>
+<th>单位</th>
+<th>决定者</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>confidence R0</td>
+<td><code>[.90,.80,.50,.20]</code></td>
+<td>每draft位置条件分数</td>
+<td>当前draft confidence head + STS</td>
+</tr>
+<tr>
+<td>survival R0</td>
+<td><code>[.90,.72,.36,.072]</code></td>
+<td>连续链生存估计</td>
+<td>行内cumprod</td>
+</tr>
+<tr>
+<td>budget</td>
+<td><code>3</code></td>
+<td>全batch floor之外的额外token名额</td>
+<td>历史survival + SPS</td>
+</tr>
+<tr>
+<td>verify_lens</td>
+<td><code>[3,2]</code></td>
+<td>每请求target输入行数，包含anchor</td>
+<td>当前survival global top-k</td>
+</tr>
+<tr>
+<td>total verify</td>
+<td><code>5</code></td>
+<td>实际有效target rows</td>
+<td><code>sum(verify_lens)</code></td>
+</tr>
+<tr>
+<td>graph tokens</td>
+<td>例如<code>8</code></td>
+<td>capture/replay bucket rows</td>
+<td>grid round-up / DP tier</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+  </section><section class="sf-topic sf-topic--why" data-topic-kind="why" aria-labelledby="为什么存在">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="为什么存在"><span class="sf-sec-number" aria-hidden="true">04</span>为什么存在</h2>
+    </header>
+
+      <div class="sf-topic__body"><p>固定verify width会在低接受概率位置浪费target计算，但只按每请求单一阈值截断又很难直接满足batch总成本。DSpark把问题拆成“总体成本预算”与“跨请求名额选择”：SPS table给不同batch token数对应的steps/sec或step time，<code>compute_verify_token_budget()</code>枚举额外名额，比较预测吞吐目标；<code>ScheduleVerifyLensTopk</code>再在所有请求/位置survival中挑最高项。这样一个高生存请求可以拿更多列，低生存请求仍至少验证anchor并得到新bonus。</p>
+<p>survival使用cumprod是因为接受链必须连续：即使第4个位置局部confidence高，只要前面位置低，真正到达第4个位置的概率也低。直接对raw confidence排序会给不可达的深位置过高优先级。STS只对confidence head的raw输出施加逐位置temperature校准，不改变draft token、target logits或accept规则；校准文件存在也不等于在当前流量上已校准良好。</p>
+<p>lag是为了把GPU confidence的D2H和host预算计算移出当前critical path。代价是预算依据旧信息，所以源码还携带<code>req_generation</code>：slot被新请求复用或generation不匹配时，planner用全1 survival作安全fallback，而不是把旧请求confidence错误套给R0。当前layout仍使用当前GPU confidence来分配预算，减轻旧预算对请求间分配的错位。</p>
+</div>
+  </section><section class="sf-topic sf-topic--objects" data-topic-kind="objects" aria-labelledby="对象与状态">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="对象与状态"><span class="sf-sec-number" aria-hidden="true">05</span>对象与状态</h2>
+    </header>
+
+      <div class="sf-topic__body sf-object-body"><p><code>DSparkVerifyPlanner</code>初始化时查找confidence head。非static mode若checkpoint没有该head会直接报错；有STS路径则校验temperature数等于gamma并写入head。planner还构建 <code>HostConfidenceBudgetPlanner</code>、决定graph tier是dynamic、DP gathered还是pinned，并记录是否因flat SPS退化为verify-all。<code>carries_confidence</code>只说明head存在，不说明动态mode一定开启。</p>
+<p>confidence有两条当前路径。dense draft调用 <code>compute_confidence(draft_hidden, markov_embed_stack)</code>，其中prev序列是 <code>[anchor,d1,...,d_(gamma-1)]</code>；若head配置with_markov则拼入Markov embedding，最后 <code>apply_sts()</code>。DeepSeek-V4 draft可由模型的 <code>compute_confidence()</code>消费<code>confidence_tap</code>。二者输出同一 <code>[B,gamma]</code>合同，但内部特征不能互相外推。</p>
+<p>overlap时 Scheduler在准备下一batch阶段调用 <code>prepare_verify_budget()</code>，它从 <code>FutureMap.resolve_confidence_cpu()</code>取两轮ring lag的host快照，把标量存进 <code>draft_input.verify_token_budget</code>，并可提前决定local/DP graph tier。non-overlap时 <code>resolve_verify_token_budget()</code>调用<code>compute_budget_sync()</code>把当前confidence搬到CPU，再由host planner的carry ring补足配置lag。两条路径都经过generation校验与同一budget函数。</p>
+<p><code>RaggedVerifyLayout</code>把<code>verify_lens</code>转换为<code>extend_start_loc/qo_indptr</code>；host可用时还保存CPU lens、真实总数和KV metadata。<code>graph_num_tokens</code>是<code>max(total_verify_tokens, graph_floor)</code>按capture grid向上取整，约束为不小于真实总数。DP tier gather在严格守卫下用各rank local tier的最大值达成共同graph key；Python collective调用返回仍不应被描述成所有device work完成。</p>
+<p>下图是组件/管辖边界，它解释了为什么一个 planner 同时有 host 和 device 部分。<code>ConfidenceRelay</code> 只负责把已发布的 device confidence 变成带 generation 的可用 host 快照；host planner 决定“总共多少名额”，device schedule kernel 使用当前 proposal confidence 决定“名额给谁”。</p>
+<figure class="diagram-frame" data-diagram-frame data-diagram-kind="component"><div class="diagram-toolbar"><span class="diagram-toolbar__identity"><b>组件 / 所有权图</b><span>DSpark confidence、history、per-step budget 与 ragged layout · 下图是组件/管辖边界，它解释了为什么一个 planner 同时有 host 和 device 部分</span></span><span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span><button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button></div><div class="diagram-legend" aria-label="图内语义色图例"><span class="diagram-legend__item" data-tone="blue">入口 / 接口</span><span class="diagram-legend__item" data-tone="orange">owner / 调度</span><span class="diagram-legend__item" data-tone="green">持久状态</span><span class="diagram-legend__item" data-tone="purple">执行组件</span></div><div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="图形阅读区，可横向滚动"><div class="diagram-frame__canvas"><pre class="mermaid" aria-label="DSpark confidence、history、per-step budget 与 ragged layout · 下图是组件/管辖边界，它解释了为什么一个 planner 同时有 host 和 device 部分">flowchart LR
+    subgraph SCH[Scheduler prepare phase]
+        S[Scheduler.run_batch]
+        FB[prepare_verify_budget]
+    end
+    subgraph RELAY[FutureMap ownership]
+        CB[device confidence buffer\nkey=req_pool_index]
+        CR[ConfidenceRelay\npinned ring + copy events]
+        GEN[req_generation snapshots]
+    end
+    subgraph HOST[host planning]
+        HP[HostConfidenceBudgetPlanner]
+        SPS[SPS cost table]
+        BUD[batch-global extra-token budget]
+    end
+    subgraph DEV[current worker step]
+        CUR[current confidence B x gamma]
+        SURV[cumprod survival]
+        TOPK[ScheduleVerifyLensTopk]
+        LAY[RaggedVerifyLayout]
+    end
+    S --&gt; FB --&gt; CR
+    CB --&gt; CR
+    GEN --&gt; CR
+    CR --&gt; HP
+    SPS --&gt; HP --&gt; BUD
+    CUR --&gt; SURV --&gt; TOPK
+    BUD --&gt; TOPK --&gt; LAY
+    LAY --&gt;|compact rows or accept cutoff| TV[target verify executor]
+</pre></div></div><figcaption><b>读图方法：</b>先认实例与持久状态的 owner，再沿组合、复用和下一消费者读边。</figcaption></figure>
+</div>
+  </section><section class="sf-topic sf-topic--source-flow" data-topic-kind="source-flow" aria-labelledby="当前源码调用链">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="当前源码调用链"><span class="sf-sec-number" aria-hidden="true">06</span>当前源码调用链</h2>
+    </header>
+
+      <div class="sf-topic__body"><figure class="diagram-frame" data-diagram-frame data-diagram-kind="data"><div class="diagram-toolbar"><span class="diagram-toolbar__identity"><b>数据 / Tensor 流</b><span>DSpark confidence、history、per-step budget 与 ragged layout · 当前源码调用链</span></span><span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span><button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button></div><div class="diagram-legend" aria-label="图内语义色图例"><span class="diagram-legend__item" data-tone="blue">输入对象</span><span class="diagram-legend__item" data-tone="green">KV / tensor</span><span class="diagram-legend__item" data-tone="purple">计算</span><span class="diagram-legend__item" data-tone="cyan">传输</span></div><div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="图形阅读区，可横向滚动"><div class="diagram-frame__canvas"><pre class="mermaid" aria-label="DSpark confidence、history、per-step budget 与 ragged layout · 当前源码调用链">flowchart TD
+    P[当前 DraftProposal hidden/tap] --&gt; C[compute_confidence_tensor]
+    C --&gt; S[current confidence B×gamma]
+    S --&gt; U[cumprod survival]
+    H[历史 relay confidence + generation] --&gt; B[HostConfidenceBudgetPlanner]
+    T[SPS cost table] --&gt; B
+    B --&gt; K[batch-global extra-token budget]
+    U --&gt; L[ScheduleVerifyLensTopk]
+    K --&gt; L
+    L --&gt; V[verify_lens per request]
+    V --&gt; M{ragged mode}
+    M --&gt;|cap-accept| F[full target forward + accept cutoff]
+    M --&gt;|compact| R[pack real rows + graph bucket]
+    M --&gt;|static / no decision| A[uniform full verify]
+</pre></div></div><figcaption><b>读图方法：</b>沿对象或 tensor 身份、shape/索引和存储位置读，不把控制流误当数据复制。</figcaption></figure>
+<p>worker在proposal之后先读取可能已folded的confidence；若为空才调用planner。<code>resolve_verify_token_budget()</code>在overlap直接取draft input中的预计算标量，在同步模式现场算。<code>schedule_layout()</code>若static返回None；若compact且flat SPS标记verify-all，从cache返回uniform layout；否则调用 <code>_schedule_verify_lens()</code>，其kernel先cumprod，再对所有request-position候选作稳定降序，选budget个有效候选并按request计数，最终<code>verify_lens=min_len+selected_extra</code>且至少1、最多gamma+1。</p>
+<p>layout随后计算tier request数、可选DP max token tier和graph floor。若超过已capture grid，返回None并回到full path；否则用device-only或host-aware构造方法建立indptr。worker的<code>should_run_compact()</code>只在mode为compact且layout非None时为真；cap-accept即使有layout也走non-compact target forward，layout只送入accept做cutoff。</p>
+<p>上面是量的转换；下面是 overlap 时序。要注意两个不同轮次同时出现：可用的 lagged confidence 产生 batch-global budget，本轮 draft 刚产生的 current confidence 只在 device 上分配这个 budget。</p>
+<figure class="diagram-frame" data-diagram-frame data-diagram-kind="sequence"><div class="diagram-toolbar"><span class="diagram-toolbar__identity"><b>时序 / 泳道图</b><span>DSpark confidence、history、per-step budget 与 ragged layout · 上面是量的转换；下面是 overlap 时序</span></span><span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span><button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button></div><div class="diagram-legend" aria-label="图内语义色图例"><span class="diagram-legend__item" data-tone="blue">caller</span><span class="diagram-legend__item" data-tone="orange">scheduler</span><span class="diagram-legend__item" data-tone="purple">device work</span><span class="diagram-legend__item" data-tone="cyan">IPC / collective</span></div><div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="图形阅读区，可横向滚动"><div class="diagram-frame__canvas"><pre class="mermaid" aria-label="DSpark confidence、history、per-step budget 与 ragged layout · 上面是量的转换；下面是 overlap 时序">sequenceDiagram
+    participant SC as Scheduler prepare, round N
+    participant FM as FutureMap + ConfidenceRelay
+    participant CP as private D2H stream / pinned ring
+    participant HP as HostConfidenceBudgetPlanner
+    participant WF as DSpark worker / forward stream
+    participant DK as device layout kernel
+    participant TV as TargetVerifyExecutor
+    SC-&gt;&gt;FM: resolve_confidence_cpu(batch N)
+    alt lag slot not ready
+        FM--&gt;&gt;SC: None
+        SC-&gt;&gt;SC: draft_input.verify_token_budget = None
+    else lag slot ready and generation matches
+        FM--&gt;&gt;SC: lagged confidence + generation
+        SC-&gt;&gt;HP: compute budget with SPS table
+        HP--&gt;&gt;SC: scalar extra-token budget
+        SC-&gt;&gt;SC: store budget on next draft_input
+    end
+    SC-&gt;&gt;WF: launch batch N with stored budget
+    WF-&gt;&gt;WF: produce current DraftProposal confidence
+    WF-&gt;&gt;DK: schedule_layout(current survival, stored budget)
+    DK--&gt;&gt;WF: verify_lens + graph_num_tokens
+    WF-&gt;&gt;TV: compact rows or full rows with cutoff
+    TV--&gt;&gt;WF: accept and new_seq_lens
+    WF-&gt;&gt;FM: publish(new_seq_lens, current proposal confidence)
+    FM-&gt;&gt;FM: scatter by req_pool_index and record publish_ready
+    FM-&gt;&gt;CP: wait_event then nonblocking ring copy
+    CP--&gt;&gt;FM: copy_done event + generation snapshot for a later resolve
+</pre></div></div><figcaption><b>读图方法：</b>从上到下区分 Python 调用、CPU 状态写入、异步 device enqueue、wait 与 return。</figcaption></figure>
+</div>
+  </section><section class="sf-topic sf-topic--example" data-topic-kind="example" aria-labelledby="连续例子">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="连续例子"><span class="sf-sec-number" aria-hidden="true">07</span>连续例子</h2>
+    </header>
+
+      <div class="sf-teach-walk" data-teaching-walk data-step-count="4">
+        <div class="sf-teach-walk__head"><b>沿固定样例逐步运行</b><span>切换步骤时同时观察对象、状态与下一消费者</span></div>
+        <div class="sf-teach-walk__source"><section class="sf-walk-panel" data-walk-panel="1"><p>t0，R0 current confidence <code>[.90,.80,.50,.20]</code>，survival <code>[.90,.72,.36,.072]</code>；R1 current confidence <code>[.70,.60,.40,.10]</code>，survival <code>[.70,.42,.168,.0168]</code>。假设history经过generation校验，SPS评估认为budget=3最优。每请求floor=1，所以无论预算如何，两请求先各保留anchor行，总floor tokens=2。</p>
+</section><section class="sf-walk-panel" data-walk-panel="2"><p>t1，global top-k从八个extra候选中选 <code>.90(R0-pos0)</code>、<code>.72(R0-pos1)</code>、<code>.70(R1-pos0)</code>。R0获得2个extra、R1获得1个，<code>verify_lens=[3,2]</code>，对应target输入R0 <code>[A0,d01,d02]</code>、R1 <code>[A1,d11]</code>。注意R0的第三个draft survival <code>.36</code> 没有入选；position索引是extra draft位置，layout长度还要加anchor floor。</p>
+</section><section class="sf-walk-panel" data-walk-panel="3"><p>t2，真实rows总数5，但capture grid可能为<code>[4,8,16,...]</code>，于是<code>graph_num_tokens=8</code>。compact builder把5个有效rows压紧，另外3行是bucket padding；不能用8计算“target验证了8个真实候选”，更不能用5计算最终接受数。target之后仍可能只接受R0一个draft、R1零个draft，各自再加bonus。</p>
+</section><section class="sf-walk-panel" data-walk-panel="4"><p>t3，下一轮budget使用lagged confidence。若R1离开、其req pool slot被R2复用，generation不匹配，host planner对该行回退全1 survival；这是保守地避免因旧低confidence把新请求预算压小，不是声称R2实际接受率为100%。等足够新轮次后，R2自己的history再进入预算。</p>
+</section></div>
+      </div>
+  </section><section class="sf-topic sf-topic--why-here" data-topic-kind="why-here" aria-labelledby="为什么必须在这里">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="为什么必须在这里"><span class="sf-sec-number" aria-hidden="true">08</span>为什么必须在这里</h2>
+    </header>
+
+      <div class="sf-topic__body"><p>budget必须在layout之前，因为top-k需要知道全batch可选多少extra；layout又必须在target forward之前，因为compact attention的input rows、indptr和graph key都依赖verify lens。confidence必须在proposal后，因为它评估当前候选位置；把它提前到prefill或上一轮只能做历史预算，不能决定当前R0与R1谁获得具体列。</p>
+<p>overlap预算准备放在Scheduler forward prepare阶段，是为了利用FutureMap已发布的host ring而不让当前forward同步等待；publish confidence必须发生在accept结果可发布的worker边界。DP tier agreement也必须在各rank进入token-keyed graph前完成，否则不同rank选择不同graph key/collective token形状会导致错误或挂起，而不仅是性能下降。</p>
+</div>
+  </section><section class="sf-topic sf-topic--boundary" data-topic-kind="boundary" aria-labelledby="边界矩阵">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="边界矩阵"><span class="sf-sec-number" aria-hidden="true">09</span>边界矩阵</h2>
+    </header>
+
+      <div class="sf-topic__body"><div class="table-scroll teaching-table"><table>
+<thead>
+<tr>
+<th>边界</th>
+<th>当前语义</th>
+<th>常见误解</th>
+<th>源码证据上限</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>confidence</td>
+<td>每位置 <code>[0,1]</code> score</td>
+<td>vocab概率、各列和为1</td>
+<td>只校验范围，不证明校准质量</td>
+</tr>
+<tr>
+<td>survival</td>
+<td>行内confidence cumprod</td>
+<td>单位置独立概率排序</td>
+<td>是planner排序量，不是accept结果</td>
+</tr>
+<tr>
+<td>budget</td>
+<td>batch-global extra slots</td>
+<td>每请求长度或总target rows</td>
+<td>floor另加B，cap再截断</td>
+</tr>
+<tr>
+<td><code>None</code> vs <code>0</code></td>
+<td>None无调度决策；0只有floor</td>
+<td>两者都“不验证”</td>
+<td>fallback路径不同</td>
+</tr>
+<tr>
+<td>static</td>
+<td>full/uniform，无动态layout</td>
+<td>confidence一定没计算</td>
+<td>head可存在但scheduler不用</td>
+</tr>
+<tr>
+<td>cap-accept</td>
+<td>full forward，accept时cutoff</td>
+<td>已减少target计算</td>
+<td>当前源码不compact rows</td>
+</tr>
+<tr>
+<td>compact</td>
+<td>压紧真实rows并选graph bucket</td>
+<td>graph tokens都是真实rows</td>
+<td>padding与真实总数分开</td>
+</tr>
+<tr>
+<td>DP</td>
+<td>lens广播/可选global tier/idle参与</td>
+<td>各rank独立top-k即可</td>
+<td>未做当前runtime collective验证</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+  </section><section class="sf-topic sf-topic--recap" data-topic-kind="recap" aria-labelledby="source-action-changed-state-why">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="source-action-changed-state-why"><span class="sf-sec-number" aria-hidden="true">10</span>source action / changed state / why</h2>
+    </header>
+
+      <div class="sf-state-flow-source" data-state-flow><div class="table-scroll teaching-table"><table>
+<thead>
+<tr>
+<th>source action</th>
+<th>changed state</th>
+<th>why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>confidence head + STS</td>
+<td>draft features → <code>[B,gamma]</code> calibrated score</td>
+<td>估计各连续位置价值</td>
+</tr>
+<tr>
+<td><code>cumprod</code></td>
+<td>conditional-like score → prefix survival</td>
+<td>接受只能沿连续前缀发生</td>
+</tr>
+<tr>
+<td>host budget planner</td>
+<td>lagged survival + cost → extra-token scalar</td>
+<td>在吞吐收益与target成本间选总量</td>
+</tr>
+<tr>
+<td><code>ScheduleVerifyLensTopk</code></td>
+<td>current survival + budget → per-request lens</td>
+<td>把有限名额给当前最有价值位置</td>
+</tr>
+<tr>
+<td>layout assembly</td>
+<td>lens → indptr、real total、graph bucket</td>
+<td>驱动ragged attention和graph dispatch</td>
+</tr>
+<tr>
+<td>DP tier agreement</td>
+<td>local tier → common max tier</td>
+<td>保证参与rank图key/collective形状一致</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+  </section><section class="sf-topic sf-topic--self-check" data-topic-kind="self-check" aria-labelledby="自测">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="自测"><span class="sf-sec-number" aria-hidden="true">11</span>自测</h2>
+    </header>
+
+      <div class="sf-self-test" data-self-test>
+        <ol>
+<li>B=3、min verify len=1、budget=4 时，local verify tier最多是多少；为什么不是4？</li>
+<li>confidence <code>[.9,.5,.9]</code> 的survival是多少？为什么第三项不会因raw <code>.9</code>自动优先？</li>
+<li><code>verify_lens=[3,2]</code>、<code>graph_num_tokens=8</code>、最终accept lens=<code>[2,1]</code> 分别描述哪三层数量？</li>
+<li><code>budget=None</code> 与0为何会走不同fallback？</li>
+<li>overlap中历史confidence决定什么，当前confidence又决定什么？generation mismatch为何要处理？</li>
+</ol>
+
+      </div>
+  </section><section class="sf-topic sf-topic--evidence" data-topic-kind="evidence" aria-labelledby="source-evidence">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="source-evidence"><span class="sf-sec-number" aria-hidden="true">12</span>源码引用与上下文</h2>
+    </header>
+
+      <details class="sf-source-details"><summary>展开本章源码片段与定位工具</summary><div class="source-microscope" data-source-microscope data-source-key="source" data-default-step="source-1"><div class="source-microscope__head"><h3>源码显微镜：receiver、状态写入与下一消费者</h3><p>左侧按本章论证顺序定位决定性源码；每一跳必须回到正文判断它是 call、write、return 还是 next-consumer。相邻卡片本身不冒充直接调用边。</p></div><div class="source-microscope__tabs" data-source-tabs><button class="button button--quiet" data-source-step="source-1">01 · DSparkVerifyPlanner</button><button class="button button--quiet" data-source-step="source-2">02 · compute_confidence_tensor</button><button class="button button--quiet" data-source-step="source-3">03 · prepare_verify_budget</button><button class="button button--quiet" data-source-step="source-4">04 · resolve_verify_token_budget</button><button class="button button--quiet" data-source-step="source-5">05 · schedule_layout</button><button class="button button--quiet" data-source-step="source-6">06 · compute_verify_token_budget</button><button class="button button--quiet" data-source-step="source-7">07 · compute_sort_survival</button><button class="button button--quiet" data-source-step="source-8">08 · RaggedVerifyLayout</button><button class="button button--quiet" data-source-step="source-9">09 · ConfidenceRelay</button></div><div class="source-microscope__stage"><section class="source-microscope__panel" data-source-panel="source-1"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>DSparkVerifyPlanner</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>confidence head、SPS table、lag 与 ragged mode 的总配置对象</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>compute_confidence_tensor</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_planner.py:70</span><span>步骤 1 / 9</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_planner.py:70 附近源码"><code>     66 |     verify_cache_loc: torch.Tensor
+     67 |     verify_cache_loc_2d: torch.Tensor
+     68 | 
+     69 | 
+&gt;    70 | class DSparkVerifyPlanner:
+     71 |     def __init__(
+     72 |         self,
+     73 |         *,
+     74 |         draft_model,</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-2"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>compute_confidence_tensor</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>dense 与 DSV4 draft 的当前 confidence 计算分派</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>prepare_verify_budget</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_planner.py:264</span><span>步骤 2 / 9</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_planner.py:264 附近源码"><code>    260 |         return (
+    261 |             self._ragged_verify_mode is RaggedVerifyMode.COMPACT and layout is not None
+    262 |         )
+    263 | 
+&gt;   264 |     def compute_confidence_tensor(
+    265 |         self,
+    266 |         *,
+    267 |         draft_hidden: Optional[torch.Tensor],
+    268 |         anchor_tokens: torch.Tensor,</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-3"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>prepare_verify_budget</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>overlap 中从 FutureMap 取滞后 confidence 并把 budget 写入下轮 draft input</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>resolve_verify_token_budget</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_planner.py:295</span><span>步骤 3 / 9</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_planner.py:295 附近源码"><code>    291 |             markov_head=self.draft_model.markov_head,
+    292 |             gamma=self.gamma,
+    293 |         )
+    294 | 
+&gt;   295 |     def prepare_verify_budget(
+    296 |         self, batch: ScheduleBatch, future_map: FutureMap
+    297 |     ) -&gt; None:
+    298 |         draft_input = batch.spec_info
+    299 |         if self._budget_planner is None:</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-4"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>resolve_verify_token_budget</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>overlap 预计算与同步计算 budget 的分界</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>schedule_layout</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_planner.py:373</span><span>步骤 4 / 9</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_planner.py:373 附近源码"><code>    369 |         return self._budget_from_resolved(
+    370 |             resolved=resolved, req_pool_indices_cpu=req_pool_indices_cpu
+    371 |         )
+    372 | 
+&gt;   373 |     def resolve_verify_token_budget(
+    374 |         self,
+    375 |         *,
+    376 |         draft_input: DFlashDraftInputV2,
+    377 |         confidence: Optional[torch.Tensor],</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-5"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>schedule_layout</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>current confidence 与 budget 生成 verify lens 和 graph tier</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>compute_verify_token_budget</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_planner.py:419</span><span>步骤 5 / 9</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_planner.py:419 附近源码"><code>    415 |                 req_pool_indices_cpu=req_pool_indices_cpu,
+    416 |             )
+    417 |         )
+    418 | 
+&gt;   419 |     def schedule_layout(
+    420 |         self,
+    421 |         *,
+    422 |         req_pool_indices: torch.Tensor,
+    423 |         prefix_lens: torch.Tensor,</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-6"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>compute_verify_token_budget</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>历史 survival 与 SPS cost 选择 batch-global extra-token budget</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>compute_sort_survival</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/dspark_components/dspark_planner.py:954</span><span>步骤 6 / 9</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/dspark_components/dspark_planner.py:954 附近源码"><code>    950 |     predicted_step_seconds: Optional[float] = None
+    951 |     predicted_theta: Optional[float] = None
+    952 | 
+    953 | 
+&gt;   954 | def compute_verify_token_budget(
+    955 |     *,
+    956 |     history_survival_probs: torch.Tensor,
+    957 |     sps_table: Union[SpsCostTable, SpsAdditiveCostTable],
+    958 |     cfg: DSparkScheduleConfig,</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-7"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>compute_sort_survival</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>per-position confidence 累乘为 prefix survival</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>RaggedVerifyLayout</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/kernels/ops/speculative/dspark/dspark_schedule.py:49</span><span>步骤 7 / 9</span></div><pre class="source-excerpt" aria-label="python/sglang/kernels/ops/speculative/dspark/dspark_schedule.py:49 附近源码"><code>     45 |             confidence=confidence, budget=budget, cfg=cfg
+     46 |         )
+     47 | 
+     48 | 
+&gt;    49 | def compute_sort_survival(confidence: torch.Tensor) -&gt; torch.Tensor:
+     50 |     return torch.cumprod(confidence.to(torch.float32), dim=1)
+     51 | 
+     52 | 
+     53 | def schedule_verify_lens_topk(</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-8"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>RaggedVerifyLayout</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>verify_lens、真实token总数与graph bucket的几何合同</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>ConfidenceRelay</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/speculative/ragged_verify.py:46</span><span>步骤 8 / 9</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/speculative/ragged_verify.py:46 附近源码"><code>     42 |     index = bisect.bisect_left(grid, total)
+     43 |     return grid[index]
+     44 | 
+     45 | 
+&gt;    46 | class RaggedVerifyLayout(msgspec.Struct, frozen=True):
+     47 |     verify_lens: torch.Tensor
+     48 |     graph_num_tokens: int
+     49 |     extend_start_loc: torch.Tensor
+     50 |     qo_indptr_device: torch.Tensor</code></pre></div></section><section class="source-microscope__panel" data-source-panel="source-9"><div class="source-microscope__lenses"><div class="source-lens" data-lens="what"><b>Symbol / state</b><p><code>ConfidenceRelay</code></p></div><div class="source-lens" data-lens="how"><b>这条证据证明什么</b><p>device confidence、pinned host ring、copy event 与 request generation 的跨轮中继</p></div><div class="source-lens" data-lens="why"><b>证据等级</b><p><span class="evidence-badge" data-evidence="SOURCE_CURRENT">SOURCE_CURRENT</span></p></div><div class="source-lens" data-lens="failure"><b>下一核对点</b><p><code>回到本章结论</code></p></div></div><div class="source-block"><div class="source-block__head"><span>python/sglang/srt/managers/overlap_utils.py:153</span><span>步骤 9 / 9</span></div><pre class="source-excerpt" aria-label="python/sglang/srt/managers/overlap_utils.py:153 附近源码"><code>    149 |             dsa_topk_indices=draft_input.dsa_topk_indices,
+    150 |         )
+    151 | 
+    152 | 
+&gt;   153 | class ConfidenceRelay(msgspec.Struct):
+    154 | 
+    155 |     device: torch.device
+    156 |     req_pool_size: int
+    157 |     pool: Any</code></pre></div></section></div><div class="source-microscope__toolbar"><span class="source-microscope__status" data-source-status aria-live="polite"></span><div class="source-microscope__actions"><button class="button button--quiet" data-source-action="prev">上一跳</button><button class="button" data-source-action="next">下一跳</button><button class="button button--quiet" data-source-action="reset">回到入口</button></div></div></div></details>
+  </section>  </article>
+              <nav class="sf-pager" aria-label="相邻章节">
+<a href="dspark-bootstrap-proposal.html"><span>← 上一章</span><b>DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</b></a><a href="dspark-verify-accept-kv.html"><span>下一章 →</span><b>DSpark Target verify、accept/finalize 与 KV commit/reclaim</b></a>              </nav>
+
+            <footer class="sf-footer"><span>投机解码源码专题</span><span>源码快照 f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</span><span>纯静态 · 本地依赖 · 可离线分享</span></footer>
+            <p class="print-only">投机解码源码专题 · DSpark confidence、history、per-step budget 与 ragged layout · f01a0c7f97ec50d3800b3cee8520d86235562720 + working-tree changes</p>
+          </div>
+
+          <aside class="sf-page-toc" aria-label="本页目录">
+            <p class="sf-page-toc__title">On this page</p>
+            <ol data-page-toc-list><li><a href="#直接结论" data-level="2">直接结论</a></li><li><a href="#当前路径假设" data-level="2">当前路径假设</a></li><li><a href="#输入-本页职责与输出" data-level="2">输入、本页职责与输出</a></li><li><a href="#为什么存在" data-level="2">为什么存在</a></li><li><a href="#对象与状态" data-level="2">对象与状态</a></li><li><a href="#当前源码调用链" data-level="2">当前源码调用链</a></li><li><a href="#连续例子" data-level="2">连续例子</a></li><li><a href="#为什么必须在这里" data-level="2">为什么必须在这里</a></li><li><a href="#边界矩阵" data-level="2">边界矩阵</a></li><li><a href="#source-action-changed-state-why" data-level="2">source action / changed state / why</a></li><li><a href="#自测" data-level="2">自测</a></li><li><a href="#source-evidence" data-level="2">源码引用与上下文</a></li></ol>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="search-dialog" id="course-search-dialog" data-search-dialog aria-labelledby="course-search-title">
+    <div class="search-dialog__head"><strong id="course-search-title">搜索课程</strong><button class="sf-icon-button" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+    <form class="search-dialog__form" data-search-form role="search"><label class="sr-only" for="course-search-input">搜索对象、方法、状态或章节</label><input id="course-search-input" type="search" data-search-input autocomplete="off" placeholder="例如：running_batch、ForwardBatch、TARGET_VERIFY"><button class="sf-button" type="submit">搜索</button></form>
+    <p class="search-dialog__status" data-search-status aria-live="polite"></p><ol class="search-results" data-search-results></ol>
+  </dialog>
+
+  <dialog class="diagram-viewer" id="diagram-viewer-dialog" data-diagram-dialog aria-labelledby="diagram-viewer-title">
+    <div class="diagram-viewer__head"><div><strong id="diagram-viewer-title" data-diagram-title>图解沉浸阅读</strong> <span class="diagram-viewer__zoom" data-diagram-zoom>100%</span></div><div class="diagram-viewer__tools"><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-in" aria-label="放大">＋</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-out" aria-label="缩小">−</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="fit">看全图</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="reset">100%</button><button class="sf-button" type="button" data-diagram-action="close">关闭 ×</button></div></div>
+    <div class="diagram-viewer__viewport" data-diagram-viewport><div class="diagram-viewer__canvas mermaid" data-diagram-canvas></div></div>
+  </dialog>
+
+<script src="assets/data/search-index.js" defer></script><script src="assets/vendor/mermaid.min.js" defer></script>  <script src="assets/js/site-shell.js" defer></script>
+  <script src="assets/js/toc-search.js" defer></script>
+  <script src="assets/js/diagram-viewer.js" defer></script>
+  <script src="assets/js/source-microscope.js" defer></script>
+  <script src="assets/js/labs.js" defer></script>
+  <script src="assets/js/lesson-components.js" defer></script>
+</body>
+</html>

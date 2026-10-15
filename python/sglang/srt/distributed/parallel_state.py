@@ -563,7 +563,7 @@ class GroupCoordinator:
     ):
         if graph_capture_context is None:
             if stream is None:
-                stream = self.device_module.Stream()
+                stream = self.device_module.Stream()#这个动作从非默认流池取得一条流，并创建 Python 包装对象
             graph_capture_context = GraphCaptureContext(stream)
         else:
             stream = graph_capture_context.stream
@@ -574,8 +574,8 @@ class GroupCoordinator:
 
         # ensure all initialization operations complete before attempting to
         # capture the graph on another stream
-        curr_stream = get_current_device_stream_fast()
-        if curr_stream != stream:
+        curr_stream = get_current_device_stream_fast()#current_stream()查询现在使用哪条流
+        if curr_stream != stream: # 假如 S旧是默认流，Stream() 得到的 S候选一定与它不同。假如 S旧本身来自非默认流池，轮转复用时，则可能取得相同的底层流。
             stream.wait_stream(curr_stream)
 
         with self.device_module.stream(stream), maybe_ca_context:

@@ -366,16 +366,16 @@ class TpModelWorker(BaseTpWorker):
         memory_pool_config: Optional[MemoryPoolConfig] = None,
         req_to_token_pool: Optional[ReqToTokenPool] = None,
         token_to_kv_pool_allocator: Optional[BaseTokenToKVPoolAllocator] = None,
-    ):
+    ):#target worker在初始化的时候,这里是空,而在后面KVCacheConfigurator._build_default_req_pool()才实例化ReqToTokenPool;只有draft worker 接收已经有的；
         """Allocate KV cache pools only (no backends or cuda graphs)."""
-        if req_to_token_pool is not None:
-            self.req_to_token_pool = req_to_token_pool
+        if req_to_token_pool is not None: # 保存:请求槽位及 req_to_token 整数映射表; 从请求+序列位置找到 KV 槽位
+            self.req_to_token_pool = req_to_token_pool # req_to_token_pool 是管理对象，req_to_token 是它内部的二维映射张量
             self.model_runner.req_to_token_pool = req_to_token_pool
-        if token_to_kv_pool_allocator is not None:
+        if token_to_kv_pool_allocator is not None:#保存：空闲 token/page 编号，待归还编号等；职责：分配和回收 KV 位置
             self.token_to_kv_pool_allocator = token_to_kv_pool_allocator
             self.model_runner.token_to_kv_pool_allocator = token_to_kv_pool_allocator
-        self.model_runner.alloc_memory_pool(memory_pool_config)
-        for mr in self.model_runner_list[1:]:
+        self.model_runner.alloc_memory_pool(memory_pool_config)# 内部分配token_to_kv_pool， 是各层实际的K/V 张量；职责：读取，保存，写入 KV 数据
+        for mr in self.model_runner_list[1:]: # 普通路径没有，这是为 multi-layer EAGLE/MTP 准备的；不同的预测深度会使用不同的 draft 模块，每个模块由一个 runner 管理
             mr.req_to_token_pool = self.req_to_token_pool
             mr.token_to_kv_pool_allocator = self.token_to_kv_pool_allocator
             mr.alloc_memory_pool(memory_pool_config)
@@ -597,13 +597,13 @@ class TpModelWorker(BaseTpWorker):
                 return batch_result
 
             if not forward_batch.is_prefill_only:
-                # For normal requests, sample the next token ids.
+                # For normal requests, sample the next token ids.  # 解惑：PP 最后一个 rank 到达此分支后，非 prefill-only 批次需要采样；上方 grammar 延迟采样会提前返回。
                 batch_result.next_token_ids = self.model_runner.sample(
                     logits_output, forward_batch
                 )
             else:
-                # For prefill-only requests, create dummy token IDs on CPU
-                # The size should match the batch size (number of sequences), not total tokens
+                # For prefill-only requests, create dummy token IDs on CPU  # 解惑：整批无需生成：这里用全零 next_token_ids 占位，不调用 sample；设备与 input_ids 相同，并非固定 CPU。
+                # The size should match the batch size (number of sequences), not total tokens  # 解惑：每个请求（sequence）一个占位 ID，长度是 batch size，不是输入 token 总数；占位值不是生成结果。
                 batch_result.next_token_ids = torch.zeros(
                     len(forward_batch.seq_lens),
                     dtype=torch.long,
@@ -613,7 +613,7 @@ class TpModelWorker(BaseTpWorker):
                     forward_batch.return_logprob
                     and logits_output.next_token_logits is not None
                 ):
-                    # NOTE: Compute logprobs without full sampling
+                    # NOTE: Compute logprobs without full sampling  # 解惑：仅在要求 logprob 且存在 next_token_logits 时单独计算 logprobs，无需完整采样。
                     self.model_runner.compute_logprobs_only(
                         logits_output, forward_batch
                     )

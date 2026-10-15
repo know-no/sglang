@@ -782,7 +782,7 @@ class SchedulerPPMixin:
         ):
             return None
 
-        max_chunk_size = self.max_prefill_tokens
+        max_chunk_size = self.max_prefill_tokens  # 动态 predictor 的返回值受 max_prefill_tokens 约束，可能大于基础 chunk；预分配还覆盖启动 profile 的 1.25×base，见 max_prefill_buffer_tokens()。
         predicted_size = self.length_predictor.predict_next_chunk_size(
             history_len=history_len,
             base_chunk_size=self.chunked_prefill_size,

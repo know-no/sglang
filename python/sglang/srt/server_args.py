@@ -766,8 +766,8 @@ class ServerArgs:
     chunked_prefill_size: A[
         Optional[int],
         "The maximum number of tokens in a chunk for the chunked prefill. Setting this to -1 means disabling chunked prefill.",
-        NS("schedule"),
-    ] = None
+        NS("schedule"),# None 表示未设置，初始化时补默认值；-1 表示关闭分块，不能把二者混为一谈。
+    ] = None # _handle_gpu_memory_settings() 按显存分档填默认 chunk size；无显存信息时用 4096，后续配置处理还可能调整。
     enable_dynamic_chunking: A[
         bool,
         "Enable dynamic chunk size adjustment for pipeline parallelism. When enabled, chunk sizes are dynamically calculated based on fitted function to maintain consistent execution time across chunks.",
@@ -6437,14 +6437,14 @@ class ServerArgs:
     def max_prefill_buffer_tokens(self) -> int:
         """Prefill-buffer ceiling: chunked_prefill_size, except PP dynamic
         chunking can grow chunks toward max_prefill_tokens and probe at 1.25x."""
-        chunked = (
-            self.chunked_prefill_size
+        chunked = (  
+            self.chunked_prefill_size 
             if self.chunked_prefill_size and self.chunked_prefill_size > 0
             else 0
         )
-        tokens = chunked
-        if self.enable_dynamic_chunking and self.pp_size > 1 and chunked:
-            tokens = max(
+        tokens = chunked# Prefill 预分配 token 容量候选，不是每轮实际输入量；关闭 chunk 时这里可为 0，调用方还会结合其他容量。
+        if self.enable_dynamic_chunking and self.pp_size > 1 and chunked:# 仅 PP 动态分块且基础 chunk>0 时，预测 chunk 可超过基础 chunked_prefill_size。
+            tokens = max(# 额外覆盖 max_prefill_tokens 与启动 profile 的 ceil(base×1.25)，避免只按基础 chunk 分配。
                 tokens, self.max_prefill_tokens or 0, math.ceil(chunked * 1.25)
             )
         return tokens

@@ -50,9 +50,9 @@ if TYPE_CHECKING:
     from sglang.srt.model_executor.runner.base_cuda_graph_runner import (
         BaseCudaGraphRunner,
     )
-    from sglang.srt.model_executor.runner.shape_key import ShapeKey
-
-
+    from sglang.srt.model_executor.runner.shape_key import ShapeKey # BCG本身没有bs=1的限制; 它的调用者通过构造不同的captured_fn->forward_fn的不同 forwardBatch 对象，传递不同的bs
+# prefill: 用 batch_size=1 的假 batch 捕获BCG;运行时，图段处理固定 token 档位，图段之间的 attention(radixAttention 还在图内) 则使用本轮真实请求的 metadata。
+# decode: 不会沿用1个假请求的逻辑，1 个假请求的逻辑在 PrefillCudaGraphRunner中，专门为 BCG 准备的；虽然 Decode 也用假 batch,但是假请求数随着档位变化,不固定为1；
 class BreakableCudaGraphBackend(DedupedCudaGraphMixin, BaseCudaGraphBackend):
     """Segmented capture: graphs break at attention / mamba boundaries;
     attention metadata is recomputed at replay outside captured segments.
@@ -118,7 +118,7 @@ class BreakableCudaGraphBackend(DedupedCudaGraphMixin, BaseCudaGraphBackend):
             warmup_out = forward_fn()
             if post_warmup_hook is not None:
                 post_warmup_hook()
-
+    #BreakableCUDAGraphCapture 和 BreakableCUDAGraph 是“捕获过程的管理者”与“捕获结果的容器”。
         graph = BreakableCUDAGraph()
         captured_fn = (
             eager_on_graph(True)(forward_fn) if self._debug_eager else forward_fn
@@ -126,14 +126,14 @@ class BreakableCudaGraphBackend(DedupedCudaGraphMixin, BaseCudaGraphBackend):
         size = shape_key.size
         if self._shared_output_buffer is None:
             self._shared_output_buffer = self._alloc_full_buffer(warmup_out, size)
-        with BreakableCUDAGraphCapture(
-            cuda_graph=graph,
-            pool=self._pool,
+        with BreakableCUDAGraphCapture(#管理正在进行的捕获:切流、开始一段、结束一段、恢复上下文; _current_graph,_stream,_pool
+            cuda_graph=graph,#保存整个档位的捕获结果，供以后重放_segments、_break_fns
+            pool=self._pool, #BreakableCUDAGraphCapture 内的torch.cuda.CUDAGraph才是真正的一张实际的 cuda 图，对应了一个图段；BreakableCUDAGraph是容器 
             stream=self._capture_stream,
         ):
-            out = captured_fn()
-            out_rows = self._output_rows(out, size)
-            self._copy_output_to_buffer(out, self._shared_output_buffer, out_rows)
+            out = captured_fn()# 在录制模式下，把计算记录进图；但是要记住，只是 python 代码执行了，但是实际上图的底层的GPU没算， 它们只是收到了计算请求，只记录操作、参数、读写地址和依赖，等 replay() 时才真正计算。
+            out_rows = self._output_rows(out, size) # 不过暂停捕获的间隔中，eager 路径的 GPU 还是真算的
+            self._copy_output_to_buffer(out, self._shared_output_buffer, out_rows)# copy 进共享输出的操作也被录制了
 
         stored = self._slice_output(self._shared_output_buffer, out_rows)
         self._graphs[shape_key] = graph

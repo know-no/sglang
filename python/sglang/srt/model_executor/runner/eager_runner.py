@@ -105,9 +105,9 @@ class EagerRunner(BaseRunner):
             from sglang.srt.layers.cp.padding import get_cp_padding_align_size
 
             max_bs = ceil_align(max_bs, self.attn_tp_size)
-            max_bs = ceil_align(max_bs, get_cp_padding_align_size())
-        prefill_ceiling = max(mr.max_total_num_tokens, sa.max_prefill_buffer_tokens())
-        max_num_token = max(prefill_ceiling, max_bs * num_tokens_per_req)
+            max_bs = ceil_align(max_bs, get_cp_padding_align_size())                    # 这是共同 eager 缓冲区请求轴的同步对齐，不专属于 Prefill。
+        prefill_ceiling = max(mr.max_total_num_tokens, sa.max_prefill_buffer_tokens())  # Prefill 侧容量候选取 KV 池总 token 容量与 max_prefill_buffer_tokens() 的较大值；PP 动态分块的额外需求在后者计算。
+        max_num_token = max(prefill_ceiling, max_bs * num_tokens_per_req) # token 轴还须覆盖 max_bs × 每请求宽度，兼顾普通 decode、投机及 dLLM 等 eager 执行需求。
         if require_mlp_sync(sa):
             max_num_token = ceil_align(max_num_token, self.attn_tp_size)
             max_num_token = ceil_align(max_num_token, get_cp_padding_align_size())
@@ -130,9 +130,9 @@ class EagerRunner(BaseRunner):
             ),
             encoder_lens_dtype=(
                 torch.int64 if torch.device(mr.device).type == "cpu" else torch.int32
-            ),
-            dp_size=sa.dp_size,
-        )
+            ),# 请求轴从 max_running_requests 起；仅 Frozen-KV MTP Draft 的 topk>1 分支额外展开，再按需对齐。
+            dp_size=sa.dp_size, # token 轴与请求轴分别规划容量；不能只按普通 decode 的一请求一 token 估算。
+        )# 容量须至少覆盖 load_batch() 将复制的 padded 形状，并非必须恰好相等；跨 runner 共享还须匹配字段名、numel、dtype、device。
         # Eager has no capture step, so warm up here (run-once via mr._kernel_warmed_up).
         self.warmup()
 

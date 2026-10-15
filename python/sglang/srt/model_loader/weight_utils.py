@@ -1095,7 +1095,7 @@ def multi_thread_safetensors_weights_iterator(
             if drop_cache_after_load:
                 _drop_file_cache_after_load(st_file)
 
-
+# 默认的从 safetensors 读取路径使用的方法
 def buffered_multi_thread_safetensors_weights_iterator(
     hf_weights_files: List[str],
     max_workers: int,

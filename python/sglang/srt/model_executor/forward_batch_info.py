@@ -399,7 +399,7 @@ class ForwardBatch(ForwardBatchDeepSeekMHAMixin):
     # The batch size
     batch_size: int
     # The input ids
-    input_ids: torch.Tensor
+    input_ids: torch.Tensor# SGLang 的普通 prefill 会把各请求本轮需要处理的 token 展平拼接, 所以这是一维 tensor # 见ScheduleBatch的 prepare_for_extend
     # The indices of requests in the req_to_token_pool
     req_pool_indices: torch.Tensor
     # The sequence length
@@ -446,7 +446,7 @@ class ForwardBatch(ForwardBatchDeepSeekMHAMixin):
     # === Borrowed from ScheduleBatch: config / flags (by-value) ===
     # For logprob
     return_logprob: bool = False
-    # Whether this batch is prefill-only (no token generation needed)
+    # Whether this batch is prefill-only (no token generation needed)  # 解惑：从 ScheduleBatch 复制的“整批无需生成”标志，不是 forward_mode.is_extend() 的别名。
     is_prefill_only: bool = False
     spec_algorithm: SpeculativeAlgorithm = None
     # For matryoshka embeddings
@@ -509,8 +509,8 @@ class ForwardBatch(ForwardBatchDeepSeekMHAMixin):
     positions: torch.Tensor = None
 
     # For extend
-    extend_num_tokens: Optional[int] = None
-    extend_seq_lens: Optional[torch.Tensor] = None
+    extend_num_tokens: Optional[int] = None # out_cache_loc = alloc_token_slots(..., batch.extend_num_tokens)
+    extend_seq_lens: Optional[torch.Tensor] = None # 从上面也可以看出这是本次需要新extend 的 token，不包含 prefix，包含 prefix 的一般是 seq_len之类的变量
     extend_prefix_lens: Optional[torch.Tensor] = None
     extend_start_loc: Optional[torch.Tensor] = None
     extend_prefix_lens_cpu: Optional[List[int]] = None
@@ -762,7 +762,7 @@ class ForwardBatch(ForwardBatchDeepSeekMHAMixin):
             can_run_dp_cuda_graph=batch.can_run_dp_cuda_graph,
             can_run_dp_breakable_cuda_graph=batch.can_run_dp_breakable_cuda_graph,
             global_forward_mode=batch.global_forward_mode,
-            is_prefill_only=batch.is_prefill_only,
+            is_prefill_only=batch.is_prefill_only,  # 只传递标志，不按当前执行阶段重新判断。
             spec_algorithm=batch.spec_algorithm,
             capture_hidden_mode=capture_hidden_mode,
             return_hidden_states_before_norm=return_hidden_states_before_norm,

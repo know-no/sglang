@@ -731,16 +731,16 @@ class ModelRunner:
         num_tokens_per_req = self.decode_num_tokens_per_req()
         capture_bs, _ = get_batch_sizes_to_capture(self, num_tokens_per_req)
         return max(capture_bs) * num_tokens_per_req
-
+    #alloc_memory_pool() 没有显式返回值，它通过修改 self 完成初始化。
     def alloc_memory_pool(self, memory_pool_config: Optional[MemoryPoolConfig] = None):
         """Allocate KV cache memory pools only (no backends or cuda graphs)."""
-        if memory_pool_config is not None:
+        if memory_pool_config is not None:## ① 接收外部配置；Draft 通常接收 Target 已经算好的配置
             self.memory_pool_config = memory_pool_config
 
-        self.init_kv_cache_configurator()
-        result = self.kv_cache_configurator.configure(
+        self.init_kv_cache_configurator() # ② 把当前 runner 的模型、设备、已有池等信息交给配置器
+        result = self.kv_cache_configurator.configure( # ③ 确定容量，创建或复用池，返回结果
             pre_model_load_memory=self.pre_model_load_memory
-        )
+        )# ④ 把结果保存为 ModelRunner 的持久状态
         self.max_total_num_tokens = result.max_total_num_tokens
         self.max_running_requests = result.max_running_requests
         self.req_to_token_pool = result.req_to_token_pool
@@ -752,7 +752,7 @@ class ModelRunner:
             self.swa_max_total_num_tokens = result.swa_max_total_num_tokens
         # Keep a reference so the shared byte buffer is not GC'd.
         self._unified_memory_pool = result.unified_memory_pool
-
+        # ⑤ 初始化依赖池对象或容量的其他组件
         self._init_post_memory_pool_components()
 
     def _init_post_memory_pool_components(self):
@@ -1497,8 +1497,8 @@ class ModelRunner:
                 mode_check()
                 and self.decode_cuda_graph_runner
                 and self.decode_cuda_graph_runner.can_run_graph(forward_batch)
-            )
-
+            ) # 先check decode; 如果此轮是 decode，且有 cuda graph，则执行 decode；不然
+             # 可能是 prefill； 或者 eager 大一统
             if (
                 forward_batch.forward_mode.is_decode()
                 and self.hisparse_coordinator is not None
@@ -1508,7 +1508,7 @@ class ModelRunner:
                 self.hisparse_coordinator.num_real_reqs.fill_(forward_batch.batch_size)
 
             # Replay cuda graph if applicable
-            if can_run_graph:
+            if can_run_graph: # 到这里为止，只是判断是否能执行 decode的 cuda graph；
                 ret = self.decode_cuda_graph_runner.execute(
                     forward_batch,
                     pp_proxy_tensors=pp_proxy_tensors,

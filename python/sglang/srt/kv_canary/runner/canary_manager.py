@@ -278,8 +278,8 @@ class CanaryManager:
 
     def mark_init_finished(self) -> None:
         for single_forward_manager in self._single_forward_managers:
-            single_forward_manager.phase_checker.enable_assert()
-        self._device_state.enable_chain_position_assert.fill_(1)
+            single_forward_manager.phase_checker.enable_assert()# 将阶段检查器重置为 IDLE 并启用断言，检查后续 Canary 调用是否按预期顺序执行。
+        self._device_state.enable_chain_position_assert.fill_(1)# 向设备端开关写 1，启用 KV 链 position 递增断言；不会在这里检查或重写全部 KV。
 
     def attach_radix_cache(self, radix_cache: BasePrefixCache) -> None:
         self._sweep_orchestrator.attach_radix_cache(radix_cache)

@@ -1,0 +1,266 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Draft proposal → Target verify → accept → KV commit">
+  <link rel="icon" href="data:,">
+  <title>03 · Draft 提案 · dSpark V2 · 投机解码专题</title>
+  <link rel="stylesheet" href="../course/assets/css/specforge-course.css">
+  <link rel="stylesheet" href="../course/assets/css/labs.css">
+  <link rel="stylesheet" href="../course/assets/css/print.css">
+  
+  <!-- Generated from notes/speculative/visualizations/sources/dspark-draft-proposal.html.jinja by notes/speculative/course/build.py; source-sha256=475ce628eda0a5addbe2dbd1df29ec9ce3875ddde422674832954407f7b9a717. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; style-src 'self' 'unsafe-inline' file:; script-src 'self' file:; img-src 'self' data: file:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'">
+<link rel="stylesheet" href="assets/dspark-visual-system.css">
+<style>@scope (.dspark-lab) {
+
+    .draft-flow{grid-template-columns:repeat(7,minmax(188px,1fr));min-width:1480px}.draft-flow .transform-stage{min-height:292px}.object-mini{display:grid;gap:5px;margin-top:12px}.object-mini span{padding:6px 7px;border:1px solid var(--line);color:var(--muted);font:11px/1.35 var(--mono);overflow-wrap:anywhere}.object-mini span[data-kind=main]{color:var(--main);border-color:var(--main)}.object-mini span[data-kind=data]{color:var(--data);border-color:var(--data)}.object-mini span[data-kind=cuda]{color:var(--cuda);border-color:var(--cuda);border-style:dashed}.object-mini span[data-kind=off]{color:var(--off);border-style:dotted}.token-set{display:flex;flex-wrap:wrap;gap:5px;margin-top:12px}.token-set .token{min-width:38px;min-height:35px;padding:5px}.shape-contract{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}.shape-card{--tone:var(--data);padding:14px;border:1px solid var(--tone);background:var(--surface)}.shape-card[data-kind=guard]{--tone:var(--guard);border-style:dashed}.shape-card[data-kind=main]{--tone:var(--main)}.shape-card b{display:block;color:var(--tone);font:800 12px/1.35 var(--mono)}.shape-card code{display:block;margin-top:9px;color:var(--text);font:12px/1.65 var(--mono)}.compare-rails{margin-top:18px}.compare-rails .token-rail+.token-rail{border-top:0}.route-note{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}.route-note article{--tone:var(--off);padding:14px;border:1px solid var(--tone);background:var(--surface);transition:opacity .18s,filter .18s}.route-note article[data-active=false]{opacity:.28;filter:saturate(.25)}.route-note article[data-kind=main]{--tone:var(--main)}.route-note article[data-kind=data]{--tone:var(--data)}.route-note article[data-kind=guard]{--tone:var(--guard);border-style:dashed}.route-note b{color:var(--tone);font:800 11px/1.3 var(--mono)}.route-note p{margin:7px 0 0;color:var(--muted);font-size:12px}.topic-link{display:block;margin-top:20px;padding:15px 17px;border:1px dashed var(--cuda);background:rgba(195,108,255,.045);text-decoration:none}.topic-link b{color:var(--cuda);font:800 12px/1.35 var(--mono)}.topic-link span{display:block;margin-top:6px;color:var(--muted);font-size:12px}@media(max-width:760px){.shape-contract,.route-note{grid-template-columns:1fr}}
+  
+}</style>
+<link rel="stylesheet" href="assets/dspark-source-studio.css">
+<script src="assets/dspark-site.js" defer></script>
+<script src="assets/dspark-learning-layer.js" defer></script>
+<script src="assets/dspark-source-studio.js" defer></script>
+<script src="assets/dspark-stepper.js" defer></script>
+  <link rel="stylesheet" href="assets/dspark-course-shell.css">
+
+</head>
+<body class="sf-course-page sf-lab-page" data-root-url="sglang-course-v2/index.html"
+      data-nav-open="false" data-nav-pinned="false"
+      data-page-id="lab-dspark-draft-proposal" data-chapter-id="lab-dspark-draft-proposal"
+      data-section-id="lab"
+      data-page="03"
+      style="--page-accent: var(--domain-speculative, var(--domain-entry))">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+
+  <div class="sf-shell">
+    <div class="sf-navigation">
+      <nav class="sf-rail" aria-label="课程工具">
+        <button class="sf-rail__button sf-rail__menu" type="button" data-nav-toggle aria-controls="course-navigation" aria-expanded="false">
+          <span aria-hidden="true">☰</span><span class="sr-only">打开课程目录</span>
+        </button>
+        <a class="sf-rail__brand" href="sglang-course-v2/index.html" aria-label="回到 SGLang 课程地图">S</a>
+        <div class="sf-rail__spacer"></div>
+        <button class="sf-rail__button" type="button" data-search-open aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span class="sr-only">搜索课程</span></button>
+        <button class="sf-rail__button" type="button" data-theme-toggle><span aria-hidden="true">◐</span><span class="sr-only" data-theme-label>深色</span></button>
+      </nav>
+
+      <aside class="sf-drawer" id="course-navigation" aria-label="全部课程目录">
+        <header class="sf-drawer__head">
+          <div><p class="sf-drawer__eyebrow">SGLang source course</p><a href="sglang-course-v2/index.html">投机解码专题</a></div>
+          <button class="sf-icon-button" type="button" data-nav-close aria-label="关闭课程目录">×</button>
+        </header>
+        <div class="sf-drawer__tools">
+          <button class="sf-button sf-button--quiet" type="button" data-search-open><span aria-hidden="true">⌕</span> 搜索</button>
+          <button class="sf-button sf-button--quiet" type="button" data-theme-toggle><span aria-hidden="true">◐</span> <span data-theme-label>深色</span></button>
+          <button class="sf-button sf-button--quiet sf-drawer__pin" type="button" data-nav-pin aria-pressed="false"><span aria-hidden="true">⌖</span> <span data-nav-pin-label>固定目录</span></button>
+        </div>
+        <p class="sf-drawer__context"><b>dSpark 交互实验</b><span>03 · Draft 提案 · dSpark V2</span></p>
+        <nav class="sf-drawer__tree" aria-label="全部章节"><div class="sf-course-tree">
+    
+      <details class="sf-course-tree__section">
+        <summary><span class="sf-course-tree__number">01</span><span>Speculative Decoding 全家族</span></summary>
+        <ul class="sf-course-tree__children sf-course-tree__children--section">
+          <li class="sf-course-tree__overview"><a href="sglang-course-v2/index.html" data-course-link data-chapter-id="speculative"
+     data-search-title="Speculative Decoding 全家族" data-search-section="Speculative Decoding 全家族"
+     
+     
+     >Speculative Decoding 全家族</a></li>
+          <li><a href="sglang-course-v2/common-contract.html" data-course-link data-chapter-id="spec-common-contract"
+     data-search-title="Draft 只提案：共同 worker 合同与四个长度" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。"
+     
+     >Draft 只提案：共同 worker 合同与四个长度</a></li><li><a href="sglang-course-v2/eagle-tree.html" data-course-link data-chapter-id="eagle-tree"
+     data-search-title="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。"
+     
+     >EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a></li><li><a href="sglang-course-v2/dflash-block.html" data-course-link data-chapter-id="dflash-block"
+     data-search-title="DFlash fixed-block draft、hidden injection 与 compact cache" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。"
+     
+     >DFlash fixed-block draft、hidden injection 与 compact cache</a></li><li><a href="sglang-course-v2/dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"
+     data-search-title="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。"
+     
+     >DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a></li><li><a href="sglang-course-v2/dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"
+     data-search-title="DSpark confidence、history、per-step budget 与 ragged layout" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。"
+     
+     >DSpark confidence、history、per-step budget 与 ragged layout</a></li><li><a href="sglang-course-v2/dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"
+     data-search-title="DSpark Target verify、accept/finalize 与 KV commit/reclaim" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。"
+     
+     >DSpark Target verify、accept/finalize 与 KV commit/reclaim</a></li><li><a href="sglang-course-v2/dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"
+     data-search-title="DSpark folded fast path、capture/replay 与 overlap" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。"
+     
+     >DSpark folded fast path、capture/replay 与 overlap</a></li><li><a href="sglang-course-v2/boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"
+     data-search-title="Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。"
+     
+     >Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a></li>
+          
+        </ul>
+      </details>
+    
+  </div></nav>
+      </aside>
+    </div>
+
+    <button class="sf-nav-backdrop" type="button" data-nav-backdrop aria-label="关闭课程目录"></button>
+
+    <div class="sf-main-frame">
+      <main class="sf-main sf-main--wide" id="main-content" tabindex="-1">
+        <div class="sf-page-grid">
+          <div class="sf-content-column">
+            
+              <nav aria-label="面包屑"><ol class="sf-breadcrumbs">
+                <li><a href="sglang-course-v2/index.html">投机解码专题</a></li><li><a href="index.html">投机实验路线</a></li><li><span aria-current="page">03 · Draft 提案 · dSpark V2</span></li>
+              </ol></nav>
+            
+
+            
+  <nav class="sf-hero__actions" aria-label="实验源文件"><a href="sources/dspark-draft-proposal.html.jinja" download>下载实验 HTML 源文件</a></nav>
+
+
+            <nav class="sf-hero__actions" aria-label="关联阅读入口" data-repository-companion><a href="../../index.html">SGLang 全景图</a></nav>
+            
+
+            
+
+            
+            
+
+            
+  <div class="dspark-lab" data-toc-source>
+<!-- lab-content:start -->
+  <nav data-site-nav aria-label="dSpark 学习页面"></nav>
+  <div class="page page--wide" data-dspark-main>
+    <header class="hero">
+      <p class="eyebrow">03 · Draft 提案</p>
+      <h1>Transformer 一次并行得到四个槽位；Markov 小头再串行生成 <code>a→b→c→d</code></h1>
+      <p class="lead">Draft 模型真正 forward 的输入是 <code>[X,MASK,MASK,MASK]</code>，不是最终候选 <code>[X,a,b,c,d]</code>。后者直到 <code>DraftProposal</code> 返回、Target 候选矩阵装配时才出现。</p>
+      <div class="evidence-strip"><span><strong>关键不变量</strong> · <code>W=G+1=5</code>，Draft Transformer 只运行 <code>G=4</code> 行</span><span><strong>对象边界</strong> · MASK 形状与真实 draft tokens 分开保存</span><span><strong>证据范围</strong> · 当前源码 <code>f01a0c7f97ec</code> · 静态核验</span></div>
+      <div class="route-switch" aria-label="选择讲解路线"><button type="button" data-route-choice="static-greedy">STATIC · 贪心</button><button type="button" data-route-choice="compact-sampling">COMPACT · 随机采样</button><button type="button" data-route-choice="folded-greedy">FOLDED · 贪心</button></div>
+      <div data-semantic-legend></div>
+    </header>
+    <section class="handoff" aria-label="Draft 提案交接契约">
+      <div class="handoff__item"><b>输入 · 跨轮状态</b><span><code>draft_input : DFlashDraftInputV2</code> 提供 anchor <code>X</code>；<code>batch : ScheduleBatch</code> 提供 prefix 与请求索引。</span></div>
+      <div class="handoff__item"><b>输入 · 本轮预留</b><span><code>verify_window : VerifyWindow</code> 已为每请求预留 <code>W=5</code> 个 Target verify 位置。</span></div>
+      <div class="handoff__item"><b>输出 · 提案对象</b><span><code>proposal : DraftProposal</code> 携带真实 token、hidden、采样分布材料与可选 confidence。</span></div>
+      <div class="handoff__item"><b>下一消费者</b><span><code>self : DSparkWorkerV2</code> 取 token；04 的 <code>self._verify_planner</code> 计算 budget/layout。</span></div>
+    </section>
+    <section class="section" aria-labelledby="draft-main-title">
+      <div class="section__head"><p class="section__kicker">主视图 · 对象与数据变换</p><h2 id="draft-main-title"><code>DFlashDraftInputV2 + VerifyWindow</code> 如何变成 <code>DraftProposal</code></h2><p class="section__intro">播放顺序写出接收者实例、具体类、关键参数、返回值与下一消费者。紫色表示设备执行；蓝色表示对象或张量。</p></div>
+      <div class="visual stepper" data-stepper data-steps="7">
+        <div class="visual__bar"><span><strong>一轮提案</strong> · B=1，prefix=20，G=4，W=5</span><button class="zoom-button" type="button" data-zoom-target="#draft-flow-canvas">放大主图</button></div>
+        <div class="visual__body">
+          <div class="stepper__toolbar"><div class="stepper__buttons" aria-label="提案流程播放控制"><button type="button" data-step-action="prev">上一步</button><button type="button" data-step-action="next">下一步</button><button type="button" data-step-action="play">播放</button><button type="button" data-step-action="reset">重置</button></div><div class="stepper__progress" aria-hidden="true"><span data-step-progress></span></div><div class="stepper__status" data-step-status aria-live="polite"></div></div>
+          <div id="draft-flow-canvas" class="canvas-scroll"><div class="data-transform draft-flow">
+            <article class="transform-stage" data-step-node="0"><b>01 · 跨轮锚点</b><p><code>draft_input : DFlashDraftInputV2</code></p><div class="object-mini"><span data-kind="data">bonus_tokens=[X]</span><span>new_seq_lens=[20]</span></div><div class="token-set"><span class="token" data-kind="data" tabindex="0" data-entity="token-x">X@20</span></div></article>
+            <article class="transform-stage" data-step-node="1"><b>02 · 预留窗口</b><p><code>verify_window : VerifyWindow</code><br><code>alloc_verify_window()</code></p><div class="object-mini"><span data-kind="data">positions=[20,21,22,23,24]</span><span>cache=L20…L24</span><span data-kind="off">第 5 格只留给 Target verify</span></div></article>
+            <article class="transform-stage" data-step-node="2" data-kind="main"><b>03 · 装配 Draft ForwardBatch</b><p><code>self._proposer._run_forward()</code></p><div class="token-set"><span class="token" data-kind="data" tabindex="0" data-entity="token-x">X</span><span class="token" data-kind="off">MASK</span><span class="token" data-kind="off">MASK</span><span class="token" data-kind="off">MASK</span></div><div class="object-mini"><span>forward_mode=TARGET_VERIFY</span><span>positions=20…23</span><span>out_cache_loc=L20…L23</span></div></article>
+            <article class="transform-stage" data-step-node="3" data-kind="cuda"><b>04 · Draft Transformer</b><p><code>self._proposer.draft_model_runner : ModelRunner</code><br><code>forward(draft_forward_batch)</code></p><div class="object-mini"><span data-kind="cuda">一次 forward · 4 行</span><span>raw_hidden[4,H]</span><span>draft_hidden_3d[1,4,H]</span></div></article>
+            <article class="transform-stage" data-step-node="4"><b>05 · 基础 logits</b><p><code>self._proposer.draft_model.compute_base_logits(raw_hidden)</code></p><div class="object-mini"><span data-kind="data">base_logits[1,4,V]</span><span>confidence_tap · 可选</span><span data-kind="off">尚未产生 a/b/c/d</span></div></article>
+            <article class="transform-stage" data-step-node="5" data-kind="main"><b>06 · Markov 串行修正与采样</b><p><code>sample_draft_block()</code> → <code>markov_head.sample_block()</code></p><div class="token-set"><span class="token" data-kind="main" tabindex="0" data-entity="token-a">a</span><span class="token" data-kind="main" tabindex="0" data-entity="token-b">b</span><span class="token" data-kind="main" tabindex="0" data-entity="token-c">c</span><span class="token" data-kind="main" tabindex="0" data-entity="token-d">d</span></div><div class="object-mini"><span>corrected_logits[1,4,V]</span><span>greedy_mask + temperatures</span></div></article>
+            <article class="transform-stage" data-step-node="6" data-kind="main"><b>07 · 返回 DraftProposal</b><p><code>proposal : DraftProposal</code></p><div class="object-mini"><span data-kind="off">draft_block_ids=[X,M,M,M]</span><span data-kind="main">draft_block.draft_tokens=[a,b,c,d]</span><span>draft_hidden[1,4,H]</span><span>confidence/tap/folded · 可选</span></div></article>
+          </div></div>
+        </div>
+      </div>
+      <div class="route-note" aria-label="三条路线在 Draft 阶段的差异">
+        <article data-kind="main" data-routes="static-greedy"><b>STATIC · 贪心</b><p>每个 step 使用 <code>argmax(step_logits)</code>。proposal 可折叠并不保证后续 accept 折叠；04 的 STATIC 仍得到 <code>layout=None</code>。</p></article>
+        <article data-kind="data" data-routes="compact-sampling"><b>COMPACT · 随机采样</b><p>按每请求 temperature 与 greedy mask 采样，并保留 <code>corrected_logits + temperatures</code>；06 用它们重建实际 <code>P_D</code>。</p></article>
+        <article data-kind="guard" data-routes="folded-greedy"><b>FOLDED · 贪心</b><p>仅当 draft sampler 存在、Draft CUDA 图命中且全贪心，token 才直接读 graph buffer；此时 <code>corrected_logits=None</code>。</p></article>
+      </div>
+    </section>
+    <section class="section" aria-labelledby="shape-title">
+      <div class="section__head"><p class="section__kicker">辅助视图 · 两种长度语义</p><h2 id="shape-title"><code>seq_lens=[20]</code> 与 <code>seq_lens_cpu=[24]</code> 同时成立，但不是同一个概念</h2><p class="section__intro">前者保留请求进入 verify window 前的设备侧 prefix 边界；后者把本次 Draft 的四个 token 行计入 CPU 侧总 token 计数。它们都不表示“a,b,c,d 已被 Target 接受”。</p></div>
+      <div class="visual"><div class="visual__bar"><span><strong>具体数据</strong> · <code>draft_forward_batch = ForwardBatch(...)</code></span><button class="zoom-button" type="button" data-zoom-target="#draft-shapes">放大辅助图</button></div><div class="visual__body" id="draft-shapes">
+        <div class="shape-contract">
+          <article class="shape-card"><b>设备注意力前缀</b><code>seq_lens = [20]<br>positions = [20,21,22,23]<br>out_cache_loc = [L20,L21,L22,L23]</code></article>
+          <article class="shape-card" data-kind="guard"><b>CPU 调度计数</b><code>seq_lens_cpu = [20] + G = [24]<br>seq_lens_sum = 24<br>不是 committed length</code></article>
+          <article class="shape-card" data-kind="main"><b>窗口与提案</b><code>VerifyWindow = 5 slots<br>Draft forward = 4 rows<br>Draft tokens = [a,b,c,d]<br>Target input = [X,a,b,c,d]</code></article>
+        </div>
+        <div class="canvas-scroll compare-rails">
+          <div class="token-rail" aria-label="Target 验证窗口五个位置"><div class="token-rail__label">VerifyWindow · W=5</div><div class="token" data-kind="data" tabindex="0" data-entity="token-x">20 · X</div><div class="token" data-kind="data">21 · a 槽</div><div class="token" data-kind="data">22 · b 槽</div><div class="token" data-kind="data">23 · c 槽</div><div class="token" data-kind="data">24 · d 槽</div><div class="token" data-kind="off">—</div><div class="token" data-kind="off">—</div><div class="token" data-kind="off">—</div><div class="token" data-kind="off">—</div><div class="token" data-kind="off">—</div></div>
+          <div class="token-rail" aria-label="Draft Transformer 四个输入行"><div class="token-rail__label">Draft forward · G=4</div><div class="token" data-kind="data" tabindex="0" data-entity="token-x">20 · X</div><div class="token" data-kind="off">21 · MASK</div><div class="token" data-kind="off">22 · MASK</div><div class="token" data-kind="off">23 · MASK</div><div class="token" data-kind="off">24 · 不运行</div><div class="token" data-kind="off">—</div><div class="token" data-kind="off">—</div><div class="token" data-kind="off">—</div><div class="token" data-kind="off">—</div><div class="token" data-kind="off">—</div></div>
+        </div>
+      </div></div>
+      <a class="topic-link" data-nav href="dspark-markov-head-internals.html"><b>03A · 进入 Markov Head 内部机制 →</b><span>逐步观察四个 hidden 同时完成后，为什么 logits 修正与采样仍必须按 <code>X→a→b→c→d</code> 串行。</span></a>
+    </section>
+    <details class="source-details"><summary>为什么、如果省略、易错边界与源码锚点</summary><div class="source-details__body">
+      <div class="callouts"><div class="callout" data-kind="data"><b>为什么 · W 比 G 多 1</b><p>Target 验证还需要 anchor 所在行预测第一个 draft token，因此窗口是 <code>anchor + G drafts</code>。</p></div><div class="callout" data-kind="guard"><b>易错 · TARGET_VERIFY 的接收者</b><p>模式用于复用 block-shaped runner/attention 分派；实际接收者仍是 Draft <code>ModelRunner</code>，不是 Target worker。</p></div><div class="callout" data-kind="fail"><b>如果省略 Markov</b><p>直接独立采四个 base logits，会让 b/c/d 看不到 a/b/c；proposal 与实际 <code>P_D</code> 都改变。</p></div><div class="callout" data-kind="fail"><b>如果丢失 corrected logits</b><p>sampling 路径无法重建 Markov 修正与 temperature 后的 proposal 概率；06 不能正确做拒绝采样修正。</p></div></div>
+      <div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:482–545</code><span><code>self : DSparkWorkerV2</code> 取得跨轮输入、预留 verify window，并调用 <code>self._proposer.propose()</code>。</span></div>
+      <div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_draft.py:241–336, 361–426</code><span><code>DraftBlockProposer.propose/_run_forward</code> 构造 ForwardBatch、执行 Draft ModelRunner、采样并封装 <code>DraftProposal</code>。</span></div>
+      <div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_draft.py:166–238</code><span>greedy/sampling 分支与返回的采样分布材料。</span></div>
+      <div class="source-anchor"><code>python/sglang/srt/models/dspark.py:34–64, 67–286</code><span>串行 Markov loop 与 vanilla/gated/RNN 三个具体 head。</span></div>
+    </div></details>
+    <div class="pager"><a data-nav href="dspark-prefill-bootstrap.html">← 02 · Prefill 启动</a><a data-nav href="dspark-markov-head-internals.html">03A · Markov Head 内部机制 →</a></div>
+    <footer class="site-footer">证据边界 · 当前源码 f01a0c7f97ec · 假设 CUDA dSpark V2、PP=1 · Python 对象与 shape 已静态核验 · 未执行 Draft CUDA Graph / Triton sampling 运行时验证。</footer>
+  </div>
+<!-- lab-content:end -->
+  </div>
+
+
+            
+
+            <footer class="sf-footer"><span>投机解码源码专题</span><span>纯静态 · 本地依赖 · 可离线分享</span></footer>
+            <p class="print-only">投机解码源码专题 · 03 · Draft 提案 · dSpark V2 · None</p>
+          </div>
+
+          <aside class="sf-page-toc" aria-label="本页目录">
+            <p class="sf-page-toc__title">On this page</p>
+            <ol data-page-toc-list></ol>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="search-dialog" id="course-search-dialog" data-search-dialog aria-labelledby="course-search-title">
+    <div class="search-dialog__head"><strong id="course-search-title">搜索课程</strong><button class="sf-icon-button" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+    <form class="search-dialog__form" data-search-form role="search"><label class="sr-only" for="course-search-input">搜索对象、方法、状态或章节</label><input id="course-search-input" type="search" data-search-input autocomplete="off" placeholder="例如：running_batch、ForwardBatch、TARGET_VERIFY"><button class="sf-button" type="submit">搜索</button></form>
+    <p class="search-dialog__status" data-search-status aria-live="polite"></p><ol class="search-results" data-search-results></ol>
+  </dialog>
+
+  <dialog class="diagram-viewer" id="diagram-viewer-dialog" data-diagram-dialog aria-labelledby="diagram-viewer-title">
+    <div class="diagram-viewer__head"><div><strong id="diagram-viewer-title" data-diagram-title>图解沉浸阅读</strong> <span class="diagram-viewer__zoom" data-diagram-zoom>100%</span></div><div class="diagram-viewer__tools"><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-in" aria-label="放大">＋</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-out" aria-label="缩小">−</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="fit">看全图</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="reset">100%</button><button class="sf-button" type="button" data-diagram-action="close">关闭 ×</button></div></div>
+    <div class="diagram-viewer__viewport" data-diagram-viewport><div class="diagram-viewer__canvas mermaid" data-diagram-canvas></div></div>
+  </dialog>
+
+  <script src="sglang-course-v2/assets/data/search-index.js" defer></script>
+  <script src="../course/assets/vendor/mermaid.min.js" defer></script>
+  <script src="../course/assets/js/site-shell.js" defer></script>
+  <script src="../course/assets/js/toc-search.js" defer></script>
+  <script src="../course/assets/js/diagram-viewer.js" defer></script>
+  <script src="../course/assets/js/source-microscope.js" defer></script>
+  <script src="../course/assets/js/labs.js" defer></script>
+  <script src="../course/assets/js/lesson-components.js" defer></script>
+  
+  
+</body>
+</html>

@@ -1,0 +1,271 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Draft proposal → Target verify → accept → KV commit">
+  <link rel="icon" href="data:,">
+  <title>dSpark V2 · 折叠快路 · 投机解码专题</title>
+  <link rel="stylesheet" href="../course/assets/css/specforge-course.css">
+  <link rel="stylesheet" href="../course/assets/css/labs.css">
+  <link rel="stylesheet" href="../course/assets/css/print.css">
+  
+  <!-- Generated from notes/speculative/visualizations/sources/dspark-folded-fast-path.html.jinja by notes/speculative/course/build.py; source-sha256=24ec2c732ff210aa62fa9e412e1aa293fa85c5920c208dd5fe5ffe1e34bc9100. -->
+  <link rel="stylesheet" href="assets/dspark-visual-system.css">
+<style>@scope (.dspark-lab) {
+
+    .overlay-map{position:relative;min-width:1260px;min-height:520px;padding:210px 18px 30px}.normal-chain{display:grid;grid-template-columns:repeat(6,minmax(170px,1fr));gap:28px}.normal-node{position:relative;min-height:128px;padding:14px;border:2px solid var(--main);background:var(--surface)}.normal-node:not(:last-child)::after{content:"→";position:absolute;right:-21px;top:43%;color:var(--main);font:900 20px/1 var(--mono)}.normal-node b{display:block;color:var(--main);font:800 12px/1.35 var(--mono)}.normal-node span{display:block;margin-top:7px;color:var(--muted);font-size:12px}.fold-layer{position:absolute;top:24px;min-height:132px;padding:14px;border:2px dashed var(--cuda);background:rgba(195,108,255,.08);color:var(--cuda)}.fold-layer::after{content:"↓ 覆盖执行位置";position:absolute;left:50%;top:100%;height:58px;border-left:2px dashed var(--cuda);padding:7px;color:var(--cuda);font:800 11px/1.25 var(--mono);white-space:nowrap}.fold-layer b{display:block;font:800 12px/1.35 var(--mono)}.fold-layer span{display:block;margin-top:7px;color:var(--purple);font-size:12px}.fold-draft{left:18px;width:190px}.fold-accept{left:244px;width:590px}.fold-commit{right:210px;width:188px}.route-matrix{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.route-card{padding:14px;border:1px solid var(--line);background:var(--surface);transition:opacity .18s}.route-card[data-active="false"]{opacity:.25;filter:saturate(.2)}.route-card b{display:block;color:var(--guard)}.route-card span{display:block;margin-top:7px;color:var(--muted);font-size:12px}.guard-circuit{display:grid;grid-template-columns:repeat(7,minmax(155px,1fr));gap:25px;min-width:1240px;padding:15px 4px 25px}.guard-gate{--tone:var(--guard);position:relative;min-height:165px;padding:14px;border:2px dashed var(--tone);background:var(--surface)}.guard-gate[data-kind="cuda"]{--tone:var(--cuda)}.guard-gate[data-kind="main"]{--tone:var(--main);border-style:solid}.guard-gate:not(:last-child)::after{content:"是 →";position:absolute;right:-24px;top:38%;color:var(--main);font:800 11px/1 var(--mono)}.guard-gate b{display:block;color:var(--tone);font:800 12px/1.3 var(--mono)}.guard-gate span{display:block;margin-top:7px;color:var(--muted);font-size:12px}.guard-gate em{display:block;margin-top:10px;color:var(--fail);font:normal 11px/1.3 var(--mono)}.trust-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.trust-card{padding:15px;border:1px solid var(--data);background:var(--surface)}.trust-card[data-kind="guard"]{border-color:var(--guard);border-style:dashed}.trust-card b{display:block;color:var(--data)}.trust-card[data-kind="guard"] b{color:var(--guard)}.trust-card span{display:block;margin-top:7px;color:var(--muted);font-size:12px}.topic-link{display:block;margin-top:18px;padding:15px;border:1px dashed var(--cuda);background:rgba(195,108,255,.06);text-decoration:none}.topic-link b{display:block;color:var(--cuda)}.topic-link span{display:block;margin-top:6px;color:var(--muted);font-size:12px}@media(max-width:760px){.route-matrix,.trust-grid{grid-template-columns:1fr}}
+  
+}</style>
+<link rel="stylesheet" href="assets/dspark-source-studio.css">
+<script src="assets/dspark-site.js" defer></script>
+<script src="assets/dspark-learning-layer.js" defer></script>
+<script src="assets/dspark-source-studio.js" defer></script>
+<script src="assets/dspark-stepper.js" defer></script>
+  <link rel="stylesheet" href="assets/dspark-course-shell.css">
+
+</head>
+<body class="sf-course-page sf-lab-page" data-root-url="sglang-course-v2/index.html"
+      data-nav-open="false" data-nav-pinned="false"
+      data-page-id="lab-dspark-folded-fast-path" data-chapter-id="lab-dspark-folded-fast-path"
+      data-section-id="lab"
+      data-page="08"
+      style="--page-accent: var(--domain-speculative, var(--domain-entry))">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+
+  <div class="sf-shell">
+    <div class="sf-navigation">
+      <nav class="sf-rail" aria-label="课程工具">
+        <button class="sf-rail__button sf-rail__menu" type="button" data-nav-toggle aria-controls="course-navigation" aria-expanded="false">
+          <span aria-hidden="true">☰</span><span class="sr-only">打开课程目录</span>
+        </button>
+        <a class="sf-rail__brand" href="sglang-course-v2/index.html" aria-label="回到 SGLang 课程地图">S</a>
+        <div class="sf-rail__spacer"></div>
+        <button class="sf-rail__button" type="button" data-search-open aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span class="sr-only">搜索课程</span></button>
+        <button class="sf-rail__button" type="button" data-theme-toggle><span aria-hidden="true">◐</span><span class="sr-only" data-theme-label>深色</span></button>
+      </nav>
+
+      <aside class="sf-drawer" id="course-navigation" aria-label="全部课程目录">
+        <header class="sf-drawer__head">
+          <div><p class="sf-drawer__eyebrow">SGLang source course</p><a href="sglang-course-v2/index.html">投机解码专题</a></div>
+          <button class="sf-icon-button" type="button" data-nav-close aria-label="关闭课程目录">×</button>
+        </header>
+        <div class="sf-drawer__tools">
+          <button class="sf-button sf-button--quiet" type="button" data-search-open><span aria-hidden="true">⌕</span> 搜索</button>
+          <button class="sf-button sf-button--quiet" type="button" data-theme-toggle><span aria-hidden="true">◐</span> <span data-theme-label>深色</span></button>
+          <button class="sf-button sf-button--quiet sf-drawer__pin" type="button" data-nav-pin aria-pressed="false"><span aria-hidden="true">⌖</span> <span data-nav-pin-label>固定目录</span></button>
+        </div>
+        <p class="sf-drawer__context"><b>dSpark 交互实验</b><span>dSpark V2 · 折叠快路</span></p>
+        <nav class="sf-drawer__tree" aria-label="全部章节"><div class="sf-course-tree">
+    
+      <details class="sf-course-tree__section">
+        <summary><span class="sf-course-tree__number">01</span><span>Speculative Decoding 全家族</span></summary>
+        <ul class="sf-course-tree__children sf-course-tree__children--section">
+          <li class="sf-course-tree__overview"><a href="sglang-course-v2/index.html" data-course-link data-chapter-id="speculative"
+     data-search-title="Speculative Decoding 全家族" data-search-section="Speculative Decoding 全家族"
+     
+     
+     >Speculative Decoding 全家族</a></li>
+          <li><a href="sglang-course-v2/common-contract.html" data-course-link data-chapter-id="spec-common-contract"
+     data-search-title="Draft 只提案：共同 worker 合同与四个长度" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。"
+     
+     >Draft 只提案：共同 worker 合同与四个长度</a></li><li><a href="sglang-course-v2/eagle-tree.html" data-course-link data-chapter-id="eagle-tree"
+     data-search-title="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。"
+     
+     >EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a></li><li><a href="sglang-course-v2/dflash-block.html" data-course-link data-chapter-id="dflash-block"
+     data-search-title="DFlash fixed-block draft、hidden injection 与 compact cache" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。"
+     
+     >DFlash fixed-block draft、hidden injection 与 compact cache</a></li><li><a href="sglang-course-v2/dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"
+     data-search-title="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。"
+     
+     >DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a></li><li><a href="sglang-course-v2/dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"
+     data-search-title="DSpark confidence、history、per-step budget 与 ragged layout" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。"
+     
+     >DSpark confidence、history、per-step budget 与 ragged layout</a></li><li><a href="sglang-course-v2/dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"
+     data-search-title="DSpark Target verify、accept/finalize 与 KV commit/reclaim" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。"
+     
+     >DSpark Target verify、accept/finalize 与 KV commit/reclaim</a></li><li><a href="sglang-course-v2/dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"
+     data-search-title="DSpark folded fast path、capture/replay 与 overlap" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。"
+     
+     >DSpark folded fast path、capture/replay 与 overlap</a></li><li><a href="sglang-course-v2/boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"
+     data-search-title="Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。"
+     
+     >Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a></li>
+          
+        </ul>
+      </details>
+    
+  </div></nav>
+      </aside>
+    </div>
+
+    <button class="sf-nav-backdrop" type="button" data-nav-backdrop aria-label="关闭课程目录"></button>
+
+    <div class="sf-main-frame">
+      <main class="sf-main sf-main--wide" id="main-content" tabindex="-1">
+        <div class="sf-page-grid">
+          <div class="sf-content-column">
+            
+              <nav aria-label="面包屑"><ol class="sf-breadcrumbs">
+                <li><a href="sglang-course-v2/index.html">投机解码专题</a></li><li><a href="index.html">投机实验路线</a></li><li><span aria-current="page">dSpark V2 · 折叠快路</span></li>
+              </ol></nav>
+            
+
+            
+  <nav class="sf-hero__actions" aria-label="实验源文件"><a href="sources/dspark-folded-fast-path.html.jinja" download>下载实验 HTML 源文件</a></nav>
+
+
+            <nav class="sf-hero__actions" aria-label="关联阅读入口" data-repository-companion><a href="../../index.html">SGLang 全景图</a></nav>
+            
+
+            
+
+            
+            
+
+            
+  <div class="dspark-lab" data-toc-source>
+<!-- lab-content:start -->
+  <nav data-site-nav aria-label="dSpark 学习站导航"></nav>
+  <div class="page page--wide" data-dspark-main>
+    <header class="hero">
+      <p class="eyebrow">08 · 折叠快路</p>
+      <h1>folded 不是第四种算法，而是覆盖普通主链的执行位置优化</h1>
+      <p class="lead">Draft proposal folded、Target folded accept、optional folded commit 是三层独立能力。前一层成立不推出后一层；任一 guard 失败都必须回到普通实现并汇入同一个可观察结果。</p>
+      <div class="evidence-strip"><span><strong>后端边界</strong> 当前 <code>DsparkVerifyEpilogue</code> 仅 NVIDIA CUDA</span><span><strong>共同合同</strong> <code>AcceptOuts → next_draft_input → GenerationBatchResult</code></span><span><strong>证据范围</strong> 静态源码；未执行 CUDA Graph 回放</span></div>
+      <div class="route-switch" aria-label="选择讲解路线"><button type="button" data-route-choice="static-greedy">STATIC · 贪心</button><button type="button" data-route-choice="compact-sampling">COMPACT · 随机采样</button><button type="button" data-route-choice="folded-greedy">FOLDED · 贪心</button></div>
+      <div data-semantic-legend></div>
+    </header>
+    <section class="handoff" aria-label="本页边界">
+      <div class="handoff__item"><b>输入</b><span>03 的 <code>proposal.folded</code>、05 的 compact/graph 结果、06/07 的普通尾部合同</span></div>
+      <div class="handoff__item"><b>本页判断</b><span><code>fold_eligible → folded_accept → folded_commit</code> 三层 guard</span></div>
+      <div class="handoff__item"><b>输出</b><span>快路或 fallback 均得到同一 <code>AcceptOuts</code> 与下一轮状态</span></div>
+      <div class="handoff__item"><b>不负责</b><span>接受数学见 06/06A；物理 compact rows 见 05；KV/anchor 合同见 07</span></div>
+    </section>
+
+    <section class="section" id="folded-overlay">
+      <div class="section__head"><p class="section__kicker">主视图 · 普通主链与折叠覆盖层</p><h2>紫色层只替换执行位置，绿色主链永远是语义基准</h2></div>
+      <div class="visual stepper" data-stepper data-steps="7">
+        <div class="visual__bar"><strong>三个 folded 层级 + 七道运行时门</strong><button class="zoom-button" type="button" data-zoom-target="#overlay-map">放大主图</button></div>
+        <div class="stepper__toolbar"><div class="stepper__buttons"><button type="button" data-step-action="prev">上一步</button><button type="button" data-step-action="next">下一步</button><button type="button" data-step-action="play">播放</button><button type="button" data-step-action="reset">重置</button></div><div class="stepper__progress"><span data-step-progress></span></div><div class="stepper__status" data-step-status></div></div>
+        <div class="visual__body canvas-scroll"><div class="overlay-map" id="overlay-map" aria-label="普通 dSpark 主链与三层 folded 覆盖架构图">
+          <article class="fold-layer fold-draft" data-routes="folded-greedy" data-step-node="0"><b>self._draft_sampler : DsparkDraftSampler</b><span>Draft CUDA graph tail：greedy Markov sampler；令 <code>proposal.folded=True</code>。它不以 verify epilogue 存在为前提。</span></article>
+          <article class="fold-layer fold-accept" data-routes="folded-greedy" data-step-node="4"><b>self._verify_epilogue : DsparkVerifyEpilogue</b><span>Target compact graph 尾部：scatter → greedy accept → finalize → BuildOutTokens。</span></article>
+          <article class="fold-layer fold-commit" data-routes="folded-greedy" data-step-node="6"><b>可选 fused commit</b><span>只有 KV pool 提供融合写接口时，hidden/KV commit 才一并折叠。</span></article>
+          <div class="normal-chain">
+            <article class="normal-node" data-step-node="0"><b>03 · Draft proposal</b><span>普通 Draft transformer + Markov sampler</span></article>
+            <article class="normal-node" data-step-node="2"><b>04/05 · layout + Target</b><span>compact 或 non-compact；graph 或 eager</span></article>
+            <article class="normal-node" data-step-node="3"><b>05 · scatter</b><span>compact logits/hidden → fixed stride</span></article>
+            <article class="normal-node" data-step-node="4"><b>06 · accept/finalize</b><span>greedy / sampling / mixed</span></article>
+            <article class="normal-node" data-step-node="5"><b>07 · hidden/KV commit</b><span>受 <code>commit_lens</code> 约束</span></article>
+            <article class="normal-node" data-step-node="6"><b>共同尾部</b><span><code>next_draft_input</code> + <code>GenerationBatchResult</code></span></article>
+          </div>
+        </div></div>
+        <div class="visual__bar"><strong>Guard 电路 · 每个“否”都标出准确 fallback</strong></div>
+        <div class="visual__body canvas-scroll"><div class="guard-circuit" aria-label="folded accept 与 commit guard 电路">
+          <article class="guard-gate" data-step-node="0"><b>proposal.folded？</b><span>draft sampler 存在、Draft forward 实际走 graph、整批 all-greedy；这条 Draft 能力独立判断</span><em>否：Draft proposal 回普通 sampler；Target 仍按自己的条件执行</em></article>
+          <article class="guard-gate" data-kind="cuda" data-step-node="1"><b>verify epilogue 存在？</b><span><code>compact &amp;&amp; !disable_cuda_graph &amp;&amp; is_cuda()</code></span><em>否：Target scatter/accept/commit 普通；Draft proposal 仍可能 folded</em></article>
+          <article class="guard-gate" data-step-node="2"><b>语义可等价？</b><span>verify logits adjustment 为 noop、未模拟接受、无 grammar</span><em>否：即使图内算过也不采用 accept buffer</em></article>
+          <article class="guard-gate" data-step-node="3"><b>run_compact？</b><span><code>mode=COMPACT &amp;&amp; layout!=None</code></span><em>否：完整 Target + 普通接受</em></article>
+          <article class="guard-gate" data-kind="cuda" data-step-node="4"><b>本轮 Target 图命中？</b><span><code>target_verify.can_run_cuda_graph</code></span><em>否：eager / 显式 scatter / 普通接受</em></article>
+          <article class="guard-gate" data-kind="main" data-step-node="5"><b>folded_accept</b><span>前述条件全部为真，才 <code>read_accept(bs)</code></span><em>否则回到 06 并重新汇合</em></article>
+          <article class="guard-gate" data-kind="cuda" data-step-node="6"><b>pool 可 fused 写？</b><span><code>epilogue.folds_commit</code></span><em>否：accept 已 folded，commit_hidden 仍在图外</em></article>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="section" id="routes-and-trust">
+      <div class="section__head"><p class="section__kicker">辅助视图 · 路线与信任边界</p><h2>“图里执行过”不等于“Worker 会采用”</h2></div>
+      <div class="route-matrix">
+        <article class="route-card" data-routes="static-greedy"><b>STATIC · 贪心</b><span><code>layout=None</code>，不 compact；proposal 可能折叠，但 Target folded accept 不成立。</span></article>
+        <article class="route-card" data-routes="compact-sampling"><b>COMPACT · 随机采样</b><span>Target 可以 compact/graph；sampling 令 <code>proposal.folded=false</code>，接受仍在 graph 外按真实 p/q 修正。</span></article>
+        <article class="route-card" data-routes="folded-greedy"><b>FOLDED · 贪心</b><span>只表示具备命中可能；本轮仍要逐个通过 construction、semantics、compact 与 graph guards。</span></article>
+      </div>
+      <div class="trust-grid" style="margin-top:18px">
+        <article class="trust-card"><b>执行位置</b><span>Target graph replay 可能已经执行 epilogue 的 scatter/greedy accept；这些 device 操作写入静态 buffer。</span></article>
+        <article class="trust-card" data-kind="guard"><b>采用条件</b><span>只有 <code>folded_accept=true</code> 才读取这些接受结果。否则应用 grammar/logit 调整后走 06；<code>inject_gate=0</code> 阻止有效融合提交。</span></article>
+      </div>
+      <a class="topic-link" data-nav href="dspark-folded-capture-replay.html"><b>08A · warm-up、capture、begin_step 与 replay 到底按什么顺序发生？</b><span>用 Python/CPU、CUDA stream 与静态 buffer 三条泳道逐轮展开。</span></a>
+      <details class="source-details"><summary>为什么 / 如果省略 / 易错边界 / 源码锚点</summary><div class="source-details__body">
+        <div class="callouts"><div class="callout" data-kind="guard"><b>COMPACT、CUDA Graph、folded 是三个维度</b><p>compact 可以 eager；graph 命中也不自动让 accept folded；folded 还要求输出语义不依赖 graph 外调整。</p></div><div class="callout" data-kind="fail"><b>如果省略语义 guard</b><p>会采用尚未应用 grammar/penalty/custom processor 的结果，造成错误 token、长度或 KV 提交，而不只是性能变化。</p></div></div>
+        <div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:195–216, 300–340, 570–659</code><span>epilogue/sampler 装配、<code>fold_eligible</code>、<code>folded_accept</code>、<code>folded_commit</code> 与 fallback。</span></div>
+        <div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_draft.py:121–155, 268–336</code><span>Draft sampler 与 <code>proposal.folded</code> 的 all-greedy + graph 条件。</span></div>
+        <div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_verify.py:453–655</code><span><code>DsparkVerifyEpilogue</code> 静态 buffers、scatter、greedy accept/finalize、可选融合注入及 <code>read_accept()</code>。</span></div>
+      </div></details>
+    </section>
+    <nav class="pager" aria-label="相邻章节"><a data-nav href="dspark-target-hidden-kv-explainer.html">← 07 · 隐藏状态 / Draft KV / 滚动锚点</a><a data-nav href="dspark-folded-capture-replay.html">08A · 折叠捕获与回放 →</a></nav>
+    <footer class="site-footer">证据边界 · 当前源码静态核验 · 折叠尾处理器主例仅 NVIDIA CUDA · 未执行 GPU/CUDA Graph runtime replay。</footer>
+  </div>
+<!-- lab-content:end -->
+  </div>
+
+
+            
+
+            <footer class="sf-footer"><span>投机解码源码专题</span><span>纯静态 · 本地依赖 · 可离线分享</span></footer>
+            <p class="print-only">投机解码源码专题 · dSpark V2 · 折叠快路 · None</p>
+          </div>
+
+          <aside class="sf-page-toc" aria-label="本页目录">
+            <p class="sf-page-toc__title">On this page</p>
+            <ol data-page-toc-list></ol>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="search-dialog" id="course-search-dialog" data-search-dialog aria-labelledby="course-search-title">
+    <div class="search-dialog__head"><strong id="course-search-title">搜索课程</strong><button class="sf-icon-button" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+    <form class="search-dialog__form" data-search-form role="search"><label class="sr-only" for="course-search-input">搜索对象、方法、状态或章节</label><input id="course-search-input" type="search" data-search-input autocomplete="off" placeholder="例如：running_batch、ForwardBatch、TARGET_VERIFY"><button class="sf-button" type="submit">搜索</button></form>
+    <p class="search-dialog__status" data-search-status aria-live="polite"></p><ol class="search-results" data-search-results></ol>
+  </dialog>
+
+  <dialog class="diagram-viewer" id="diagram-viewer-dialog" data-diagram-dialog aria-labelledby="diagram-viewer-title">
+    <div class="diagram-viewer__head"><div><strong id="diagram-viewer-title" data-diagram-title>图解沉浸阅读</strong> <span class="diagram-viewer__zoom" data-diagram-zoom>100%</span></div><div class="diagram-viewer__tools"><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-in" aria-label="放大">＋</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-out" aria-label="缩小">−</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="fit">看全图</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="reset">100%</button><button class="sf-button" type="button" data-diagram-action="close">关闭 ×</button></div></div>
+    <div class="diagram-viewer__viewport" data-diagram-viewport><div class="diagram-viewer__canvas mermaid" data-diagram-canvas></div></div>
+  </dialog>
+
+  <script src="sglang-course-v2/assets/data/search-index.js" defer></script>
+  <script src="../course/assets/vendor/mermaid.min.js" defer></script>
+  <script src="../course/assets/js/site-shell.js" defer></script>
+  <script src="../course/assets/js/toc-search.js" defer></script>
+  <script src="../course/assets/js/diagram-viewer.js" defer></script>
+  <script src="../course/assets/js/source-microscope.js" defer></script>
+  <script src="../course/assets/js/labs.js" defer></script>
+  <script src="../course/assets/js/lesson-components.js" defer></script>
+  
+  
+</body>
+</html>

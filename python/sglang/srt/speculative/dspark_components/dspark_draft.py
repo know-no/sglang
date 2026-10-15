@@ -372,10 +372,10 @@ class DraftBlockProposer:
         prefix_lens = batch.seq_lens
         positions_2d = verify_window.positions_2d
         verify_cache_loc_2d = verify_window.verify_cache_loc_2d
-
-        draft_block_ids = torch.full(
+        # G = gamma = 4; draft_block_ids = [Y, MASK, MASK, MASK]; anchor + G-1 个 MASK; 见文档记录
+        draft_block_ids = torch.full( # 因为这里除了 anchor，只有 MASK，所以当此方法返回后，拿到python/sglang/srt/speculative/dspark_components/dspark_draft.py:288
             (bs, gamma), int(self._mask_token_id), dtype=torch.long, device=device
-        )
+        )# 返回后，拿到的的 draft_block_ids里面除了 0 列是 anchor，其他 gamma-1列都是 MASk，无用；所以python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:535 是从 draft_block里面取的 draft 的 token id
         draft_block_ids[:, 0].copy_(draft_input.bonus_tokens.view(-1))
         draft_positions = positions_2d[:, :gamma].reshape(-1)
         draft_cache_loc = verify_cache_loc_2d[:, :gamma].reshape(-1)

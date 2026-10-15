@@ -350,7 +350,7 @@ class BreakableCUDAGraphCapture:
         return False
 
     def _begin_new_segment(self) -> None:
-        graph_cls = torch.xpu.XPUGraph if _is_xpu else torch.cuda.CUDAGraph
+        graph_cls = torch.xpu.XPUGraph if _is_xpu else torch.cuda.CUDAGraph #一张实际的 CUDA 图，对应其中一个图段;CUDA 记录的操作与依赖
         # keep_graph retains the raw graph for dedup; skip it on the plain path.
         # Dedup is CUDA-only (it introspects the raw graph via cuda-python), so
         # XPU always takes the plain path below.

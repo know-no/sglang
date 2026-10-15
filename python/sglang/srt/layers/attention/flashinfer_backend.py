@@ -1521,7 +1521,7 @@ class FlashInferIndicesUpdaterDecode:
     ):
         # Keep the signature for type checking. It will be assigned during runtime.
         raise NotImplementedError()
-
+    # 普通路径下的update方法
     def update_single_wrapper(
         self,
         req_pool_indices: torch.Tensor,

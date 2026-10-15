@@ -1,0 +1,75 @@
+{% if subsystem_overview|default(false) %}
+  <section class="sf-subsystem-overview" id="subsystem-overview" aria-labelledby="subsystem-overview-title">
+    <header class="sf-overview-head sf-subsystem-overview__head">
+      <p class="sf-overview-head__eyebrow">Subsystem visual atlas</p>
+      <h2 id="subsystem-overview-title">先用三张总图建立子系统坐标，再进入机制路线</h2>
+      <p>{{ subsystem_overview.lead }}</p>
+    </header>
+
+    <nav class="sf-subsystem-lenses" aria-label="三种子系统总览视角">
+      {% for lens in subsystem_overview.lenses %}
+        <a href="#subsystem-map-{{ lens.id }}" data-lens="{{ lens.id }}">
+          <small>{{ '%02d'|format(loop.index) }} · {{ lens.kicker }}</small>
+          <b>{{ lens.short_title }}</b>
+          <span>{{ lens.question }}</span>
+        </a>
+      {% endfor %}
+    </nav>
+
+    <div class="sf-subsystem-maps">
+      {% for lens in subsystem_overview.lenses %}
+        <article class="sf-subsystem-map" id="subsystem-map-{{ lens.id }}" data-lens="{{ lens.id }}">
+          <header class="sf-subsystem-map__head">
+            <div>
+              <p>{{ '%02d'|format(loop.index) }} · {{ lens.kicker }}</p>
+              <h3>{{ lens.title }}</h3>
+            </div>
+            <p><b>这张图回答：</b>{{ lens.question }}</p>
+          </header>
+
+          <figure class="diagram-frame" data-diagram-frame data-diagram-kind="{{ lens.kind }}">
+            <div class="diagram-toolbar">
+              <span class="diagram-toolbar__identity"><b>{{ lens.kind_label }}</b><span>{{ lens.title }}</span></span>
+              <span class="diagram-toolbar__status" data-diagram-status>正在计算可读尺寸…</span>
+              <button type="button" class="diagram-open" data-diagram-open>沉浸阅读</button>
+            </div>
+            <div class="diagram-legend" aria-label="图内语义色图例">
+              <span class="diagram-legend__item" data-tone="blue">入口 / 控制</span>
+              <span class="diagram-legend__item" data-tone="orange">调度 / 决策</span>
+              <span class="diagram-legend__item" data-tone="purple">模型 / 设备执行</span>
+              <span class="diagram-legend__item" data-tone="green">数据 / 持久状态</span>
+              <span class="diagram-legend__item" data-tone="cyan">进程 / 分布式交接</span>
+              <span class="diagram-legend__item" data-tone="pink">投机分支</span>
+              <span class="diagram-legend__item" data-tone="yellow">工程 / 证据</span>
+            </div>
+            <div class="diagram-frame__viewport" data-diagram-content tabindex="0" aria-label="{{ lens.title }}阅读区，可横向滚动">
+              <div class="diagram-frame__canvas"><pre class="mermaid" aria-label="{{ lens.title }}">{{ lens.mermaid }}</pre></div>
+            </div>
+            <figcaption><b>读图结论：</b>{{ lens.caption }}</figcaption>
+          </figure>
+
+          {% if lens.routes|default([]) %}
+            <nav class="sf-subsystem-map__routes" aria-label="从{{ lens.short_title }}下钻机制章节">
+              <span>图中节点下钻</span>
+              <div>
+                {% for route in lens.routes %}
+                  <a href="{{ route.url }}" data-course-link data-chapter-id="{{ route.id }}"><small>{{ '%02d'|format(route.number) }}</small>{{ route.title }}</a>
+                {% endfor %}
+              </div>
+            </nav>
+          {% endif %}
+        </article>
+      {% endfor %}
+    </div>
+
+    {% if subsystem_overview.evidence|default([]) %}
+      <aside class="sf-subsystem-evidence" aria-label="总图源码证据入口">
+        <b>原核对快照的总图证据入口</b>
+        <ul>
+          {% for item in subsystem_overview.evidence %}<li><code>{{ item.path }}</code><span>{{ item.symbol }}</span><em>{{ item.note }}</em></li>{% endfor %}
+        </ul>
+        <p>这里给定位入口；具体 guard、状态写入、返回对象与下一消费者在下方机制章逐一审计。</p>
+      </aside>
+    {% endif %}
+  </section>
+{% endif %}

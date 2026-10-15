@@ -1,0 +1,220 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Draft proposal → Target verify → accept → KV commit">
+  <link rel="icon" href="data:,">
+  <title>04A · 历史置信度与 SPS 预算 · dSpark V2 · 投机解码专题</title>
+  <link rel="stylesheet" href="../course/assets/css/specforge-course.css">
+  <link rel="stylesheet" href="../course/assets/css/labs.css">
+  <link rel="stylesheet" href="../course/assets/css/print.css">
+  
+  <!-- Generated from notes/speculative/visualizations/sources/dspark-budget-history-sps.html.jinja by notes/speculative/course/build.py; source-sha256=ed56fd5cd7b3d136a1185cd9d4c47ee5bf34386dd8c1a088ca7a2959f8833e66. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; style-src 'self' 'unsafe-inline' file:; script-src 'self' file:; img-src 'self' data: file:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'">
+<link rel="stylesheet" href="assets/dspark-visual-system.css">
+<style>@scope (.dspark-lab) {
+
+    .lag-canvas{min-width:1250px;padding:10px 4px}.lag-head,.lag-row{display:grid;grid-template-columns:190px repeat(5,minmax(180px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}.lag-row{border-top:0}.lag-head>div,.lag-row>div{min-height:68px;padding:11px;background:var(--surface)}.lag-head>div{min-height:48px;color:var(--guard);font:800 12px/1.35 var(--mono)}.lag-row .lane{display:grid;align-content:center;color:var(--data);font:800 12px/1.4 var(--mono)}.lag-event{--tone:var(--data);border-left:4px solid var(--tone)!important;color:var(--muted);font-size:12px}.lag-event[data-kind=guard]{--tone:var(--guard);border-left-style:dashed!important}.lag-event[data-kind=main]{--tone:var(--main)}.lag-event[data-kind=off]{--tone:var(--off);border-left-style:dotted!important}.lag-event b{display:block;color:var(--tone);font:800 11px/1.3 var(--mono)}.lag-event code{display:block;margin-top:6px;color:var(--text);font-size:11px}.dependency-note{margin-top:16px;padding:12px 14px;border:1px dashed var(--guard);background:rgba(255,208,96,.035);color:var(--muted);font-size:12px}.formula-flow{display:grid;grid-template-columns:repeat(5,minmax(190px,1fr));gap:26px;min-width:1100px}.formula-card{--tone:var(--data);position:relative;padding:14px;border:1px solid var(--tone);background:var(--surface)}.formula-card[data-kind=guard]{--tone:var(--guard);border-style:dashed}.formula-card[data-kind=main]{--tone:var(--main)}.formula-card:not(:last-child)::after{content:"→";position:absolute;right:-20px;top:43%;color:var(--main);font:800 18px/1 var(--mono)}.formula-card b{display:block;color:var(--tone);font:800 11px/1.3 var(--mono)}.formula-card code{display:block;margin-top:8px;color:var(--text);font-size:11px}.formula-card p{margin:8px 0 0;color:var(--muted);font-size:12px}.budget-table{width:100%;min-width:720px;border-collapse:collapse;margin-top:18px;font:12px/1.35 var(--mono)}.budget-table th,.budget-table td{padding:9px;border:1px solid var(--line);text-align:right}.budget-table th{color:var(--data);background:var(--surface-2)}.budget-table td:first-child,.budget-table th:first-child{text-align:left}.budget-table tr[data-best=true]{color:var(--main);background:rgba(98,245,154,.05)}.budget-table tr[data-cliff=true]{border-top:2px dashed var(--guard)}.warmup-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.warmup-card{--tone:var(--data);padding:14px;border-left:4px solid var(--tone);background:var(--surface)}.warmup-card[data-kind=guard]{--tone:var(--guard);border-left-style:dashed}.warmup-card[data-kind=off]{--tone:var(--off);border-left-style:dotted}.warmup-card[data-kind=fail]{--tone:var(--fail);border-left-style:double}.warmup-card b{display:block;color:var(--tone);font:800 11px/1.3 var(--mono)}.warmup-card p{margin:7px 0 0;color:var(--muted);font-size:12px}@media(max-width:760px){.warmup-grid{grid-template-columns:1fr}}
+  
+}</style>
+<link rel="stylesheet" href="assets/dspark-source-studio.css">
+<script src="assets/dspark-site.js" defer></script>
+<script src="assets/dspark-learning-layer.js" defer></script>
+<script src="assets/dspark-source-studio.js" defer></script>
+<script src="assets/dspark-stepper.js" defer></script>
+  <link rel="stylesheet" href="assets/dspark-course-shell.css">
+
+</head>
+<body class="sf-course-page sf-lab-page" data-root-url="sglang-course-v2/index.html"
+      data-nav-open="false" data-nav-pinned="false"
+      data-page-id="lab-dspark-budget-history-sps" data-chapter-id="lab-dspark-budget-history-sps"
+      data-section-id="lab"
+      data-page="04A"
+      style="--page-accent: var(--domain-speculative, var(--domain-entry))">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+
+  <div class="sf-shell">
+    <div class="sf-navigation">
+      <nav class="sf-rail" aria-label="课程工具">
+        <button class="sf-rail__button sf-rail__menu" type="button" data-nav-toggle aria-controls="course-navigation" aria-expanded="false">
+          <span aria-hidden="true">☰</span><span class="sr-only">打开课程目录</span>
+        </button>
+        <a class="sf-rail__brand" href="sglang-course-v2/index.html" aria-label="回到 SGLang 课程地图">S</a>
+        <div class="sf-rail__spacer"></div>
+        <button class="sf-rail__button" type="button" data-search-open aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span class="sr-only">搜索课程</span></button>
+        <button class="sf-rail__button" type="button" data-theme-toggle><span aria-hidden="true">◐</span><span class="sr-only" data-theme-label>深色</span></button>
+      </nav>
+
+      <aside class="sf-drawer" id="course-navigation" aria-label="全部课程目录">
+        <header class="sf-drawer__head">
+          <div><p class="sf-drawer__eyebrow">SGLang source course</p><a href="sglang-course-v2/index.html">投机解码专题</a></div>
+          <button class="sf-icon-button" type="button" data-nav-close aria-label="关闭课程目录">×</button>
+        </header>
+        <div class="sf-drawer__tools">
+          <button class="sf-button sf-button--quiet" type="button" data-search-open><span aria-hidden="true">⌕</span> 搜索</button>
+          <button class="sf-button sf-button--quiet" type="button" data-theme-toggle><span aria-hidden="true">◐</span> <span data-theme-label>深色</span></button>
+          <button class="sf-button sf-button--quiet sf-drawer__pin" type="button" data-nav-pin aria-pressed="false"><span aria-hidden="true">⌖</span> <span data-nav-pin-label>固定目录</span></button>
+        </div>
+        <p class="sf-drawer__context"><b>dSpark 交互实验</b><span>04A · 历史置信度与 SPS 预算 · dSpark V2</span></p>
+        <nav class="sf-drawer__tree" aria-label="全部章节"><div class="sf-course-tree">
+    
+      <details class="sf-course-tree__section">
+        <summary><span class="sf-course-tree__number">01</span><span>Speculative Decoding 全家族</span></summary>
+        <ul class="sf-course-tree__children sf-course-tree__children--section">
+          <li class="sf-course-tree__overview"><a href="sglang-course-v2/index.html" data-course-link data-chapter-id="speculative"
+     data-search-title="Speculative Decoding 全家族" data-search-section="Speculative Decoding 全家族"
+     
+     
+     >Speculative Decoding 全家族</a></li>
+          <li><a href="sglang-course-v2/common-contract.html" data-course-link data-chapter-id="spec-common-contract"
+     data-search-title="Draft 只提案：共同 worker 合同与四个长度" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="区分 proposed、verified、accepted、emitted/KV frontier，追踪 Scheduler 如何将 model_worker 替换为 spec worker。"
+     
+     >Draft 只提案：共同 worker 合同与四个长度</a></li><li><a href="sglang-course-v2/eagle-tree.html" data-course-link data-chapter-id="eagle-tree"
+     data-search-title="EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 prefill hidden、draft tree、TARGET_VERIFY、bonus token、draft_extend 和 Draft KV 修复。"
+     
+     >EAGLE/EAGLE3 tree draft、retrieve index 与 custom mask</a></li><li><a href="sglang-course-v2/dflash-block.html" data-course-link data-chapter-id="dflash-block"
+     data-search-title="DFlash fixed-block draft、hidden injection 与 compact cache" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 target auxiliary hidden 如何物化到 Draft KV，以及 block verify/accept 的限制。"
+     
+     >DFlash fixed-block draft、hidden injection 与 compact cache</a></li><li><a href="sglang-course-v2/dspark-bootstrap-proposal.html" data-course-link data-chapter-id="dspark-bootstrap-proposal"
+     data-search-title="DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="解释第一个 anchor 从哪里来，Markov/SPS 如何生成候选并传给 verify planner。"
+     
+     >DSpark Prefill bootstrap、rolling anchor 与 DraftBlockProposer</a></li><li><a href="sglang-course-v2/dspark-confidence-layout.html" data-course-link data-chapter-id="dspark-confidence-layout"
+     data-search-title="DSpark confidence、history、per-step budget 与 ragged layout" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用 survival/top-k 实验区分 block 长度、global tier token 数和实际 verify 几何。"
+     
+     >DSpark confidence、history、per-step budget 与 ragged layout</a></li><li><a href="sglang-course-v2/dspark-verify-accept-kv.html" data-course-link data-chapter-id="dspark-verify-accept-kv"
+     data-search-title="DSpark Target verify、accept/finalize 与 KV commit/reclaim" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="追踪 candidate slots、greedy/sampling accept、用户输出、Target/Draft KV frontier 与 reject 回收。"
+     
+     >DSpark Target verify、accept/finalize 与 KV commit/reclaim</a></li><li><a href="sglang-course-v2/dspark-folded-overlap.html" data-course-link data-chapter-id="dspark-folded-overlap"
+     data-search-title="DSpark folded fast path、capture/replay 与 overlap" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="展开 capture hook、folded scatter/accept/commit、FutureMap publish 和 DP compact tier 一致性。"
+     
+     >DSpark folded fast path、capture/replay 与 overlap</a></li><li><a href="sglang-course-v2/boundary-matrix.html" data-course-link data-chapter-id="spec-boundary-matrix"
+     data-search-title="Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec" data-search-section="Speculative Decoding 全家族"
+     data-search-summary="用能力矩阵标出 hidden、Draft KV、verify layout、grammar、logprob、graph、DP/PP/PD 边界。"
+     
+     >Frozen-KV MTP、Standalone、NGram、adaptive 与 decoupled spec</a></li>
+          
+        </ul>
+      </details>
+    
+  </div></nav>
+      </aside>
+    </div>
+
+    <button class="sf-nav-backdrop" type="button" data-nav-backdrop aria-label="关闭课程目录"></button>
+
+    <div class="sf-main-frame">
+      <main class="sf-main sf-main--wide" id="main-content" tabindex="-1">
+        <div class="sf-page-grid">
+          <div class="sf-content-column">
+            
+              <nav aria-label="面包屑"><ol class="sf-breadcrumbs">
+                <li><a href="sglang-course-v2/index.html">投机解码专题</a></li><li><a href="index.html">投机实验路线</a></li><li><span aria-current="page">04A · 历史置信度与 SPS 预算 · dSpark V2</span></li>
+              </ol></nav>
+            
+
+            
+  <nav class="sf-hero__actions" aria-label="实验源文件"><a href="sources/dspark-budget-history-sps.html.jinja" download>下载实验 HTML 源文件</a></nav>
+
+
+            <nav class="sf-hero__actions" aria-label="关联阅读入口" data-repository-companion><a href="../../index.html">SGLang 全景图</a></nav>
+            
+
+            
+
+            
+            
+
+            
+  <div class="dspark-lab" data-toc-source>
+<!-- lab-content:start --><nav data-site-nav aria-label="dSpark 学习页面"></nav><div class="page page--wide" data-dspark-main>
+  <header class="hero"><span class="topic-badge">专题页 · 归属 04 置信度 / 预算 / 布局</span><p class="eyebrow">04A · 历史置信度与 SPS 预算</p><h1>默认 overlap 与 non-overlap 都用两轮前的 confidence，只是延迟由不同组件持有</h1><p class="lead">稳定连续 decode 下，二者都把 <code>C_(t-2)</code> 送进 Host planner。overlap 的两轮延迟在 <code>FutureMap / ConfidenceRelay</code>；non-overlap 没有 relay，于是 <code>HostConfidenceBudgetPlanner</code> 自己 carry 两轮。</p><div class="evidence-strip"><span><strong>默认</strong> · <code>SGLANG_DSPARK_CONFIDENCE_RELAY_LAG_STEPS=2</code></span><span><strong>overlap</strong> · relay_lag=2，carry=0</span><span><strong>non-overlap</strong> · relay_lag=0，carry=2</span><span><strong>结果</strong> · steady-state budget 都看 <code>C_(t-2)</code></span></div><div class="route-switch"><button type="button" data-route-choice="static-greedy">STATIC · 贪心</button><button type="button" data-route-choice="compact-sampling">COMPACT · 随机采样</button><button type="button" data-route-choice="folded-greedy">FOLDED · 贪心</button></div><div data-semantic-legend></div></header>
+  <section class="handoff"><div class="handoff__item"><b>输入 · 历史样本</b><span><code>ResolvedConfidence(confidence, generation)</code>，按当前请求的 pool row 对齐。</span></div><div class="handoff__item"><b>保护条件</b><span><code>lagged_generation == current_generation</code>；否则 survival 使用全 1。</span></div><div class="handoff__item"><b>输出</b><span><code>VerifyBudgetDecision(budget, predicted_step_seconds, predicted_theta)</code>。</span></div><div class="handoff__item"><b>下一消费者</b><span><code>resolve_verify_token_budget()</code> 只取 Python <code>int budget</code>，04B 再按当前 confidence 分配。</span></div></section>
+  <section class="section" aria-labelledby="lag-title"><div class="section__head"><p class="section__kicker">主视图 · 连续 t0 / t1 / t2 时间线</p><h2 id="lag-title">相同历史年龄，不同持有者与 warm-up</h2><p class="section__intro">“两轮前”是 generation 匹配、同一请求连续 decode 的稳态描述。batch 交错、非 decode、pool row 复用或 relay 尚未 ready 时要看 fallback。</p></div>
+    <div class="visual stepper" data-stepper data-steps="5"><div class="visual__bar"><span><strong>两条对齐泳道</strong> · t0 产生 C0，t2 才用于 budget2</span><button class="zoom-button" type="button" data-zoom-target="#lag-canvas">放大主图</button></div><div class="visual__body"><div class="stepper__toolbar"><div class="stepper__buttons"><button type="button" data-step-action="prev">上一步</button><button type="button" data-step-action="next">下一步</button><button type="button" data-step-action="play">播放</button><button type="button" data-step-action="reset">重置</button></div><div class="stepper__progress"><span data-step-progress></span></div><div class="stepper__status" data-step-status></div></div><div class="canvas-scroll"><div id="lag-canvas" class="lag-canvas">
+      <div class="lag-head"><div>执行模式 / 持有者</div><div>t0 · proposal 返回</div><div>t0 · publish / carry</div><div>t1 · 中间轮</div><div>t2 · 解析</div><div>t2 · Worker 使用</div></div>
+      <div class="lag-row"><div class="lane">overlap<br><code>FutureMap</code></div><div class="lag-event" data-step-node="0"><b>产生 C0</b><code>Worker t0 → confidence</code></div><div class="lag-event" data-kind="guard" data-step-node="1"><b>publish 到 relay ring</b><code>on_publish(C0,generation)</code><br>private D2H stream</div><div class="lag-event" data-kind="off" data-step-node="2"><b>ring 保持两轮</b><code>CONFIDENCE_RELAY_RING_LAG=2</code></div><div class="lag-event" data-kind="main" data-step-node="3"><b>Scheduler 提前 resolve</b><code>prepare_verify_budget()</code><br>写 draft_input.verify_token_budget</div><div class="lag-event" data-kind="main" data-step-node="4"><b>Worker 直接读取</b><code>return draft_input.verify_token_budget</code></div></div>
+      <div class="lag-row"><div class="lane">non-overlap<br><code>Host planner</code></div><div class="lag-event" data-step-node="0"><b>产生 C0</b><code>Worker t0 → confidence</code></div><div class="lag-event" data-kind="guard" data-step-node="1"><b>同步送入 planner</b><code>compute_budget_sync()</code><br>先取 carry 旧槽，再写 C0</div><div class="lag-event" data-kind="off" data-step-node="2"><b>本地 carry 两轮</b><code>carry_steps=2</code></div><div class="lag-event" data-kind="main" data-step-node="3"><b>t2 取出 C0</b><code>_shift_to_lag()</code><br>C0 → history survival</div><div class="lag-event" data-kind="main" data-step-node="4"><b>同步返回 budget</b><code>compute_budget_sync() → int</code></div></div>
+      <div class="dependency-note" style="margin-top:16px"><strong>公式对齐：</strong>overlap：<code>lag_steps=2, relay_lag=2, carry=0</code>；non-overlap：<code>lag_steps=2, relay_lag=0, carry=2</code>。因此默认稳态观察到的都是 <code>C_(t-2)</code>。</div>
+    </div></div></div></div>
+  </section>
+  <section class="section" aria-labelledby="sps-title"><div class="section__head"><p class="section__kicker">辅助视图 · 手算 SPS 目标函数</p><h2 id="sps-title">历史 survival 的收益一直增加，但 SPS 档位下降可让最优 budget 提前停止</h2><p class="section__intro">此处用独立的历史样本，避免与 04B 的当前分配样本混淆。普通 <code>SpsCostTable</code> 使用 <code>theta=tau_star×steps_per_sec</code>；additive 表改用 <code>tau_star/step_time</code>。</p></div>
+    <div class="visual"><div class="visual__bar"><span><strong>固定教学表</strong> · probes=[1,5]，SPS=[1.0,.5]</span><button class="zoom-button" type="button" data-zoom-target="#sps-canvas">放大辅助图</button></div><div class="visual__body" id="sps-canvas"><div class="canvas-scroll"><div class="formula-flow"><article class="formula-card"><b>1 · C_(t-2)</b><code>R0 [.90,.80,.50,.20]<br>R1 [.70,.60,.50,.40]</code><p>generation 匹配才有效。</p></article><article class="formula-card"><b>2 · cumprod</b><code>R0 [.900,.720,.360,.072]<br>R1 [.700,.420,.210,.084]</code><p>这是历史 survival。</p></article><article class="formula-card"><b>3 · 全局降序</b><code>.900,.720,.700,.420,<br>.360,.210,.084,.072</code><p>删除低于 survival_eps 的值。</p></article><article class="formula-card" data-kind="guard"><b>4 · tau_star(k)</b><code>B + prefixSum(top-k)<br>B=2</code><p>基础 B 表示每请求 anchor 仍可产生一个 bonus。</p></article><article class="formula-card" data-kind="main"><b>5 · 选最大 theta</b><code>argmax tau_star×SPS<br>→ k=2</code><p><code>VerifyBudgetDecision.budget=2</code></p></article></div>
+      <table class="budget-table" aria-label="各 budget 候选的收益与 SPS 目标"><thead><tr><th>k / extra budget</th><th>B+k tokens</th><th>tau_star(k)</th><th>SPS</th><th>theta</th></tr></thead><tbody><tr><td>0</td><td>2</td><td>2.000</td><td>1.0</td><td>2.000</td></tr><tr><td>1</td><td>3</td><td>2.900</td><td>1.0</td><td>2.900</td></tr><tr data-best="true"><td>2 · 最优</td><td>4</td><td>3.620</td><td>1.0</td><td><strong>3.620</strong></td></tr><tr data-cliff="true"><td>3 · SPS 降档</td><td>5</td><td>4.320</td><td>0.5</td><td>2.160</td></tr><tr><td>4</td><td>6</td><td>4.740</td><td>0.5</td><td>2.370</td></tr><tr><td>5</td><td>7</td><td>5.100</td><td>0.5</td><td>2.550</td></tr><tr><td>6</td><td>8</td><td>5.310</td><td>0.5</td><td>2.655</td></tr><tr><td>7</td><td>9</td><td>5.394</td><td>0.5</td><td>2.697</td></tr><tr><td>8</td><td>10</td><td>5.466</td><td>0.5</td><td>2.733</td></tr></tbody></table>
+    </div></div></div>
+  </section>
+  <section class="section"><div class="section__head"><p class="section__kicker">为什么 / 边界</p><h2>启动、缺 profile 与 0/None 必须分开理解</h2></div><div class="warmup-grid"><article class="warmup-card" data-kind="guard"><b>overlap warm-up</b><p>relay 尚未积累两轮或 copy event 未 ready 时，resolve 可能为 None；这轮 budget 也是 None。</p></article><article class="warmup-card" data-kind="off"><b>non-overlap warm-up</b><p>carry 初始 generation 不匹配，历史 survival 回退全 1，再结合 SPS table 计算，不等同于直接返回 None。</p></article><article class="warmup-card"><b>无 profiled SPS</b><p>flat SPS + 非负 survival 使最优通常退化到 verify-all；COMPACT 识别为 <code>_is_verify_all</code> 并复用 uniform layout。</p></article><article class="warmup-card" data-kind="fail"><b>budget 0 vs None</b><p>0 是“明确不选 extra”；None 是“本轮无 budget 控制”。mandatory anchor floor 不在 budget optimizer 中扣除。</p></article></div></section>
+  <details class="source-details"><summary>源码锚点与可核验边界</summary><div class="source-details__body"><div class="source-anchor"><code>python/sglang/srt/managers/overlap_utils.py:118–229, 352–359</code><span><code>ConfidenceRelay</code> 的 ring lag=2、异步 D2H 与 <code>FutureMap.resolve_confidence_cpu()</code>。</span></div><div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_planner.py:295–417</code><span>overlap 的提前 budget 写入、non-overlap 的同步 resolve 与 generation 对齐。</span></div><div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_planner.py:948–1020</code><span><code>compute_verify_token_budget()</code> 的 tau_star、SPS/step-time objective 与 decision。</span></div><div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_planner.py:1023–1130</code><span>lag/carry、generation guard、warm-up fallback。</span></div><div class="source-anchor"><code>python/sglang/srt/environ.py:789</code><span>默认 <code>SGLANG_DSPARK_CONFIDENCE_RELAY_LAG_STEPS=2</code>。</span></div></div></details>
+  <div class="pager"><a data-nav href="dspark-confidence-budget-layout.html">← 04 · 置信度 / 预算 / 布局</a><a data-nav href="dspark-survival-topk-layout.html">04B · 当前 Top-k / Layout →</a></div><footer class="site-footer">证据边界 · 当前源码 f01a0c7f97ec · 数值表是对已核验公式的教学演算 · 未运行真实硬件 SPS profile。</footer>
+</div><!-- lab-content:end -->
+  </div>
+
+
+            
+
+            <footer class="sf-footer"><span>投机解码源码专题</span><span>纯静态 · 本地依赖 · 可离线分享</span></footer>
+            <p class="print-only">投机解码源码专题 · 04A · 历史置信度与 SPS 预算 · dSpark V2 · None</p>
+          </div>
+
+          <aside class="sf-page-toc" aria-label="本页目录">
+            <p class="sf-page-toc__title">On this page</p>
+            <ol data-page-toc-list></ol>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="search-dialog" id="course-search-dialog" data-search-dialog aria-labelledby="course-search-title">
+    <div class="search-dialog__head"><strong id="course-search-title">搜索课程</strong><button class="sf-icon-button" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+    <form class="search-dialog__form" data-search-form role="search"><label class="sr-only" for="course-search-input">搜索对象、方法、状态或章节</label><input id="course-search-input" type="search" data-search-input autocomplete="off" placeholder="例如：running_batch、ForwardBatch、TARGET_VERIFY"><button class="sf-button" type="submit">搜索</button></form>
+    <p class="search-dialog__status" data-search-status aria-live="polite"></p><ol class="search-results" data-search-results></ol>
+  </dialog>
+
+  <dialog class="diagram-viewer" id="diagram-viewer-dialog" data-diagram-dialog aria-labelledby="diagram-viewer-title">
+    <div class="diagram-viewer__head"><div><strong id="diagram-viewer-title" data-diagram-title>图解沉浸阅读</strong> <span class="diagram-viewer__zoom" data-diagram-zoom>100%</span></div><div class="diagram-viewer__tools"><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-in" aria-label="放大">＋</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-out" aria-label="缩小">−</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="fit">看全图</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="reset">100%</button><button class="sf-button" type="button" data-diagram-action="close">关闭 ×</button></div></div>
+    <div class="diagram-viewer__viewport" data-diagram-viewport><div class="diagram-viewer__canvas mermaid" data-diagram-canvas></div></div>
+  </dialog>
+
+  <script src="sglang-course-v2/assets/data/search-index.js" defer></script>
+  <script src="../course/assets/vendor/mermaid.min.js" defer></script>
+  <script src="../course/assets/js/site-shell.js" defer></script>
+  <script src="../course/assets/js/toc-search.js" defer></script>
+  <script src="../course/assets/js/diagram-viewer.js" defer></script>
+  <script src="../course/assets/js/source-microscope.js" defer></script>
+  <script src="../course/assets/js/labs.js" defer></script>
+  <script src="../course/assets/js/lesson-components.js" defer></script>
+  
+  
+</body>
+</html>

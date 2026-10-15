@@ -225,8 +225,8 @@ _PREFILL_STATIC_FIELDS = (
     "req_pool_indices",
     "orig_seq_lens",
 )
-
-
+#BCG Prefill 用单请求 dummy batch 捕获固定 token 档位；普通 attention 在图段之间以 eager 方式执行，通过当前 ForwardBatch 和 attention metadata 支持真实多请求 batch。
+#普通 BCG 把依赖请求分组的 attention 留在图段之间执行；Full 把 attention 的 GPU 工作也捕获进去，所以必须提前固定它能容纳的请求槽位。 两者的选图条件，来自各自捕获的计算对“形状”的依赖。
 class PrefillCudaGraphRunner(BaseCudaGraphRunner):
     """Prefill-phase CUDA graph runner.
 
@@ -239,26 +239,26 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
     def __init__(self, model_runner: ModelRunner):
         super().__init__(model_runner)
         # --- model flags ----------------------------------------------
-        self.quant_config = getattr(model_runner.model, "quant_config", None)
+        self.quant_config = getattr(model_runner.model, "quant_config", None)  # 仅保存模型已有的量化配置引用，供后续捕获上下文使用；此处没有执行权重量化。
         self.is_multimodal = model_runner.model_config.is_multimodal
         self.enable_lora = model_runner.server_args.enable_lora
         # Classification/reward forwards branch on return_pooled_hidden_states;
         # capture must use the same flag value as replay for those models.
         self.capture_return_pooled_hidden_states = not model_runner.is_generation
-
+        # 分类、reward 等非生成任务使用 pooled hidden states；此开关必须在捕获和重放时一致。
         # --- prefill graph config -------------------------------------
         prefill_config = model_runner.server_args.cuda_graph_config.prefill
         self.prefill_backend_name = prefill_config.backend
         # bs in prefill carries the captured shape (token count for
         # tc_piecewise) — one shape knob per phase.
-        capture_tokens = prefill_config.bs
+        capture_tokens = prefill_config.bs# Prefill 的 bs 配置表示整批输入的 token 档位；每个档位分别捕获，不是只捕获最大档。
         assert capture_tokens is not None, "cuda_graph_config[prefill].bs is not set"
         self.capture_num_tokens = sorted(capture_tokens)
         assert self.capture_num_tokens, "cuda_graph_config[prefill].bs is empty"
 
         # --- runner bounds --------------------------------------------
-        self.max_num_tokens = max(self.capture_num_tokens)
-        self.max_bs = model_runner.req_to_token_pool.size
+        self.max_num_tokens = max(self.capture_num_tokens)# 最大 token 档位，也是本 runner 输入缓冲区的总 token 容量，不是每个请求的容量。
+        self.max_bs = model_runner.req_to_token_pool.size# 请求池容量，作为请求级缓冲区上界；Full 图实际捕获的请求槽位数还会另行限制。
 
         # --- capture modes --------------------------------------------
         self.capture_forward_mode = ForwardMode.EXTEND
@@ -281,9 +281,9 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
             self.capture_hidden_mode = CaptureHiddenMode.FULL
         else:
             self.capture_hidden_mode = CaptureHiddenMode.NULL
-
+        # capture_prepare() 构造 EXTEND 的 ForwardBatch，并传入 capture_hidden_mode；dFlash family 包括 dSpark。
         self.mamba_track_enabled = self._is_mamba_track_enabled()
-
+        # 先创建输入张量，再合并可共享的存储，最后登记每轮复制、补齐和切片规则。
         # --- buffers ---------------------------------------------------
         self.buffers: PrefillInputBuffers = PrefillInputBuffers.create(
             device=self.device,
@@ -293,16 +293,16 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
             is_multimodal=self.is_multimodal,
             hidden_size=self.model_runner.model_config.hidden_size,
             dtype=self.model_runner.dtype,
-            enable_mamba_track=self.mamba_track_enabled,
-        )
-        self.buffers.share_buffers()
+            enable_mamba_track=self.mamba_track_enabled, # 启用时额外分配 Mamba 跟踪字段；是否共享由后面的 share_buffers() 处理。
+        )# create() 先分配张量；下一行才尝试与已有 runner 的同类缓冲区合并。
+        self.buffers.share_buffers()# 非 NPU 时按 (字段名, numel, dtype, device) 匹配：命中则改用已有存储的 view，否则登记新存储；容量不同不合并。
         # Token-axis FB-shared slot registry adopting PrefillInputBuffers
         # storage; same physical tensors, stable data_ptr for capture vs
         # replay. Replaces populate_from_forward_batch on capture/replay paths.
-        self.buffer_registry: CudaGraphBufferRegistry = build_prefill_registry(
-            device=self.device,
-            max_bs=self.max_bs,
-            max_num_token=self.max_num_tokens,
+        self.buffer_registry: CudaGraphBufferRegistry = build_prefill_registry(# 绑定共享后的张量并登记规则，不再给这些字段分配第二份存储。
+            device=self.device, # capture_prepare() 从 registry 取档位切片，如 token 轴的 [:256]，放入捕获用 ForwardBatch。
+            max_bs=self.max_bs, # load_batch() 先选 token 档，再由 fill_from() 清理 padding、复制本轮输入，随后构造 static_forward_batch。
+            max_num_token=self.max_num_tokens,# 图重放读取捕获时的地址，所以必须原地更新内容；只替换 Python 张量引用不会更新图的输入地址。
             cache_loc_dtype=self._cache_loc_dtype(),
             is_multimodal=self.is_multimodal,
             hidden_size=self.model_runner.model_config.hidden_size,
@@ -315,7 +315,7 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
             ),
             source=self.buffers,
         )
-
+         # 共享方须串行或互斥使用同一存储，并在各自执行前填入本轮数据；共享池本身不负责同步。
         self.attention_layers = self.model_runner.attention_layers
         self.mha_companion_layers = self.model_runner.mha_companion_layers
         self.has_mha_companion_layers = any(
@@ -335,7 +335,7 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
         self._prefill_static_buffers: Optional[Dict[str, torch.Tensor]] = None
         self.static_draft_hidden_states: Optional[torch.Tensor] = None
         self.layer_model = None
-        self._capture_req_slots = 1
+        self._capture_req_slots = 1 # BCG 用 batch_size=1 的假 batch 捕获；运行时，图段处理固定 token 档位，图段之间的 attention 则使用本轮真实请求的 metadata。; 如果切到 Full 分支，才会修改这个值；
         # Same rationale: _run_compile_pass runs a dummy _run_forward before
         # resolve_prefill_backend returns, and that forward reads
         # self._is_full_backend. The compile-pass backend is never Full, so
@@ -346,8 +346,8 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
         self._capture_lora = False
         # TcPiecewise does its compile pass during backend construction.
         # Wrap only that path with the prefill CUDA graph failure hint.
-        try:
-            self.backend = resolve_prefill_backend(self)
+        try:# 选中 TC_PIECEWISE 时，backend 构造会通过 _run_compile_pass() -> _run_dummy_forward() 回调尚未初始化完的 runner。
+            self.backend = resolve_prefill_backend(self)# 所以上述占位字段须先存在；这是 TC 的编译准备，实际图捕获在后续 capture()。CUDA 通用默认是 BREAKABLE。
         except RuntimeError as e:
             if self.prefill_backend_name != Backend.TC_PIECEWISE:
                 raise
@@ -361,12 +361,12 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
             max_req = prefill_config.full_prefill_max_req
             if max_req is None:
                 # Auto: scale request slots with the chunked prefill size.
-                max_req = max(model_runner.server_args.chunked_prefill_size // 512, 1)
-            self._capture_req_slots = min(max_req, self.max_bs)
-        # BCG/Full record LoRA kernels, so the metadata they read must live in
-        # static buffers refreshed in place per batch; unsupported LoRA
-        # configs were already routed to the eager runner.
-        self._capture_lora = self.enable_lora and isinstance(
+                max_req = max(model_runner.server_args.chunked_prefill_size // 512, 1)  # ServerArgs 已为未设置的 chunk size 补默认值；512 是估算请求槽位的比例常数，不要求每个请求有 512 tokens。
+            self._capture_req_slots = min(max_req, self.max_bs) # Full 固定请求槽位数 R；运行时要求 batch_size <= R，与总 token 档位是两项独立条件，见 can_run_graph()。
+        # BCG/Full 会捕获 LoRA kernels，它们读取的 metadata 需要静态存储，并在每批执行前原地刷新。
+        # 不支持图捕获的 LoRA 配置已在外层回退 eager；这里仅初始化受支持配置的静态 batch 信息。
+        # Full 的 R 还可能被下方 LoRA segment-slot 容量进一步缩小；token 档位不随之改变。
+        self._capture_lora = self.enable_lora and isinstance(                  # 仅启用 LoRA 且使用 BCG/Full 时走此分支。
             self.backend, (BreakableCudaGraphBackend, FullCudaGraphBackend)
         )
         if self._capture_lora:
@@ -384,18 +384,18 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
                     lora_max_bs,
                 )
                 self._capture_req_slots = lora_max_bs
-
-        self._full_cg_seq_lens_cpu = (
-            torch.zeros((self._capture_req_slots,), dtype=torch.int64, device="cpu")
+        # Full 的 CPU seq_lens 也固定为 R 个槽位，与 GPU 上参与 attention 规划的请求描述对应。
+        self._full_cg_seq_lens_cpu = (# 重放前清零并复制真实 seq_lens_cpu，再用 batch_size=R 的 padded_view 调用 init_forward_metadata_out_graph()。
+            torch.zeros((self._capture_req_slots,), dtype=torch.int64, device="cpu") # 真实请求不足 R 时补零，保持图外规划与捕获的请求维度一致；不是把真实请求数改成 R。
             if self._is_full_backend
             else None
         )
         # This flag controls whether the model dispatches through the distinct
         # chunked-prefix topology; backend capability is validated separately.
-        self._capture_chunked_prefix = (
-            self._is_full_backend
+        self._capture_chunked_prefix = ( # 例：R=4，每槽每块覆盖 512 个历史前缀 tokens，最长可寻址前缀为 2500。
+            self._is_full_backend        # 最多需 ceil(2500/512)=5 块，保留 1、2、4、8 块变体；这是历史前缀，不是本轮新输入 tokens。
             and not model_runner.server_args.disable_chunked_prefix_cache
-        )
+        )# 默认借 chunked_prefill_size 作为一块的跨请求总容量，再除以 R 得每槽长度；详见 _resolve_prefix_chunk_shape()。
         self._prefix_chunk_len = 0
         self._prefix_chunk_capacity = 0
         self._prefix_max_len = 0
@@ -435,11 +435,11 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
                     else "auto from chunked_prefill_size"
                 ),
             )
-        if isinstance(self.backend, (BreakableCudaGraphBackend, FullCudaGraphBackend)):
+        if isinstance(self.backend, (BreakableCudaGraphBackend, FullCudaGraphBackend)): # 另建请求级静态字段；PrefillInputBuffers 的 input_ids 等按 token 轴分配，这里按请求轴分配。
             with torch.device(self.device):
                 self._prefill_static_buffers = {
-                    name: torch.zeros((self.max_bs,), dtype=torch.int64)
-                    for name in _PREFILL_STATIC_FIELDS
+                    name: torch.zeros((self.max_bs,), dtype=torch.int64) # 分配容量是 max_bs；不代表 Full 图捕获并能使用全部 max_bs 个槽位。
+                    for name in _PREFILL_STATIC_FIELDS # 捕获取 [:R]；重放复制 [:真实bs]，Full 再清理 [真实bs:R]。BCG 不受 Full 的固定 R 上限约束。
                 }
 
         # Static hidden_states buffer giving the captured graph a stable
@@ -462,28 +462,28 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
         # Some attention backends (e.g. DSV4) opt into a captured-metadata
         # contract under BCG: capture-time builds a per-bucket metadata
         # object the backend then refreshes in place at replay. We honor
-        # the contract only when the backend is Breakable; FullCG and
-        # TC_PIECEWISE use the eager init_forward_metadata path.
+        # the contract only for Breakable. At replay, Full uses init_forward_metadata_out_graph;
+        # while TC_PIECEWISE uses the regular init_forward_metadata path.
         if isinstance(self.backend, BreakableCudaGraphBackend):
-            self.use_captured_attn_metadata = (
+            self.use_captured_attn_metadata = (# DSV4 的地址保持是正确性要求：图内 kernel 仍读捕获时的存储，不能只换成新 metadata 张量。
                 model_runner.attn_backend.use_captured_forward_metadata_for_breakable_cuda_graph
             )
         else:
             self.use_captured_attn_metadata = False
         self.attn_metadata_buffers: Optional[Dict[int, object]] = (
-            {} if self.use_captured_attn_metadata else None
+            {} if self.use_captured_attn_metadata else None  # 按 token 档保留捕获 metadata；DSV4 重放仍构建本轮 metadata，再按字段 copy_ 或安全替换，见其 refresh 方法。
         )
 
         # BCG and Full CG capture only the transformer body (layer_model.forward),
-        # not the LM head + logits_processor — the eager tail keeps the captured
-        # graph bs-invariant so req_slots is not bound by an (req_slots, vocab) buffer.
+        # not the LM head + logits_processor; the eager tail uses real request metadata.
+        # 尾部不入图可避免固定槽位的 logits 计算与 padding；Full 的 body 仍有固定请求槽位约束。
         if isinstance(self.backend, (BreakableCudaGraphBackend, FullCudaGraphBackend)):
-            try:
+            try:# 沿模型包装找到拥有 .layers 的模块，保存为 layer_model；BCG/Full 捕获它的 forward，尾部留在图外。
                 self.layer_model = _resolve_transformer_layer_model(
-                    self.model_runner.model
-                )
-            except RuntimeError as exc:
-                raise RuntimeError(
+                    self.model_runner.model # 按本轮总 token 数匹配捕获档位；Full 有缓存前缀时还需匹配 _shape_key() 的 prefix 变体。
+                )# 普通生成 Prefill 不返回输入 logprob 时，LM head 通常每请求取一行；返回输入 logprob 时行数还取决于所需 token。
+            except RuntimeError as exc:# 固定形状捕获尾部也可设计实现，但会带来槽位 padding 或更多形状档位的代价；当前选择 eager 尾部。
+                raise RuntimeError(# 找不到受支持的 transformer body 才在此报错；请求数超出 Full 槽位时走 can_run_graph() 的回退分支。
                     f"{type(self.backend).__name__} {exc} This backend is "
                     f"unsupported for this model architecture."
                 ) from exc
@@ -493,13 +493,13 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
             )
 
         # --- aiter chip info pre-warming (AMD) -------------------------
-        maybe_pre_warm_aiter_chip_info()
-
+        maybe_pre_warm_aiter_chip_info()# 仅 HIP 且启用 AITER 时预热芯片信息，避免捕获期间才触发探测；CUDA 路径跳过。
+        
         # --- capture --------------------------------------------------
-        self.device_module.synchronize()
+        self.device_module.synchronize()# 先等本设备已有工作完成，再让 TP ranks 到达 barrier，同步后进入 capture()。
         self.model_runner.tp_group.barrier()
         self.capture()
-
+        # 记录运行时真实 token 数和请求数；load_batch() 更新它们，供输出裁剪等逻辑使用。
         self.raw_num_tokens = 0
         self.raw_bs = 0
 
@@ -635,7 +635,7 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
             if self._uses_eager_prefill_tail():
                 # BCG / Full: capture the transformer body only.
                 positions = self._get_layer_model_positions(forward_batch)
-                return self.layer_model.forward(
+                return self.layer_model.forward( # Prefill BCG/Full 仅捕获 layer_model.forward（Transformer 主体），不含 LM head/logits processor；返回 hidden states 等，由图外的模型尾部继续处理。
                     forward_batch.input_ids,
                     positions,
                     forward_batch,
@@ -1002,7 +1002,7 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
         forward_batch.set_attn_attend_prefix_cache(False)
 
     def can_run_graph(self, forward_batch: ForwardBatch) -> bool:
-        if self._is_full_backend and forward_batch.batch_size > self._capture_req_slots:
+        if self._is_full_backend and forward_batch.batch_size > self._capture_req_slots:  # 检查 Full 捕获的请求维度：R=4 的图不能容纳第 5 份请求描述，即使总 token 数能匹配。
             return False
         # LoRA batches may only replay the graph when prepare_lora_batch put
         # their metadata in the static buffers (same predicate); keyed off
@@ -1034,7 +1034,7 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
             and not forward_batch.can_run_dp_breakable_cuda_graph
         ):
             return False
-        num_tokens = len(forward_batch.input_ids)
+        num_tokens = len(forward_batch.input_ids) # SGLang 的普通 prefill 会把各请求本轮需要处理的 token 展平拼接, 所以这是一维 tensor
         if forward_batch.return_logprob and not self._uses_eager_prefill_tail():
             return False
         if num_tokens > self.max_num_tokens:
@@ -1079,11 +1079,11 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
         Returns ``(forward_batch, attn_backend)`` to mirror decode's
         capture_prepare signature.
         """
-        bs = self._capture_req_slots
+        bs = self._capture_req_slots  # Full 使用固定 R 个请求槽位；BCG/TC 的 dummy batch 为 1，不表示运行时最多只能有 1 个请求,BCG/TC捕获时，把这 8 个假 token 描述为一个假请求。 并不是运行时只能执行一个请求。
         # Slot 0 carries num_tokens; slots 1..bs-1 are zero-length sentinels.
         lens_cpu = [num_tokens] + [0] * (bs - 1)
         start_loc_cpu = [0] + [num_tokens] * (bs - 1)
-
+        # 第一类输入：请求描述，先创建临时 tensor，然后复制到静态 buffer
         with torch.device(self.device):
             shape_inputs = {
                 "req_pool_indices": torch.arange(bs, device=self.device),
@@ -1103,12 +1103,12 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
                 torch.arange(bs, device=s["req_pool_indices"].device)
             )
             s["orig_seq_lens"][:bs].copy_(shape_inputs["orig_seq_lens"])
-            for name in _PREFILL_STATIC_FIELDS:
-                shape_inputs[name] = s[name][:bs]
-
+            for name in _PREFILL_STATIC_FIELDS:#让字典改为指向静态 buffer 的切片 
+                shape_inputs[name] = s[name][:bs]  # Full 捕获只看到 [:R]；底层分配了 max_bs 个元素，不会让已捕获图自动扩展到 max_bs 个请求。
+        # 第二类输入：按照 token 排列的输入，包含：input_ids、positions、out_cache_loc
         registry = self.buffer_registry
 
-        def _slot(name):
+        def _slot(name):                  # slice_for 切片视图
             return registry.get_slot(name).slice_for(bs, num_tokens)
 
         if self.require_mlp_tp_gather:
@@ -1133,8 +1133,8 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
         with torch.device(self.device):
             forward_batch = ForwardBatch(
                 forward_mode=ForwardMode.EXTEND,
-                batch_size=bs,
-                input_ids=_slot("input_ids"),
+                batch_size=bs, # BCG 路径下，这个值是1； FULL路径下，这个值才可能不是 1
+                input_ids=_slot("input_ids"),#因为捕获时，不用真实的数据，所以用已有的默认值数据就好，不用填写
                 input_embeds=(
                     _slot("input_embeds") if registry.has_slot("input_embeds") else None
                 ),
@@ -1200,12 +1200,12 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
     def capture(self) -> None:
         # Warm up + autotune kernels once before capture (run-once across the
         # decode + prefill runners; see BaseRunner.warmup).
-        self.warmup()
+        self.warmup() # 可能会直接跳过，如果之前创建过 eagerrunner; 预热：建立通信 workspace，运行 flashinfer autotune，跨 rank 通信和某些初始化同步, 必须在捕获开始前完成; 这是基础预热，后面每个档位还有自己的预热
         with freeze_gc(self.model_runner.server_args.enable_cudagraph_gc):
             with graph_capture() as graph_capture_context:
                 self.stream = graph_capture_context.stream
-                with self.backend.capture_session(self.stream):
-                    self._capture_one_stream()
+                with self.backend.capture_session(self.stream):# 这里内部会分配 memory pool，为为了捕获过程中产生的中间张量（hidden states，QKV 投影结果，mlp 中间结果等等），其地址也必须能在以后重放时继续使用
+                    self._capture_one_stream() # pytorch的allocator会用graph 私有池管理捕获期间的分配；sglang 给不同的 cpature 传入共享的池句柄，方便复用其中的内存；
 
     def _capture_one_stream(self) -> None:
         avail_mem = get_available_gpu_memory(
@@ -1451,10 +1451,10 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
             s["req_pool_indices"][:bs].copy_(forward_batch.req_pool_indices)
             if forward_batch.orig_seq_lens is not None:
                 s["orig_seq_lens"][:bs].copy_(forward_batch.orig_seq_lens)
-            if self._is_full_backend and bs < self._capture_req_slots:
+            if self._is_full_backend and bs < self._capture_req_slots:  # Full 要求真实 bs <= R；多余槽位的长度置零、start_loc 指向真实 token 尾；BCG 不做此请求槽位 padding。
                 # Sentinel tail for slots [bs:req_slots]: the captured graph
-                # reads all req_slots entries (e.g. the logits-processor
-                # cumsum), so stale values from the previous replay must be
+                # reads fixed-slot request metadata, so stale values from the
+                # previous replay must be
                 # cleared. Zero lengths make the sentinels no-ops;
                 # extend_start_loc sentinels sit at the flat end of the real
                 # tokens.
@@ -1494,7 +1494,7 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
         # logits_processor eagerly.
         full_path = self._is_full_backend
         ie_idx = self._input_embeds_arg_idx
-
+        # 临时替换 layer_model.forward：外层模型调用 body 时重放图，再用返回的 hidden states 执行尾部；finally 恢复原方法。
         def replay_layer_forward(*args, **layer_kwargs):
             # The captured body graph reads activations from the static
             # input_embeds slot. The outer model.forward (run eagerly)
@@ -1512,12 +1512,12 @@ class PrefillCudaGraphRunner(BaseCudaGraphRunner):
                     self.buffer_registry.get_slot("input_embeds").slice_for(
                         1, static_num_tokens
                     )[: ie.shape[0]].copy_(ie)
-            hs = self.backend.replay(shape_key, static_forward_batch, **kwargs)
+            hs = self.backend.replay(shape_key, static_forward_batch, **kwargs) # replay得到录制时的路径执行，得到结果，即 hidden states；
             return _slice_output_rows(hs, raw_num_tokens) if full_path else hs
 
         original_layer_forward = self.layer_model.forward
         self.layer_model.forward = replay_layer_forward
-        # For Full, run the eager tail against the raw user-facing batch so it
+        # Full 尾部使用原始 forward_batch 的真实请求边界；body 使用固定 R 槽位。BCG 的 static_forward_batch 保留真实请求数。
         # uses real request metadata instead of padded slots. BCG has no
         # request-slot padding, so static_forward_batch is already the serving batch.
         tail_batch = forward_batch if full_path else static_forward_batch

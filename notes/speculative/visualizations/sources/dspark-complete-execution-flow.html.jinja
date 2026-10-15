@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>dSpark V2 · 完整执行地图</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="assets/dspark-visual-system.css">
+  <style>
+    /* Page-local coordinates only; visual grammar lives in the shared stylesheet. */
+    #runtime-map { min-width: 1420px; min-height: 820px; }
+    #region-scheduler { left: 20px; top: 28px; width: 300px; height: 760px; }
+    #region-dspark { left: 346px; top: 28px; width: 660px; height: 760px; }
+    #region-runner { left: 1032px; top: 28px; width: 368px; height: 760px; }
+    #node-scheduler { left: 45px; top: 88px; width: 250px; }
+    #node-batch { left: 45px; top: 258px; width: 250px; }
+    #node-result { left: 45px; top: 526px; width: 250px; }
+    #node-dspark { left: 375px; top: 82px; width: 275px; }
+    #node-target-worker { left: 700px; top: 82px; width: 275px; }
+    #node-proposer { left: 375px; top: 254px; width: 275px; }
+    #node-planner { left: 700px; top: 254px; width: 275px; }
+    #node-executor { left: 700px; top: 430px; width: 275px; }
+    #node-injector { left: 375px; top: 594px; width: 275px; }
+    #node-draft-runner { left: 1062px; top: 100px; width: 306px; }
+    #node-target-runner { left: 1062px; top: 292px; width: 306px; }
+    #node-attn { left: 1062px; top: 510px; width: 306px; }
+    .edge-label[data-edge="dispatch"] { left: 299px; top: 139px; }
+    .edge-label[data-edge="target"] { left: 635px; top: 139px; }
+    .edge-label[data-edge="proposal"] { left: 446px; top: 204px; }
+    .edge-label[data-edge="layout"] { left: 742px; top: 204px; }
+    .edge-label[data-edge="verify"] { left: 817px; top: 376px; }
+    .edge-label[data-edge="target-forward"] { left: 995px; top: 405px; }
+    .edge-label[data-edge="commit"] { left: 506px; top: 545px; }
+    .edge-label[data-edge="construct-result"] { left: 298px; top: 484px; }
+    .edge-label[data-edge="return"] { left: 176px; top: 430px; }
+    .architecture-note {
+      position: absolute; left: 388px; top: 762px; width: 574px;
+      color: var(--faint); font: 12px/1.35 var(--mono); text-align: center;
+    }
+    .architecture-story { border:1px solid var(--line); background:var(--bg); }
+    .architecture-story__tabs { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border-bottom:1px solid var(--line); }
+    .architecture-story__tabs button { min-height:76px; padding:12px 15px; border:0; border-right:1px solid var(--line); background:var(--surface); color:var(--muted); text-align:left; cursor:pointer; }
+    .architecture-story__tabs button:last-child { border-right:0; }
+    .architecture-story__tabs button[aria-selected="true"] { color:var(--text); background:color-mix(in srgb,var(--main) 8%,var(--surface)); box-shadow:inset 0 -4px var(--main); }
+    .architecture-story__tabs span { display:block; color:var(--main); font:900 12px/1.25 var(--mono); }
+    .architecture-story__tabs b { display:block; margin-top:5px; font-size:15px; }
+    .architecture-story__stage { min-width:0; }
+    .architecture-scene { min-width:0; padding:20px; overflow-x:auto; }
+    .architecture-scene[aria-hidden="true"] { display:none; }
+    .architecture-scene > header { display:grid; grid-template-columns:170px minmax(0,1fr); gap:5px 18px; margin-bottom:18px; }
+    .architecture-scene > header > span { grid-row:1 / span 2; color:var(--data); font:900 13px/1.4 var(--mono); }
+    .architecture-scene > header h3 { margin:0; font-size:24px; line-height:1.22; }
+    .architecture-scene > header p { margin:2px 0 0; max-width:92ch; color:var(--muted); font-size:15px; line-height:1.55; }
+    .architecture-flow { display:grid; align-items:stretch; min-width:930px; }
+    .architecture-flow--entry { grid-template-columns:minmax(190px,1fr) 130px minmax(210px,1fr) 220px minmax(230px,1.1fr); gap:10px; }
+    .story-node { --tone:var(--data); min-width:0; min-height:118px; padding:14px 15px; border:1px solid var(--tone); border-left:5px solid var(--tone); background:var(--surface); transition:box-shadow .18s,transform .18s,opacity .18s; }
+    .story-node[data-kind="main"] { --tone:var(--main); }
+    .story-node[data-kind="guard"] { --tone:var(--guard); border-style:dashed; }
+    .story-node[data-kind="cuda"] { --tone:var(--cuda); border-style:dashed; }
+    .story-node[data-linked="true"] { transform:translateY(-3px); box-shadow:0 0 24px color-mix(in srgb,var(--tone) 26%,transparent); }
+    .story-node b { display:block; color:var(--tone); font:900 14px/1.4 var(--mono); overflow-wrap:anywhere; }
+    .story-node code { display:block; margin-top:7px; color:var(--text); font:800 13px/1.45 var(--mono); overflow-wrap:anywhere; }
+    .story-node span { display:block; margin-top:8px; color:var(--muted); font-size:14px; line-height:1.48; }
+    .story-node--compact { min-height:0; margin-top:9px; }
+    .story-arrow { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:0; color:var(--main); text-align:center; }
+    .story-arrow::before { content:""; position:absolute; left:4px; right:4px; top:50%; border-top:2px solid var(--main); }
+    .story-arrow::after { content:"→"; position:absolute; right:0; top:calc(50% - 14px); color:var(--main); font-size:22px; }
+    .story-arrow b,.story-arrow span { position:relative; z-index:1; max-width:95%; padding:3px 6px; background:var(--bg); }
+    .story-arrow b { color:var(--text); font:800 12px/1.35 var(--mono); overflow-wrap:anywhere; }
+    .story-arrow span { color:var(--faint); font-size:12px; }
+    .story-hub { display:grid; grid-template-columns:260px minmax(0,1fr); gap:18px; align-items:stretch; min-width:900px; }
+    .story-node--hub { display:flex; flex-direction:column; justify-content:center; }
+    .story-component-grid { display:grid; grid-template-columns:repeat(2,minmax(250px,1fr)); gap:10px; }
+    .story-component-grid .story-node { min-height:132px; }
+    .story-order { display:flex; align-items:center; justify-content:center; gap:9px; margin:14px 0 0; color:var(--main); font:900 13px/1.3 var(--mono); }
+    .story-order span { padding:7px 10px; border:1px solid var(--main); background:color-mix(in srgb,var(--main) 7%,var(--surface)); }
+    .story-order i { color:var(--guard); font-style:normal; }
+    .story-dual-runner { display:grid; grid-template-columns:repeat(3,minmax(280px,1fr)); gap:12px; min-width:900px; }
+    .story-dual-runner > section { padding:13px; border:1px solid var(--line); background:color-mix(in srgb,var(--surface) 88%,transparent); }
+    .story-dual-runner h4 { margin:0 0 10px; color:var(--data); font:900 14px/1.35 var(--mono); }
+    .story-arrow--down { min-height:54px; }
+    .story-arrow--down::before { left:50%; right:auto; top:4px; bottom:4px; border-top:0; border-left:2px solid var(--main); }
+    .story-arrow--down::after { content:"↓"; right:auto; left:calc(50% - 7px); top:auto; bottom:-2px; }
+    .architecture-scene > footer { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:12px; align-items:center; min-width:860px; margin-top:16px; padding:11px 13px; border-top:1px solid var(--line); background:color-mix(in srgb,var(--data) 6%,var(--surface)); color:var(--muted); font-size:14px; }
+    .architecture-scene > footer > b,.architecture-scene > footer span b { color:var(--data); }
+    .architecture-scene > footer button,.architecture-scene > footer a { padding:8px 10px; border:1px solid var(--main); background:transparent; color:var(--main); text-decoration:none; cursor:pointer; font:900 12px/1.25 var(--mono); }
+    .architecture-story__progress { display:grid; grid-template-columns:auto minmax(0,1fr); gap:12px; align-items:center; padding:10px 16px; border-top:1px solid var(--line); color:var(--faint); font:800 12px/1.3 var(--mono); }
+    .architecture-story__progress i { position:relative; height:4px; background:var(--line); }
+    .architecture-story__progress i::after { content:""; position:absolute; inset:0 auto 0 0; width:var(--arch-progress,33.333%); background:var(--main); transition:width .25s ease; }
+    .architecture-legacy { margin-top:15px; border-block:1px solid var(--line); }
+    .architecture-legacy > summary { padding:12px 2px; color:var(--faint); cursor:pointer; font:800 13px/1.4 var(--mono); }
+    .identity-contract {
+      display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:18px;
+    }
+    .identity-contract__item {
+      min-width:0; padding:14px; border:1px dashed var(--data); background:rgba(93,159,255,.055);
+    }
+    .identity-contract__item b { display:block; color:var(--data); font:800 13px/1.3 var(--mono); }
+    .identity-contract__item code { display:block; margin-top:8px; color:var(--text); font-size:13px; line-height:1.55; }
+    .identity-contract__item span { display:block; margin-top:7px; color:var(--muted); font-size:14px; line-height:1.48; }
+    #routes .route-ribbon { padding:8px 0; }
+    #routes .route-ribbon__name { font-size:14px; }
+    #routes .route-stop { min-width:156px; min-height:50px; display:grid; align-content:center; font-size:14px; line-height:1.42; }
+    #routes .entry-map { margin-top:16px; }
+    .entry-map { margin-top:24px; border:1px solid var(--line); background:rgba(5,11,24,.72); }
+    .entry-map__head { display:flex; justify-content:space-between; gap:18px; padding:14px 16px; border-bottom:1px solid var(--line); }
+    .entry-map__head b { font-size:16px; }
+    .entry-map__head span { color:var(--muted); font-size:14px; text-align:right; }
+    .entry-row { display:grid; grid-template-columns:170px minmax(0,1fr); gap:14px; align-items:center; padding:14px 16px; }
+    .entry-row + .entry-row { border-top:1px solid var(--line); }
+    .entry-row__label b { display:block; color:var(--main); font:800 13px/1.3 var(--mono); }
+    .entry-row__label span { display:block; margin-top:5px; color:var(--muted); font-size:13px; }
+    .entry-row[data-kind="guard"] .entry-row__label b { color:var(--guard); }
+    .entry-row[data-kind="cuda"] .entry-row__label b { color:var(--cuda); }
+    .entry-flow { display:flex; gap:8px; align-items:stretch; overflow-x:auto; padding:3px 0 5px; }
+    .entry-step {
+      position:relative; flex:1 0 150px; min-width:150px; padding:10px 11px; border:1px solid var(--main);
+      border-left:4px solid var(--main); background:var(--surface); color:inherit; text-decoration:none;
+    }
+    .entry-step[data-kind="guard"] { border-color:var(--guard); border-style:dashed; }
+    .entry-step[data-kind="cuda"] { border-color:var(--cuda); border-style:dashed; }
+    .entry-step:not(:last-child)::after { content:"\2192"; position:absolute; right:-10px; top:38%; z-index:2; color:var(--main); }
+    .entry-step b { display:block; font:800 13px/1.3 var(--mono); }
+    .entry-step span { display:block; margin-top:5px; color:var(--muted); font-size:13px; line-height:1.42; }
+    .stage-map { display:grid; grid-template-columns:repeat(4,minmax(220px,1fr)); gap:10px; }
+    .stage-map a { min-height:154px; padding:14px; border:1px solid var(--line); background:var(--surface); text-decoration:none; }
+    .stage-map a:hover { border-color:var(--ui); transform:translateY(-2px); }
+    .stage-map b { display:block; color:var(--main); font:800 14px/1.3 var(--mono); }
+    .stage-map span { display:block; margin-top:7px; color:var(--muted); font-size:14px; line-height:1.45; }
+    .stage-map dl { display:grid; gap:6px; margin:11px 0 0; }
+    .stage-map dl div { display:grid; grid-template-columns:42px minmax(0,1fr); gap:7px; align-items:start; }
+    .stage-map dt { color:var(--data); font:800 12px/1.35 var(--mono); }
+    .stage-map dd { min-width:0; margin:0; color:var(--faint); font:13px/1.45 var(--mono); overflow-wrap:anywhere; }
+    @media (max-width: 980px) {
+      .identity-contract { grid-template-columns:1fr; }
+      .stage-map { grid-template-columns:repeat(2,minmax(220px,1fr)); }
+      .architecture-story__tabs { grid-template-columns:1fr; }
+      .architecture-story__tabs button { min-height:58px; border-right:0; border-bottom:1px solid var(--line); }
+    }
+    @media (max-width: 640px) {
+      .entry-map__head, .entry-row { display:grid; grid-template-columns:1fr; }
+      .entry-map__head span { text-align:left; }
+      .stage-map { grid-template-columns:1fr; }
+    }
+  </style>
+  <link rel="stylesheet" href="assets/dspark-source-studio.css">
+  <script src="assets/dspark-site.js" defer></script>
+  <script src="assets/dspark-learning-layer.js" defer></script>
+  <script src="assets/dspark-source-studio.js" defer></script>
+</head>
+<body data-page="00">
+  <nav data-site-nav aria-label="dSpark 学习站导航"></nav>
+
+  <main class="page page--wide">
+    <header class="hero">
+      <p class="eyebrow">00 · 运行时所有权 / 单轮执行地图</p>
+      <h1>dSpark 一轮执行，不是一堵对象卡片墙</h1>
+      <p class="lead">从 <code>Scheduler.model_worker</code> 的动态接收者开始，沿真实实例所有权、Target/Draft 两套 runner 与一轮状态闭环定位每个阶段；细节只在对应子页展开。</p>
+      <div class="evidence-strip">
+        <span><strong>源码版本</strong> f01a0c7f97ec</span>
+        <span><strong>执行路径</strong> CUDA/ROCm 通用 <code>TpModelWorker</code> · PP=1；折叠尾处理器仅支持 NVIDIA CUDA</span>
+        <span><strong>证据范围</strong> 当前源码静态追踪 · 本轮未执行 GPU 运行时验证</span>
+      </div>
+      <div class="route-switch" aria-label="选择讲解路线">
+        <button type="button" data-route-choice="static-greedy">STATIC · 贪心</button>
+        <button type="button" data-route-choice="compact-sampling">COMPACT · 随机采样</button>
+        <button type="button" data-route-choice="folded-greedy">FOLDED · 贪心</button>
+      </div>
+      <div data-semantic-legend></div>
+    </header>
+
+    <section class="handoff" aria-label="本页边界">
+      <div class="handoff__item"><b>输入</b><span><code>scheduler : Scheduler</code> 已选择 dSpark 投机解码算法</span></div>
+      <div class="handoff__item"><b>本页确认</b><span><code>scheduler.model_worker</code> 的运行时接收者与其内部实例所有权</span></div>
+      <div class="handoff__item"><b>输出</b><span><code>GenerationBatchResult(next_draft_input=DFlashDraftInputV2(...))</code></span></div>
+      <div class="handoff__item"><b>后继章节</b><span>01 Scheduler 隔离 / 02 Prefill 启动 / 03 Decode 提案</span></div>
+    </section>
+
+    <section class="section" id="architecture">
+      <div class="section__head">
+        <p class="section__kicker">组件架构</p>
+        <h2>谁持有谁，谁真正接到 <code>run_batch()</code></h2>
+        <p class="section__intro"><code>scheduler.model_worker</code> 在 dSpark 下指向 <code>DSparkWorkerV2</code>；Target 的通用 <code>TpModelWorker</code> 被它保存在 <code>self._target_worker</code> 内。绿色是 Python 主调用，蓝色是对象/数据，紫色虚线是 CUDA 图与设备路径。</p>
+      </div>
+
+      <div class="architecture-story" data-architecture-story>
+        <div class="architecture-story__tabs" role="tablist" aria-label="分三张子图学习运行时对象关系">
+          <button type="button" role="tab" data-arch-scene="0" aria-selected="true"><span>子图 1 / 3</span><b>Scheduler 如何进入 dSpark</b></button>
+          <button type="button" role="tab" data-arch-scene="1" aria-selected="false"><span>子图 2 / 3</span><b>dSpark 内部怎样分工</b></button>
+          <button type="button" role="tab" data-arch-scene="2" aria-selected="false"><span>子图 3 / 3</span><b>模型执行如何回到下一轮</b></button>
+        </div>
+        <div class="architecture-story__stage">
+          <article class="architecture-scene" data-arch-panel="0" aria-hidden="false">
+            <header><span>入口与动态接收者</span><h3><code>Scheduler.run_batch()</code> 调到的不是普通 Target worker</h3><p>先只回答“调用落到谁”：同一个 <code>ScheduleBatch</code> 被交给 <code>scheduler.model_worker</code>，而 dSpark 配置下这个字段指向 <code>scheduler.draft_worker : DSparkWorkerV2</code>。</p></header>
+            <div class="architecture-flow architecture-flow--entry">
+              <div class="story-node" data-kind="main" data-object-ref="scheduler"><b>scheduler : Scheduler</b><code>Scheduler.run_batch()</code><span>发起本轮执行</span></div>
+              <div class="story-arrow"><b>batch_to_run</b><span>Python 调用</span></div>
+              <div class="story-node" data-kind="data" data-object-ref="batch"><b>batch : ScheduleBatch</b><code>input_ids / seq_lens / spec_info</code><span>本轮工作视图与跨轮状态</span></div>
+              <div class="story-arrow"><b>forward_batch_generation(batch)</b><span>receiver = scheduler.model_worker · 动态分派</span></div>
+              <div class="story-node" data-kind="main" data-object-ref="dspark"><b>scheduler.model_worker</b><code>is scheduler.draft_worker<br>: DSparkWorkerV2</code><span>真正接收 run_batch 的协调器</span></div>
+            </div>
+            <footer><b>本图交出</b><span><code>self : DSparkWorkerV2</code>，下一张只展开它内部持有的四个职责组件。</span><button type="button" data-arch-next="1">继续：内部组件 →</button></footer>
+          </article>
+
+          <article class="architecture-scene" data-arch-panel="1" aria-hidden="true">
+            <header><span>协调器内部的职责分解</span><h3>一个 <code>DSparkWorkerV2</code> 组合四个长期复用实例</h3><p>这些不是四轮执行，也不是四份模型；它们共同完成同一轮的提案、规划、Target 验证和已接受 hidden 的 KV 提交。</p></header>
+            <div class="story-hub">
+              <div class="story-node story-node--hub" data-kind="main" data-object-ref="dspark"><b>self : DSparkWorkerV2</b><code>forward_batch_generation()</code><span>统一编排和共同尾部</span></div>
+              <div class="story-component-grid">
+                <div class="story-node" data-kind="main" data-object-ref="proposer"><b>self._proposer</b><code>DraftBlockProposer.propose()</code><span>输入 rolling anchor，产生 DraftProposal</span></div>
+                <div class="story-node" data-kind="guard" data-object-ref="planner"><b>self._verify_planner</b><code>DSparkVerifyPlanner.schedule_layout()</code><span>budget → verify_lens → layout</span></div>
+                <div class="story-node" data-kind="main" data-object-ref="executor"><b>self._verify_executor</b><code>TargetVerifyExecutor.run_*()</code><span>装配 Target Verify 并返回 TargetVerifyResult</span></div>
+                <div class="story-node" data-kind="data" data-object-ref="injector"><b>self._kv_injector</b><code>TargetHiddenKvInjector.commit_hidden()</code><span>只写 anchor + accepted drafts 的 Draft KV</span></div>
+              </div>
+            </div>
+            <div class="story-order"><span>① proposal</span><i>→</i><span>② layout</span><i>→</i><span>③ target verify</span><i>→</i><span>④ accept / commit</span></div>
+            <footer><button type="button" data-arch-next="0">← 返回入口</button><span><b>本图交出</b> proposer 与 executor 分别调用 Draft/Target 模型执行；下一张追到 runner、attention 和结果回收。</span><button type="button" data-arch-next="2">继续：模型执行 →</button></footer>
+          </article>
+
+          <article class="architecture-scene" data-arch-panel="2" aria-hidden="true">
+            <header><span>两套 runner 与共同结果尾部</span><h3>Draft 和 Target 各自 forward，最终汇入同一个 <code>GenerationBatchResult</code></h3><p>紫色是设备执行位置；绿色是 Python 控制/采用。CUDA Graph 是否命中只改变执行位置，不改变最后交给 Scheduler 的结果合同。</p></header>
+            <div class="story-dual-runner">
+              <section><h4>Draft 分支</h4><div class="story-node" data-kind="main" data-object-ref="proposer"><b>self._proposer</b><span>构造 [anchor,MASK,…]</span></div><div class="story-arrow story-arrow--down"><b>draft_model_runner.forward()</b></div><div class="story-node" data-kind="cuda" data-object-ref="draft-runner"><b>self._draft_worker.model_runner</b><code>ModelRunner</code><span>一次 G 行 Transformer；Markov 尾部另行串行采样</span></div></section>
+              <section><h4>Target 分支</h4><div class="story-node" data-kind="main" data-object-ref="target-worker"><b>self._target_worker : TpModelWorker</b><span>forward_batch_generation(is_verify=True)</span></div><div class="story-arrow story-arrow--down"><b>model_runner.forward(verify_forward_batch)</b></div><div class="story-node" data-kind="cuda" data-object-ref="target-runner"><b>self._target_worker.model_runner</b><code>DecodeCudaGraphRunner | EagerRunner</code><span>Target logits + FULL auxiliary hidden</span></div><div class="story-node story-node--compact" data-kind="cuda" data-object-ref="attention"><b>attn_backend : AttentionBackend</b><span>读取 DFlashVerifyInput attention metadata</span></div></section>
+              <section><h4>共同尾部</h4><div class="story-node" data-kind="data" data-object-ref="result"><b>TargetVerifyResult</b><span>logits / hidden / graph hit</span></div><div class="story-arrow story-arrow--down"><b>accept + commit_hidden</b></div><div class="story-node" data-kind="main" data-object-ref="result"><b>GenerationBatchResult</b><code>next_token_ids / accept_lens / next_draft_input</code><span>交回 Scheduler.process_batch_result()</span></div></section>
+            </div>
+            <footer><button type="button" data-arch-next="1">← 返回内部组件</button><span><b>闭环</b> <code>next_draft_input.bonus_tokens</code> 成为下一轮 Draft 的 anchor。</span><a href="#lifecycle">继续：对象闭环 ↓</a></footer>
+          </article>
+        </div>
+        <div class="architecture-story__progress"><span data-arch-progress>1 / 3 · 入口与动态接收者</span><i></i></div>
+      </div>
+
+      <details class="architecture-legacy">
+        <summary>展开旧版“所有对象同屏坐标图”用于一次性核对（不作为主教学图）</summary>
+      <div class="visual">
+        <div class="visual__bar"><strong>运行时对象所有权与调用端口</strong><button class="zoom-button" type="button" data-zoom-target="#runtime-map">放大主图</button></div>
+        <div class="visual__body canvas-scroll">
+          <div class="diagram-canvas" id="runtime-map" aria-label="dSpark 运行时组件架构图">
+            <div class="arch-region" id="region-scheduler"><span class="region-title">Scheduler 进程 / 跨轮批次状态</span></div>
+            <div class="arch-region" id="region-dspark"><span class="region-title">dSpark V2 协调器 / 一轮投机解码</span></div>
+            <div class="arch-region" id="region-runner"><span class="region-title">模型执行 / 设备后端</span></div>
+
+            <article class="arch-node" data-kind="main" id="node-scheduler">
+              <span class="instance">scheduler : Scheduler</span>
+              <span class="class-name">Scheduler.run_batch()</span>
+              <span class="fqcn">sglang.srt.managers.scheduler.Scheduler</span>
+            </article>
+            <article class="arch-node arch-node--document" data-kind="data" id="node-batch">
+              <span class="instance">batch : ScheduleBatch</span>
+              <span class="class-name">跨轮 Scheduler 状态容器</span>
+              <span class="fqcn">sglang.srt.managers.schedule_batch.ScheduleBatch</span>
+            </article>
+            <article class="arch-node arch-node--document" data-kind="data" id="node-result">
+              <span class="instance">batch_result : GenerationBatchResult</span>
+              <span class="class-name">已接受输出 + 下一轮 Draft 输入</span>
+              <span class="fqcn">sglang.srt.managers.utils.GenerationBatchResult</span>
+            </article>
+
+            <article class="arch-node" data-kind="main" id="node-dspark">
+              <span class="instance">scheduler.model_worker is scheduler.draft_worker : DSparkWorkerV2</span>
+              <span class="class-name">forward_batch_generation()</span>
+              <span class="fqcn">sglang.srt.speculative.dspark_components.dspark_worker_v2.DSparkWorkerV2</span>
+            </article>
+            <article class="arch-node" data-kind="main" id="node-target-worker">
+              <span class="instance">scheduler.model_worker._target_worker is scheduler.tp_worker : TpModelWorker</span>
+              <span class="class-name">forward_batch_generation(is_verify=True)</span>
+              <span class="fqcn">sglang.srt.managers.tp_worker.TpModelWorker</span>
+            </article>
+            <article class="arch-node" data-kind="main" id="node-proposer">
+              <span class="instance">self._proposer : DraftBlockProposer</span>
+              <span class="class-name">propose() → DraftProposal</span>
+              <span class="fqcn">sglang.srt.speculative.dspark_components.dspark_draft.DraftBlockProposer</span>
+            </article>
+            <article class="arch-node" data-kind="guard" id="node-planner">
+              <span class="instance">self._verify_planner : DSparkVerifyPlanner</span>
+              <span class="class-name">预算 / verify_lens / layout</span>
+              <span class="fqcn">sglang.srt.speculative.dspark_components.dspark_planner.DSparkVerifyPlanner</span>
+            </article>
+            <article class="arch-node" data-kind="main" id="node-executor">
+              <span class="instance">self._verify_executor : TargetVerifyExecutor</span>
+              <span class="class-name">run_non_compact() / run_compact()</span>
+              <span class="fqcn">sglang.srt.speculative.dspark_components.dspark_verify.TargetVerifyExecutor</span>
+            </article>
+            <article class="arch-node" data-kind="data" id="node-injector">
+              <span class="instance">self._kv_injector : TargetHiddenKvInjector</span>
+              <span class="class-name">已接受的 Target hidden → Draft KV</span>
+              <span class="fqcn">sglang.srt.speculative.dspark_components.dspark_kv_inject.TargetHiddenKvInjector</span>
+            </article>
+
+            <article class="arch-node" data-kind="cuda" id="node-draft-runner">
+              <span class="instance">self.draft_model_runner is self._draft_worker.model_runner : ModelRunner</span>
+              <span class="class-name">forward() · Draft Transformer；只有折叠钩子才捕获 Markov 尾部</span>
+              <span class="fqcn">sglang.srt.model_executor.model_runner.ModelRunner</span>
+            </article>
+            <article class="arch-node" data-kind="cuda" id="node-target-runner">
+              <span class="instance">self.model_runner is self._target_worker.model_runner : ModelRunner</span>
+              <span class="class-name">decode_cuda_graph_runner : DecodeCudaGraphRunner | eager_runner : EagerRunner</span>
+              <span class="fqcn">sglang.srt.model_executor.runner.{decode_cuda_graph_runner,eager_runner}</span>
+            </article>
+            <article class="arch-node arch-node--hex" data-kind="cuda" id="node-attn">
+              <span class="instance">self._verify_executor.target_worker.model_runner.attn_backend : AttentionBackend</span>
+              <span class="class-name">元数据规划 + 后端注意力计算</span>
+              <span class="fqcn">sglang.srt.layers.attention.base_attn_backend.AttentionBackend</span>
+            </article>
+
+            <svg class="edges" viewBox="0 0 1420 800" aria-hidden="true">
+              <defs>
+                <marker id="arrow-main" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#62f59a"/></marker>
+                <marker id="arrow-data" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#5d9fff"/></marker>
+                <marker id="arrow-cuda" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#c36cff"/></marker>
+              </defs>
+              <path class="edge-data" d="M170 180V258" marker-end="url(#arrow-data)"/>
+              <path class="edge-control" d="M295 137H375" marker-end="url(#arrow-main)"/>
+              <path class="edge-data" d="M295 305H340V164H375" marker-end="url(#arrow-data)"/>
+              <path class="edge-control" d="M650 137H700" marker-end="url(#arrow-main)"/>
+              <path class="edge-control" d="M510 174V254" marker-end="url(#arrow-main)"/>
+              <path class="edge-control" d="M600 174V215H837V254" marker-end="url(#arrow-main)"/>
+              <path class="edge-control" d="M837 346V430" marker-end="url(#arrow-main)"/>
+              <path class="edge-cuda" d="M650 275H680V220H1032V146H1062" marker-end="url(#arrow-cuda)"/>
+              <path class="edge-control" d="M975 137H1018V338H1062" marker-end="url(#arrow-main)"/>
+              <path class="edge-control" d="M975 477H1018V137H975" marker-end="url(#arrow-main)"/>
+              <path class="edge-cuda" d="M1215 384V510" marker-end="url(#arrow-cuda)"/>
+              <path class="edge-data" d="M700 506H664V640H650" marker-end="url(#arrow-data)"/>
+              <path class="edge-data" d="M375 200H360V584H295" marker-end="url(#arrow-data)"/>
+              <path class="edge-return" d="M170 526V350" marker-end="url(#arrow-main)"/>
+            </svg>
+            <span class="edge-label" data-edge="dispatch">动态分派</span>
+            <span class="edge-label" data-edge="target">持有 Target worker</span>
+            <span class="edge-label" data-edge="proposal">propose()</span>
+            <span class="edge-label" data-edge="layout">schedule_layout()</span>
+            <span class="edge-label" data-edge="verify">layout + 候选 token</span>
+            <span class="edge-label" data-edge="target-forward">target_worker.forward_batch_generation(is_verify=True)</span>
+            <span class="edge-label" data-edge="commit">commit_hidden()</span>
+            <span class="edge-label" data-edge="construct-result">DSparkWorkerV2 构造 GenerationBatchResult</span>
+            <span class="edge-label" data-edge="return">Scheduler 提交已确认的下一轮状态</span>
+            <p class="architecture-note">MLX、NPU/XPU 等替代 worker/backend 不属于本图假设；它们改变运行时接收者时必须另画分支，不能由本图推断。</p>
+          </div>
+        </div>
+      </div>
+      </details>
+
+      <div class="identity-contract" aria-label="运行时对象引用等式">
+        <div class="identity-contract__item">
+          <b>外层调用接收者</b>
+          <code>scheduler.model_worker is scheduler.draft_worker</code>
+          <span>两者都指向同一个 <code>DSparkWorkerV2</code>；<code>Scheduler.run_batch()</code> 因此先进入 dSpark 编排层。</span>
+        </div>
+        <div class="identity-contract__item">
+          <b>Target 实例与 runner</b>
+          <code>scheduler.tp_worker is scheduler.model_worker._target_worker<br>self.model_runner is self._target_worker.model_runner</code>
+          <span><code>TargetVerifyExecutor.target_worker</code> 也引用这个 Target worker；不是另一份 Target 模型。</span>
+        </div>
+        <div class="identity-contract__item">
+          <b>KV 注入器共享</b>
+          <code>self._kv_injector is self._verify_executor.kv_injector</code>
+          <span>验证执行器与轮末提交使用同一个 <code>TargetHiddenKvInjector</code>，避免把两个字段误读成两个组件实例。</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="routes">
+      <div class="section__head">
+        <p class="section__kicker">三条运行路线</p>
+        <h2>三条路线经过同一组持有者，只改变分支与执行位置</h2>
+        <p class="section__intro">切换路线只高亮，不隐藏其它事实。这样可以看见回退路径最终重新汇入同一个接受、提交与 Scheduler 尾部。</p>
+      </div>
+      <div class="route-ribbons">
+        <div class="route-ribbon" data-routes="static-greedy"><div class="route-ribbon__name">STATIC · 贪心</div><div class="route-ribbon__flow"><span class="route-stop">DraftProposal</span><span class="route-stop" data-kind="guard">layout = None</span><span class="route-stop">完整 Target B×W</span><span class="route-stop">AcceptGreedy</span><span class="route-stop">提交 + 下一轮锚点</span></div></div>
+        <div class="route-ribbon" data-routes="compact-sampling"><div class="route-ribbon__name">COMPACT · 随机采样</div><div class="route-ribbon__flow"><span class="route-stop">置信度 + 预算</span><span class="route-stop" data-kind="guard">RaggedVerifyLayout</span><span class="route-stop" data-kind="cuda">压紧后的 Target</span><span class="route-stop">AcceptSampling</span><span class="route-stop">提交 + 下一轮锚点</span></div></div>
+        <div class="route-ribbon" data-routes="folded-greedy"><div class="route-ribbon__name">FOLDED · 贪心 · 仅 NVIDIA CUDA</div><div class="route-ribbon__flow"><span class="route-stop">折叠 DraftProposal</span><span class="route-stop" data-kind="guard">压紧 + CUDA 图 + is_cuda()</span><span class="route-stop" data-kind="cuda">Target 图回放</span><span class="route-stop" data-kind="cuda">尾处理器内散射 + 接受</span><span class="route-stop">统一结果尾部</span></div></div>
+      </div>
+
+      <div class="entry-map" aria-label="Prefill、Decode 与 Folded 覆盖层">
+        <div class="entry-map__head">
+          <b>先分生命周期入口，再看验证策略</b>
+          <span>下面是 Prefill / Decode 的调用阶段；上面的 STATIC / COMPACT / FOLDED 是 Decode 内部怎样验证，两个维度不能混成一个枚举。</span>
+        </div>
+        <div class="entry-row" data-kind="guard">
+          <div class="entry-row__label"><b>PREFILL · 启动桥</b><span>01 是外层隔离壳</span></div>
+          <div class="entry-flow">
+            <a class="entry-step" data-kind="guard" data-nav href="dspark-forward-isolation.html"><b>01 · 进入隔离区</b><span><code>ScheduleBatch(EXTEND)</code> 临时工作视图</span></a>
+            <a class="entry-step" data-nav href="dspark-prefill-bootstrap.html"><b>02 · Prefill 启动</b><span>prompt → Target hidden → Draft KV + 首个锚点</span></a>
+            <a class="entry-step" data-kind="guard" data-nav href="dspark-forward-isolation.html#transaction-flow"><b>01 · 恢复并提交</b><span><code>next_draft_input</code> 成为跨轮状态</span></a>
+          </div>
+        </div>
+        <div class="entry-row">
+          <div class="entry-row__label"><b>DECODE · 一轮主链</b><span>03–07 在隔离壳内部</span></div>
+          <div class="entry-flow">
+            <a class="entry-step" data-kind="guard" data-nav href="dspark-forward-isolation.html"><b>01 · 临时工作视图</b><span><code>ScheduleBatch</code> 事务式重绑</span></a>
+            <a class="entry-step" data-nav href="dspark-draft-proposal.html"><b>03 · Draft</b><span><code>DraftProposal</code></span></a>
+            <a class="entry-step" data-nav href="dspark-confidence-budget-layout.html"><b>04 · 规划</b><span>budget / layout</span></a>
+            <a class="entry-step" data-nav href="dspark-verify-step-through.html"><b>05 · Target</b><span><code>TargetVerifyResult</code></span></a>
+            <a class="entry-step" data-nav href="dspark-accept-finalize.html"><b>06 · 接受</b><span><code>AcceptOuts</code></span></a>
+            <a class="entry-step" data-nav href="dspark-target-hidden-kv-explainer.html"><b>07 · KV / Result</b><span><code>GenerationBatchResult</code></span></a>
+            <a class="entry-step" data-kind="guard" data-nav href="dspark-forward-isolation.html#transaction-flow"><b>01 · 持久提交</b><span>恢复临时字段，显式提交下一轮状态</span></a>
+          </div>
+        </div>
+        <div class="entry-row" data-kind="cuda" data-routes="folded-greedy">
+          <div class="entry-row__label"><b>FOLDED · 覆盖层</b><span>不是第四条业务流水线</span></div>
+          <div class="entry-flow">
+            <a class="entry-step" data-kind="guard" data-nav href="dspark-folded-fast-path.html"><b>08 · 分段 guard</b><span>proposal / accept / commit 各自判定</span></a>
+            <a class="entry-step" data-kind="cuda" data-nav href="dspark-folded-capture-replay.html"><b>08A · 图内执行</b><span>可折叠阶段移入 capture / replay</span></a>
+            <a class="entry-step" data-nav href="dspark-target-hidden-kv-explainer.html"><b>07 · 重新汇入</b><span>仍交出相同的结果与跨轮状态契约</span></a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="lifecycle">
+      <div class="section__head">
+        <p class="section__kicker">一轮状态闭环</p>
+        <h2>对象闭环：一轮的 bonus 是下一轮的锚点</h2>
+        <p class="section__intro">控制调用结束并不等于状态消失；<code>next_draft_input</code> 把接受阶段产生的 bonus 与新长度送回下一轮。</p>
+      </div>
+      <div class="visual">
+        <div class="visual__bar"><strong>一轮执行 · 对象交接</strong><button class="zoom-button" type="button" data-zoom-target="#round-cycle">放大闭环</button></div>
+        <div class="visual__body canvas-scroll">
+          <div class="cycle-track" id="round-cycle">
+            <div class="cycle-object"><b>DFlashDraftInputV2</b><span>本轮输入：bonus_tokens / new_seq_lens / 历史 confidence</span></div>
+            <div class="cycle-object"><b>VerifyWindow + DraftProposal</b><span>anchor + draft_tokens / corrected_logits / 当前 confidence</span></div>
+            <div class="cycle-object"><b>RaggedVerifyLayout | None</b><span>可选规划：how many / where / CUDA 图档位</span></div>
+            <div class="cycle-object"><b>TargetVerifyResult</b><span>logits_output（其中携带 H_aux）+ can_run_cuda_graph</span></div>
+            <div class="cycle-object"><b>AcceptOuts</b><span>correct_len / bonus / commit_lens</span></div>
+            <div class="cycle-object"><b>Draft KV + 下一轮锚点</b><span>写入的是已提交输入的 hidden；输出 bonus 只是下一轮 anchor</span></div>
+            <div class="cycle-object"><b>GenerationBatchResult</b><span>next_token_ids / accept_lens / next_draft_input → ScheduleBatch commit</span></div>
+            <div class="cycle-return" aria-label="GenerationBatchResult 中的 next_draft_input 回到下一轮 DFlashDraftInputV2"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="questions">
+      <div class="section__head">
+        <p class="section__kicker">按问题进入</p>
+        <h2>从最容易卡住的六个问题，直接进入对应专题</h2>
+        <p class="section__intro">这些入口来自源码学习过程中反复出现的困惑。主阶段负责交代边界，专题页负责把时间线、张量和失败后果完整展开。</p>
+      </div>
+      <nav class="question-index" aria-label="按问题选择 dSpark 专题">
+        <a class="question-card" data-kind="guard" data-nav href="dspark-forward-isolation.html">
+          <b>为什么必须临时改写再恢复同一个 <code>ScheduleBatch</code>？</b>
+          <span>看临时 TARGET_VERIFY 视图、ForwardBatch 引用捕获、finally 恢复与跨轮提交。</span>
+        </a>
+        <a class="question-card" data-kind="data" data-nav href="dspark-markov-head-internals.html">
+          <b><code>[X,MASK,MASK,MASK]</code> 为什么能产生 <code>a→b→c→d</code>？</b>
+          <span>区分一次并行 Draft Transformer 与四步串行 Markov logits 修正。</span>
+        </a>
+        <a class="question-card" data-kind="guard" data-nav href="dspark-budget-history-sps.html">
+          <b>为什么预算看两轮前的 confidence，而不是当前轮？</b>
+          <span>对齐 overlap relay、non-overlap carry、SPS 成本与 warm-up。</span>
+        </a>
+        <a class="question-card" data-kind="fail" data-nav href="dspark-confidence-budget-layout.html">
+          <b><code>layout=None</code> 是不是不运行 Target Verify？</b>
+          <span>不是；它通常意味着走完整 non-compact Target，三种模式的含义不同。</span>
+        </a>
+        <a class="question-card" data-kind="main" data-nav href="dspark-sampling-rejection-lab.html">
+          <b>sampling 拒绝后，bonus 为什么不一定是 Target argmax？</b>
+          <span>用 <code>p/q</code> 接受率和 residual 分布手算一次随机结果。</span>
+        </a>
+        <a class="question-card" data-kind="cuda" data-nav href="dspark-folded-fast-path.html">
+          <b><code>proposal.folded=True</code> 为什么还不等于 folded accept？</b>
+          <span>逐个检查 compact、CUDA 图、语义 guard 与可选 fused commit。</span>
+        </a>
+      </nav>
+    </section>
+
+    <section class="section" id="stages">
+      <div class="section__head">
+        <p class="section__kicker">分阶段阅读</p>
+        <h2>沿唯一持有者深入，不在总图重复算法</h2>
+      </div>
+      <div class="canvas-scroll">
+        <nav class="stage-map" aria-label="dSpark 分阶段学习页面">
+          <a data-nav href="dspark-forward-isolation.html"><b>01 · 隔离</b><span>ScheduleBatch 临时 verify 视图与恢复</span><dl><div><dt>接收</dt><dd>batch_to_run : ScheduleBatch</dd></div><div><dt>交出</dt><dd>恢复 + 提交 next_draft_input</dd></div></dl></a>
+          <a data-nav href="dspark-prefill-bootstrap.html"><b>02 · Prefill 启动</b><span>首个滚动锚点与 Draft KV 初始化</span><dl><div><dt>接收</dt><dd>EXTEND ScheduleBatch</dd></div><div><dt>交出</dt><dd>Draft KV + 首个 DFlashDraftInputV2</dd></div></dl></a>
+          <a data-nav href="dspark-draft-proposal.html"><b>03 · Draft 提案</b><span>Draft ForwardBatch、Transformer 与 Markov head</span><dl><div><dt>接收</dt><dd>滚动锚点 + Draft KV 前缀</dd></div><div><dt>交出</dt><dd>VerifyWindow + DraftProposal</dd></div></dl></a>
+          <a data-nav href="dspark-confidence-budget-layout.html"><b>04 · 规划</b><span>置信度、历史预算与当前 layout</span><dl><div><dt>接收</dt><dd>proposal + history / SPS</dd></div><div><dt>交出</dt><dd>budget + RaggedVerifyLayout | None</dd></div></dl></a>
+          <a data-nav href="dspark-verify-step-through.html"><b>05 · Target 验证</b><span>调用泳道：2 个请求 → 4 个逻辑行 → 5 个物理行 → 10 个固定槽</span><dl><div><dt>接收</dt><dd>proposal + VerifyWindow + layout</dd></div><div><dt>交出</dt><dd>TargetVerifyResult（compact 另交出 hidden_strided）</dd></div></dl></a>
+          <a data-nav href="dspark-accept-finalize.html"><b>06 · 接受</b><span>贪心 / 随机采样修正与 AcceptOuts</span><dl><div><dt>接收</dt><dd>Target p + Draft q</dd></div><div><dt>交出</dt><dd>AcceptOuts</dd></div></dl></a>
+          <a data-nav href="dspark-target-hidden-kv-explainer.html"><b>07 · 提交</b><span>Target hidden、Draft KV、用户输出与滚动锚点</span><dl><div><dt>接收</dt><dd>Target hidden + AcceptOuts</dd></div><div><dt>交出</dt><dd>Draft KV + next anchor + GenerationBatchResult</dd></div></dl></a>
+          <a data-nav href="dspark-folded-fast-path.html"><b>08 · 折叠快路</b><span>捕获 / 回放快路与回退路径汇合</span><dl><div><dt>接收</dt><dd>分段条件 + 静态缓冲区</dd></div><div><dt>交出</dt><dd>相同契约或精确回退</dd></div></dl></a>
+        </nav>
+      </div>
+
+      <details class="source-details">
+        <summary>源码锚点与为何这样画</summary>
+        <div class="source-details__body">
+          <div class="source-anchor"><code>python/sglang/srt/managers/scheduler.py:806-927</code><span><code>tp_worker</code> / <code>draft_worker</code> 装配，以及 speculative 模式下 <code>model_worker = draft_worker</code>。</span></div>
+          <div class="source-anchor"><code>python/sglang/srt/speculative/spec_info.py:248-267</code><span><code>SpeculativeAlgorithm.DSPARK</code> 将运行时 worker 类映射为 <code>DSparkWorkerV2</code>。</span></div>
+          <div class="source-anchor"><code>python/sglang/srt/speculative/base_spec_worker.py:45-68</code><span><code>target_worker</code> 属性返回 <code>_target_worker</code>；默认 fast-path runner 与 attention backend 也从该 Target worker 解析。</span></div>
+          <div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:66-245</code><span><code>DSparkWorkerV2</code> 持有 Target worker、Draft 执行器、提案器、规划器、验证执行器与 KV 注入器。</span></div>
+          <div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:482-700</code><span>单轮解码从提案、布局、Target 验证、接受、hidden 提交到 <code>GenerationBatchResult</code>。</span></div>
+        </div>
+      </details>
+    </section>
+
+    <div class="pager"><span></span><a data-nav href="dspark-forward-isolation.html">下一页 · 01 Scheduler 隔离 →</a></div>
+    <footer class="site-footer">V2 样板 · 颜色表达执行语义，不作装饰 · 仅完成当前源码静态核验</footer>
+  </main>
+</body>
+</html>

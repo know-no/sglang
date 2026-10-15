@@ -52,10 +52,10 @@ class AttentionBackend(ABC):
         self.init_forward_metadata_out_graph(forward_batch)
         self.init_forward_metadata_in_graph(forward_batch)
 
-    def init_forward_metadata_out_graph(
+    def init_forward_metadata_out_graph(#它负责在每轮重放之前，把 Attention 需要的请求边界、KV 长度和 KV 地址信息准备好
         self,
         forward_batch: ForwardBatch,
-        in_capture: bool = False,
+        in_capture: bool = False,#录制期间和重放都要调用，只不过要用不同的 bool 参数
     ):
         """Per-iter metadata prep — runs outside ``with graph.capture():``.
 

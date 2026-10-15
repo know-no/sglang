@@ -1,0 +1,200 @@
+{# SpecForge-aligned multipage shell. Content facts remain source-driven. #}
+{% from "components/lesson.html" import render_lesson %}
+{% set current_section = section if section is defined and section else {} %}
+{% set current_group = group if group is defined and group else none %}
+{% set current_chapter = chapter if chapter is defined and chapter else {} %}
+{% set current_content = content_html if content_html is defined else '' %}
+{% set current_stages = lesson_stages if lesson_stages is defined else [] %}
+{% set current_toc = toc if toc is defined else [] %}
+{% set roadmap_stages = current_stages|selectattr('roadmap')|list %}
+{% set current_breadcrumbs = breadcrumbs if breadcrumbs is defined else [] %}
+{% set current_prev = prev_chapter if prev_chapter is defined and prev_chapter else none %}
+{% set current_next = next_chapter if next_chapter is defined and next_chapter else none %}
+{% if source_snapshot is mapping %}
+  {% set current_snapshot_text = source_snapshot.commit_short|default(source_snapshot.commit|default(source_snapshot.label|default('源码快照未标注'))) %}
+{% else %}
+  {% set current_snapshot_text = source_snapshot|string %}
+{% endif %}
+
+{% macro chapter_id(item) -%}{{- item.id|default(item.slug|default(item.url|default(''))) -}}{%- endmacro %}
+
+{% macro nav_link(item, section_title='') -%}
+  <a href="{{ item.url }}" data-course-link data-chapter-id="{{ chapter_id(item) }}"
+     data-search-title="{{ item.title }}" data-search-section="{{ section_title }}"
+     {% if item.summary is defined %}data-search-summary="{{ item.summary }}"{% endif %}
+     {% if item.keywords is defined %}data-search-keywords="{{ item.keywords|join(' ') if item.keywords is iterable and item.keywords is not string else item.keywords }}"{% endif %}
+     {% if item.active|default(false) %}aria-current="page"{% endif %}>{{ item.title }}</a>
+{%- endmacro %}
+
+{% macro render_navigation(items) -%}
+  <div class="sf-course-tree">
+    {% for nav_section in items|default([]) %}
+      <details class="sf-course-tree__section"{% if nav_section.active|default(false) %} open{% endif %}>
+        <summary><span class="sf-course-tree__number">{{ nav_section.number|default('%02d'|format(loop.index)) }}</span><span>{{ nav_section.title }}</span></summary>
+        <ul class="sf-course-tree__children sf-course-tree__children--section">
+          {% if nav_section.url is defined and nav_section.url %}<li class="sf-course-tree__overview">{{ nav_link(nav_section, nav_section.title) }}</li>{% endif %}
+          {% for nav_chapter in nav_section.chapters|default([]) %}<li>{{ nav_link(nav_chapter, nav_section.title) }}</li>{% endfor %}
+          {% for nav_group in nav_section.groups|default([]) %}
+            <li class="sf-course-tree__group">
+              <details{% if nav_group.active|default(false) %} open{% endif %}>
+                <summary>{{ nav_group.title }}</summary>
+                <ul class="sf-course-tree__children">
+                  {% if nav_group.url is defined and nav_group.url %}<li class="sf-course-tree__overview">{{ nav_link(nav_group, nav_section.title) }}</li>{% endif %}
+                  {% for nav_chapter in nav_group.chapters|default([]) %}<li>{{ nav_link(nav_chapter, nav_section.title ~ ' / ' ~ nav_group.title) }}</li>{% endfor %}
+                </ul>
+              </details>
+            </li>
+          {% endfor %}
+        </ul>
+      </details>
+    {% endfor %}
+  </div>
+{%- endmacro %}
+
+<!doctype html>
+<html lang="{{ site.lang|default('zh-CN') }}" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="{{ current_chapter.summary|default(current_section.purpose|default(current_section.summary|default(site.subtitle|default(site.description|default('SGLang 源码进阶课程'))))) }}">
+  <link rel="icon" href="data:,">
+  <title>{% block title %}{{ current_chapter.title|default(current_section.title|default(site.title)) }} · {{ site.short_title|default(site.title) }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ asset_prefix }}/css/specforge-course.css">
+  <link rel="stylesheet" href="{{ asset_prefix }}/css/labs.css">
+  <link rel="stylesheet" href="{{ asset_prefix }}/css/print.css">
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="{% block body_class %}sf-course-page{% endblock %}" data-root-url="{{ root_prefix }}"
+      data-nav-open="false" data-nav-pinned="false"
+      {% if current_chapter %}data-page-id="{{ chapter_id(current_chapter) }}" data-chapter-id="{{ chapter_id(current_chapter) }}"{% endif %}
+      {% if current_section %}data-section-id="{{ current_section.id|default(current_section.slug|default('')) }}"{% endif %}
+      {% block body_attributes %}{% endblock %}
+      style="--page-accent: var(--domain-{{ current_section.domain|default('entry') }}, var(--domain-entry))">
+  <a class="skip-link" href="#main-content">跳到正文</a>
+
+  <div class="sf-shell">
+    <div class="sf-navigation">
+      <nav class="sf-rail" aria-label="课程工具">
+        <button class="sf-rail__button sf-rail__menu" type="button" data-nav-toggle aria-controls="course-navigation" aria-expanded="false">
+          <span aria-hidden="true">☰</span><span class="sr-only">打开课程目录</span>
+        </button>
+        <a class="sf-rail__brand" href="{{ root_prefix }}" aria-label="回到 SGLang 课程地图">S</a>
+        <div class="sf-rail__spacer"></div>
+        <button class="sf-rail__button" type="button" data-search-open aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span class="sr-only">搜索课程</span></button>
+        <button class="sf-rail__button" type="button" data-theme-toggle><span aria-hidden="true">◐</span><span class="sr-only" data-theme-label>深色</span></button>
+      </nav>
+
+      <aside class="sf-drawer" id="course-navigation" aria-label="全部课程目录">
+        <header class="sf-drawer__head">
+          <div><p class="sf-drawer__eyebrow">SGLang source course</p><a href="{{ root_prefix }}">{{ site.short_title|default(site.title) }}</a></div>
+          <button class="sf-icon-button" type="button" data-nav-close aria-label="关闭课程目录">×</button>
+        </header>
+        <div class="sf-drawer__tools">
+          <button class="sf-button sf-button--quiet" type="button" data-search-open><span aria-hidden="true">⌕</span> 搜索</button>
+          <button class="sf-button sf-button--quiet" type="button" data-theme-toggle><span aria-hidden="true">◐</span> <span data-theme-label>深色</span></button>
+          <button class="sf-button sf-button--quiet sf-drawer__pin" type="button" data-nav-pin aria-pressed="false"><span aria-hidden="true">⌖</span> <span data-nav-pin-label>固定目录</span></button>
+        </div>
+        <p class="sf-drawer__context"><b>{{ current_section.title|default('课程地图') }}</b>{% if current_group %}<span>{{ current_group.title }}</span>{% endif %}{% if current_chapter %}<span>{{ current_chapter.title }}</span>{% endif %}</p>
+        <nav class="sf-drawer__tree" aria-label="全部章节">{{ render_navigation(nav_sections|default([])) }}</nav>
+      </aside>
+    </div>
+
+    <button class="sf-nav-backdrop" type="button" data-nav-backdrop aria-label="关闭课程目录"></button>
+
+    <div class="sf-main-frame">
+      <main class="sf-main{% if current_chapter.wide|default(false) %} sf-main--wide{% endif %}" id="main-content" tabindex="-1">
+        <div class="sf-page-grid">
+          <div class="sf-content-column">
+            {% if current_breadcrumbs %}
+              <nav aria-label="面包屑"><ol class="sf-breadcrumbs">
+                {% for crumb in current_breadcrumbs %}<li>{% if crumb.url is defined and crumb.url %}<a href="{{ crumb.url }}">{{ crumb.title }}</a>{% else %}<span aria-current="page">{{ crumb.title }}</span>{% endif %}</li>{% endfor %}
+              </ol></nav>
+            {% endif %}
+
+            {% block page_header %}
+              <header class="sf-hero">
+                {% if current_chapter.eyebrow|default('') %}<p class="sf-hero__eyebrow">{{ current_chapter.eyebrow }}</p>{% endif %}
+                <h1>{{ current_chapter.title|default(current_section.title|default(site.title)) }}</h1>
+                {% if current_chapter.lead|default(current_chapter.summary|default('')) %}<p class="sf-hero__lead">{{ current_chapter.lead|default(current_chapter.summary) }}</p>{% endif %}
+                <div class="sf-evidence-strip">
+                  {% if source_snapshot %}<span><strong>源码版本</strong> {{ current_snapshot_text }}</span>{% if chapter_meta|default({}) and chapter_meta.reviewed_at|default('') %}<span><strong>本章核对</strong> {{ chapter_meta.reviewed_at }}</span>{% elif source_snapshot is mapping and source_snapshot.checked_at|default('') %}<span><strong>原核对</strong> {{ source_snapshot.checked_at }}</span>{% endif %}{% endif %}
+                  {% if current_chapter.assumptions|default(site.assumed_primary_path|default('')) %}<span><strong>路径假设</strong> {{ current_chapter.assumptions|default(site.assumed_primary_path) }}</span>{% endif %}
+                  {% if current_chapter.evidence_scope|default('') %}<span><strong>证据范围</strong> {{ current_chapter.evidence_scope }}</span>{% endif %}
+                </div>
+                <div class="sf-hero__actions">{% block hero_actions %}{% endblock %}</div>
+              </header>
+
+              {% if current_chapter.contract|default(false) %}
+                <section class="sf-contract" aria-label="本章边界">
+                  <div><b>输入</b><span>{{ current_chapter.contract.input }}</span></div>
+                  <div><b>本章职责</b><span>{{ current_chapter.contract.responsibility }}</span></div>
+                  <div><b>输出</b><span>{{ current_chapter.contract.output }}</span></div>
+                  <div><b>下一消费者</b><span>{{ current_chapter.contract.next_consumer }}</span></div>
+                </section>
+              {% endif %}
+            {% endblock %}
+
+            <nav class="sf-hero__actions" aria-label="关联阅读入口" data-repository-companion><a href="{{ notes_home_url|default(root_prefix|replace('index.html', '../../index.html')) }}">{{ notes_home_title|default('笔记总入口') }}</a>{% if full_chapter_url|default('') %} · <a href="{{ full_chapter_url }}">完整课程中的本章</a>{% endif %}</nav>
+            {% if site.evidence_notice|default('') %}<details class="sf-source-details"><summary>版本与验证范围</summary><p>{{ site.evidence_notice }}</p></details>{% endif %}
+
+            {% if related_notes|default([]) %}
+              <aside class="sf-contract" aria-label="深入源码笔记" data-related-notes data-repository-companion>
+                <div><b>深入源码笔记</b><span>课程负责连贯导览；逐段源码推导与补充讨论在以下主文维护。</span></div>
+                {% for note in related_notes %}<div><a href="{{ note.url }}">{{ note.title }}</a></div>{% endfor %}
+              </aside>
+            {% endif %}
+
+            {% if roadmap_stages %}
+              <nav class="sf-stage-map" aria-label="本章学习路径">
+                <div class="sf-stage-map__head"><span>Stage roadmap</span><b>沿同一组对象，从结论走到源码与边界</b></div>
+                <ol>{% for stage in roadmap_stages %}<li><a href="#{{ stage.id }}"><span>{{ stage.index }}</span>{{ stage.kicker }}</a></li>{% endfor %}</ol>
+              </nav>
+            {% endif %}
+            {% if current_toc %}<details class="sf-mobile-toc"><summary>本页目录</summary><ol>{% for item in current_toc %}<li><a href="#{{ item.id }}">{{ item.text }}</a></li>{% endfor %}</ol></details>{% endif %}
+
+            {% block content %}{% if current_stages %}{{ render_lesson(current_stages) }}{% else %}<article class="sf-article" data-toc-source>{{ current_content|safe }}</article>{% endif %}{% endblock %}
+
+            {% if current_prev or current_next %}
+              <nav class="sf-pager" aria-label="相邻章节">
+                {% if current_prev %}<a href="{{ current_prev.url }}"><span>← 上一章</span><b>{{ current_prev.title }}</b></a>{% else %}<span></span>{% endif %}
+                {% if current_next %}<a href="{{ current_next.url }}"><span>下一章 →</span><b>{{ current_next.title }}</b></a>{% endif %}
+              </nav>
+            {% endif %}
+
+            <footer class="sf-footer"><span>{{ site.title }}</span>{% if source_snapshot %}<span>源码快照 {{ current_snapshot_text }}</span>{% endif %}<span>纯静态 · 本地依赖 · 可离线分享</span></footer>
+            <p class="print-only">{{ site.title }} · {{ current_chapter.title|default(current_section.title|default('课程地图')) }} · {{ current_snapshot_text }}</p>
+          </div>
+
+          <aside class="sf-page-toc" aria-label="本页目录">
+            <p class="sf-page-toc__title">On this page</p>
+            <ol data-page-toc-list>{% for item in current_toc %}<li><a href="#{{ item.id }}" data-level="{{ item.level }}">{{ item.text }}</a></li>{% endfor %}</ol>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="search-dialog" id="course-search-dialog" data-search-dialog aria-labelledby="course-search-title">
+    <div class="search-dialog__head"><strong id="course-search-title">搜索课程</strong><button class="sf-icon-button" type="button" data-search-close aria-label="关闭搜索">×</button></div>
+    <form class="search-dialog__form" data-search-form role="search"><label class="sr-only" for="course-search-input">搜索对象、方法、状态或章节</label><input id="course-search-input" type="search" data-search-input autocomplete="off" placeholder="例如：running_batch、ForwardBatch、TARGET_VERIFY"><button class="sf-button" type="submit">搜索</button></form>
+    <p class="search-dialog__status" data-search-status aria-live="polite"></p><ol class="search-results" data-search-results></ol>
+  </dialog>
+
+  <dialog class="diagram-viewer" id="diagram-viewer-dialog" data-diagram-dialog aria-labelledby="diagram-viewer-title">
+    <div class="diagram-viewer__head"><div><strong id="diagram-viewer-title" data-diagram-title>图解沉浸阅读</strong> <span class="diagram-viewer__zoom" data-diagram-zoom>100%</span></div><div class="diagram-viewer__tools"><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-in" aria-label="放大">＋</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="zoom-out" aria-label="缩小">−</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="fit">看全图</button><button class="sf-button sf-button--quiet" type="button" data-diagram-action="reset">100%</button><button class="sf-button" type="button" data-diagram-action="close">关闭 ×</button></div></div>
+    <div class="diagram-viewer__viewport" data-diagram-viewport><div class="diagram-viewer__canvas mermaid" data-diagram-canvas></div></div>
+  </dialog>
+
+  {% if search_index_script %}<script src="{{ search_index_script }}" defer></script>{% endif %}
+  {% if current_chapter or render_mermaid|default(false) %}<script src="{{ asset_prefix }}/vendor/mermaid.min.js" defer></script>{% endif %}
+  <script src="{{ asset_prefix }}/js/site-shell.js" defer></script>
+  <script src="{{ asset_prefix }}/js/toc-search.js" defer></script>
+  <script src="{{ asset_prefix }}/js/diagram-viewer.js" defer></script>
+  <script src="{{ asset_prefix }}/js/source-microscope.js" defer></script>
+  <script src="{{ asset_prefix }}/js/labs.js" defer></script>
+  <script src="{{ asset_prefix }}/js/lesson-components.js" defer></script>
+  {% for script in current_chapter.scripts|default([]) %}<script src="{{ script }}" defer></script>{% endfor %}
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

@@ -56,7 +56,7 @@ def freeze_gc(enable_cudagraph_gc: bool):
 
 
 def get_batch_sizes_to_capture(
-    model_runner: ModelRunner, captured_req_width: int = 1
+    model_runner: ModelRunner, captured_req_width: int = 1 # 投机解码传递的这个值是speculative_num_draft_tokens
 ) -> Tuple[List[int], List[int]]:
     """Build the (capture_bs, compile_bs) lists for the decode runner.
 
@@ -74,8 +74,8 @@ def get_batch_sizes_to_capture(
     alignment_width = captured_req_width
     if server_args.enable_two_batch_overlap:
         mul_base *= 2
-        alignment_width = 1
-
+        alignment_width = 1 # 这应该不是退化成1， 而是变成了mul_base为主控的
+    # todo 这啥意思呀
     if require_gathered_buffer(server_args):
         mul_base *= get_parallel().attn_tp_size
 

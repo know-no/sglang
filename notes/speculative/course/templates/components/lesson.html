@@ -1,0 +1,41 @@
+{% macro render_stage(stage) -%}
+  <section class="sf-topic sf-topic--{{ stage.kind }}" data-topic-kind="{{ stage.kind }}" aria-labelledby="{{ stage.id }}">
+    <header class="sf-topic__head">
+      <h2 class="sf-sec-title" id="{{ stage.id }}"><span class="sf-sec-number" aria-hidden="true">{{ stage.index }}</span>{{ stage.title }}</h2>
+    </header>
+
+    {% if stage.kind == 'verdict' %}
+      <div class="sf-note sf-note--key">{{ stage.body_html|safe }}</div>
+    {% elif stage.kind == 'prereq' %}
+      <div class="sf-note sf-note--scope">{{ stage.body_html|safe }}</div>
+    {% elif stage.kind == 'contract' %}
+      <div class="sf-contract-body">{{ stage.body_html|safe }}</div>
+    {% elif stage.kind == 'objects' %}
+      <div class="sf-topic__body sf-object-body">{{ stage.body_html|safe }}</div>
+    {% elif stage.kind == 'example' and stage.process_step_count|default(0) > 1 %}
+      <div class="sf-teach-walk" data-teaching-walk data-step-count="{{ stage.process_step_count }}">
+        <div class="sf-teach-walk__head"><b>沿固定样例逐步运行</b><span>切换步骤时同时观察对象、状态与下一消费者</span></div>
+        <div class="sf-teach-walk__source">{{ stage.walk_html|default(stage.body_html)|safe }}</div>
+      </div>
+      {% if stage.walk_extras_html|default('') %}<div class="sf-authored-lab">{{ stage.walk_extras_html|safe }}</div>{% endif %}
+    {% elif stage.kind == 'recap' %}
+      <div class="sf-state-flow-source" data-state-flow>{{ stage.body_html|safe }}</div>
+    {% elif stage.kind == 'faq' %}
+      <div class="sf-quiz-block">{{ stage.body_html|safe }}</div>
+    {% elif stage.kind == 'self-check' %}
+      <div class="sf-self-test" data-self-test>
+        {{ stage.body_html|safe }}
+      </div>
+    {% elif stage.kind == 'evidence' %}
+      <details class="sf-source-details"><summary>展开本章源码片段与定位工具</summary>{{ stage.body_html|safe }}</details>
+    {% else %}
+      <div class="sf-topic__body">{{ stage.body_html|safe }}</div>
+    {% endif %}
+  </section>
+{%- endmacro %}
+
+{% macro render_lesson(stages) -%}
+  <article class="sf-deep-lesson" data-toc-source data-lesson>
+    {% for stage in stages %}{{ render_stage(stage) }}{% endfor %}
+  </article>
+{%- endmacro %}

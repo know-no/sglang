@@ -1,0 +1,16 @@
+{% extends "page.html" %}
+{% block body_class %}sf-course-page sf-note-page{% endblock %}
+{% block extra_head %}
+  <!-- Generated from {{ source_path }} by notes/speculative/course/build.py. -->
+  <link rel="stylesheet" href="{{ maintenance_prefix }}/navigation.css">
+  <link rel="stylesheet" href="{{ maintenance_prefix }}/syntax.css">
+  {% if has_math %}<link rel="stylesheet" href="{{ maintenance_prefix }}/vendor/katex/katex.min.css"><script defer src="{{ maintenance_prefix }}/vendor/katex/katex.min.js"></script>{% endif %}
+{% endblock %}
+{% block page_header %}
+  <header class="sf-note-meta">
+    <p class="sf-hero__eyebrow">投机解码 · 深入源码与专题笔记</p>
+    <nav class="sf-hero__actions" aria-label="笔记操作"><a href="{{ topic_url }}">主题阅读顺序</a><a href="{{ source_url }}" download>下载 Markdown 源文</a></nav>
+  </header>
+{% endblock %}
+{% block content %}<article class="sf-article sf-note-article" data-toc-source>{{ content_html|safe }}</article>{% endblock %}
+{% block extra_scripts %}<script defer src="{{ maintenance_prefix }}/reading.js"></script>{% endblock %}

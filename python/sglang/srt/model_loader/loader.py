@@ -300,7 +300,7 @@ def _get_quantization_config(
         return quant_config
     return None
 
-
+# 只是构造 模型结构等，但是没有加载权重
 def _initialize_model(
     model_config: ModelConfig,
     load_config: LoadConfig,
@@ -790,13 +790,13 @@ class DefaultModelLoader(BaseModelLoader):
         quant_config = _get_quantization_config(model_config, self.load_config)
         with set_default_torch_dtype(model_config.dtype):
             with target_device:
-                model = _initialize_model(
+                model = _initialize_model(# 先构造
                     model_config,
                     self.load_config,
                     quant_config,
                 )
 
-            self.load_weights_and_postprocess(
+            self.load_weights_and_postprocess( # 后加载权重；  _get_all_weights 返回的是一个 generator，通过 yield from 接上具体格式的读取器，
                 model, self._get_all_weights(model_config, model), target_device
             )
 

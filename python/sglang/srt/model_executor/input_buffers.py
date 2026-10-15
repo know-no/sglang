@@ -77,7 +77,7 @@ class ForwardInputBuffers:
         if is_npu():
             return
 
-        for f in fields(self):
+        for f in fields(self):# fields(self) 遍历实际 dataclass 实例的字段，包括 PrefillInputBuffers、DecodeInputBuffers 的子类字段。
             name = f.name
             buffer = getattr(self, name)
 
@@ -100,5 +100,5 @@ class ForwardInputBuffers:
                 assert isinstance(
                     buffer, torch.Tensor
                 ), f"Field {name} is expected to be a torch.Tensor, a dict of torch.Tensor, or a dataclass of torch.Tensor, but got {type(buffer)}."
-                new_buffer = self._share_one_buffer(name, buffer)
+                new_buffer = self._share_one_buffer(name, buffer)  # 匹配字段名、numel、dtype、device；返回已有存储的 view 或登记新存储，不复制本轮输入数据。
                 setattr(self, name, new_buffer)

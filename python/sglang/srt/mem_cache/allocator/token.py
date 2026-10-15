@@ -52,7 +52,7 @@ class TokenToKVPoolAllocator(BaseTokenToKVPoolAllocator):
         # To avoid minor "len(free_pages) * 1" overhead
         return len(self.free_pages) + len(self.release_pages)
 
-    def alloc(self, need_size: int):
+    def alloc(self, need_size: int):# 从空闲编号中取出 n 个; 但是是取的page，按页管理的，上游要计算好 page 个数
         if self.need_sort and need_size > len(self.free_pages):
             self.merge_and_sort_free()
 
@@ -61,10 +61,10 @@ class TokenToKVPoolAllocator(BaseTokenToKVPoolAllocator):
 
         select_index = self.free_pages[:need_size]
         self.free_pages = self.free_pages[need_size:]
-        return select_index
+        return select_index # 只返回 KV slot 编号，尚未更新请求映射表; 上游自己来更新请求映射表，把这个值写入 req_to_token_pool
 
-    def free(self, free_index: torch.Tensor):
-        if free_index.numel() == 0:
+    def free(self, free_index: torch.Tensor): #free() 不会清零旧 K/V，也不会销毁底层大张量、把这部分显存交还给 CUDA。旧内容可以暂时留着，之后由新 token 覆写。
+        if free_index.numel() == 0: #它归还的是池内位置的使用权。至于“什么时候可以归还”，由上层生命周期和缓存逻辑决定。 请求结束后，如果前缀缓存还保留这些 KV，就不能立刻把编号交给其他 token 使用。allocator 本身不判断前缀是否值得保留。
             return
 
         if self.is_not_in_free_group:

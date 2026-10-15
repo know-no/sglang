@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file: data:; style-src 'self' 'unsafe-inline' file:; script-src 'self' file:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'">
+  <title>07 · 隐藏状态 / Draft KV / 滚动锚点 · dSpark V2</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="assets/dspark-visual-system.css">
+  <style>
+    .invariant {
+      max-width: 920px;
+      margin-top: 22px;
+      padding: 14px 16px;
+      border-left: 5px solid var(--guard);
+      background: rgba(255, 208, 96, .055);
+      color: #d9e4f2;
+    }
+    .invariant b { color: var(--guard); font: 800 12px/1.3 var(--mono); }
+    .invariant p { margin: 6px 0 0; font-size: 13px; }
+
+    .step-copyline {
+      min-height: 44px;
+      margin: 0 0 14px;
+      padding: 10px 12px;
+      border-left: 4px solid var(--data);
+      background: rgba(8, 17, 30, .8);
+      color: #cbd9e9;
+      font-size: 12px;
+    }
+    .step-copyline b { color: var(--data); font: 800 12px/1.3 var(--mono); }
+
+    .rail-board {
+      position: relative;
+      min-width: 1130px;
+      padding: 4px 0 154px;
+    }
+    .rail-board .rounds { min-width: 1130px; }
+    .rounds__head { min-height: 64px; font-size: 12px; }
+    .rounds__head:first-child { color: var(--ui); }
+    .rounds__head small {
+      display: block;
+      margin-top: 4px;
+      color: var(--faint);
+      font: 12px/1.3 var(--mono);
+    }
+    .rounds__label { min-height: 86px; font-size: 12px; }
+    .rounds__label strong { display: block; color: var(--data); }
+    .rounds__label small { display: block; margin-top: 5px; color: var(--faint); font-size: 12px; }
+    .rounds__cell {
+      position: relative;
+      display: grid;
+      align-content: center;
+      gap: 4px;
+      min-height: 86px;
+      font-size: 12px;
+    }
+    .rounds__cell b { font: 800 12px/1.25 var(--mono); }
+    .rounds__cell small { color: inherit; opacity: .72; font: 12px/1.3 var(--mono); }
+    .rounds__cell[data-step-state="active"] {
+      background: color-mix(in srgb, currentColor 9%, var(--surface));
+      box-shadow: inset 0 0 0 1px currentColor;
+    }
+    .rounds__cell[data-linked="true"] { z-index: 2; }
+
+    .commit-boundary {
+      border-left: 2px dashed var(--guard);
+      border-right-color: var(--guard);
+      background: rgba(255, 208, 96, .035);
+    }
+    .next-round-cell { background: rgba(93, 159, 255, .045); }
+    .suffix-note { color: var(--off); font-style: normal; }
+
+    .anchor-loop {
+      position: absolute;
+      left: 170px;
+      right: 0;
+      bottom: 12px;
+      height: 122px;
+      transition: opacity .2s, filter .2s;
+    }
+    .anchor-loop svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+    .anchor-loop__label {
+      position: absolute;
+      left: 13%;
+      bottom: 7px;
+      padding: 4px 8px;
+      background: var(--bg);
+      color: var(--guard);
+      font: 800 12px/1.3 var(--mono);
+    }
+    .anchor-loop__draft {
+      position: absolute;
+      left: 2%;
+      top: 5px;
+      width: 270px;
+      padding: 9px 11px;
+      border: 1px solid var(--data);
+      background: var(--surface);
+      color: var(--muted);
+      font: 12px/1.35 var(--mono);
+      overflow-wrap: anywhere;
+    }
+    .anchor-loop__draft b { display: block; color: var(--data); }
+    .anchor-loop__bonus {
+      position: absolute;
+      right: 2%;
+      top: 5px;
+      width: 210px;
+      padding: 9px 11px;
+      border: 1px dashed var(--guard);
+      background: var(--surface);
+      color: var(--guard);
+      font: 800 12px/1.35 var(--mono);
+      overflow-wrap: anywhere;
+    }
+    .loop-token {
+      position: absolute;
+      left: 0;
+      top: 0;
+      z-index: 3;
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border: 2px solid var(--guard);
+      border-radius: 50%;
+      background: var(--bg);
+      color: var(--guard);
+      font: 900 12px/1 var(--mono);
+      offset-path: path("M 920 28 C 920 110, 170 110, 170 34");
+      offset-rotate: 0deg;
+    }
+    .anchor-loop[data-step-state="active"] .loop-token { animation: roll-anchor 1.4s ease-in-out infinite; }
+    @keyframes roll-anchor { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+
+    .route-entry-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(230px, 1fr));
+      gap: 12px;
+      min-width: 820px;
+      margin: 0 0 26px;
+    }
+    .route-entry {
+      min-width: 0;
+      padding: 11px 12px;
+      border-top: 2px dashed var(--guard);
+      border-bottom: 1px solid var(--line);
+      transition: opacity .18s, filter .18s;
+    }
+    .route-entry b { display: block; color: var(--guard); font: 800 12px/1.3 var(--mono); }
+    .route-entry span { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; }
+
+    .pipeline-wrap { min-width: 1010px; }
+    .pipeline { grid-template-columns: repeat(5, minmax(170px, 1fr)); min-width: 1010px; }
+    .pipeline__node .instance { display: block; color: var(--tone); font: 800 12px/1.35 var(--mono); overflow-wrap: anywhere; }
+    .pipeline__node .fqcn { display: block; margin-top: 6px; color: var(--faint); font: 12px/1.35 var(--mono); overflow-wrap: anywhere; }
+    .pipeline__node .method { display: block; margin-top: 7px; color: #d8e5f4; font: 12px/1.4 var(--mono); overflow-wrap: anywhere; }
+    .pipeline__node[data-kind="off"] { --tone: var(--off); border-style: dotted; }
+    .kv-cells { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .kv-cell { padding: 3px; text-align: center; }
+
+    .fanout-wrap {
+      min-width: 1010px;
+      margin-top: 42px;
+      padding-top: 28px;
+      border-top: 1px solid var(--line);
+    }
+    .fanout { min-width: 1010px; grid-template-columns: 220px repeat(3, minmax(220px, 1fr)); }
+    .fanout__target[data-kind="main"] { border-color: var(--main); }
+    .fanout b, .fanout span { font-size: 12px; }
+    .fanout__target b { overflow-wrap: anywhere; }
+    .fanout__target code { color: #d7e6f8; }
+    .fanout__target a { color: var(--ui); }
+
+    .early-publish {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(170px, 1fr));
+      gap: 22px;
+      min-width: 1010px;
+      margin-bottom: 28px;
+    }
+    .early-publish__node {
+      position: relative;
+      min-height: 112px;
+      padding: 12px;
+      border: 1px dashed var(--guard);
+      background: var(--surface);
+      color: var(--muted);
+      font: 12px/1.4 var(--mono);
+    }
+    .early-publish__node:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      right: -17px;
+      top: 42%;
+      color: var(--guard);
+      font-weight: 900;
+    }
+    .early-publish__node b { display: block; color: var(--guard); }
+    .early-publish__node[data-kind="main"] { border-color: var(--main); border-style: solid; }
+    .early-publish__node[data-kind="main"] b { color: var(--main); }
+    .early-publish__node[data-kind="data"] { border-color: var(--data); border-style: solid; }
+    .early-publish__node[data-kind="data"] b { color: var(--data); }
+
+    .source-details .callouts { margin-top: 12px; }
+
+    @media (max-width: 900px) {
+      .route-entry-grid { grid-template-columns: repeat(3, 250px); }
+    }
+    @media (max-width: 600px) {
+      .invariant { padding: 12px; }
+      .step-copyline { min-height: 58px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .anchor-loop[data-step-state="active"] .loop-token { animation: none; offset-distance: 100%; }
+    }
+  </style>
+  <link rel="stylesheet" href="assets/dspark-source-studio.css">
+  <script src="assets/dspark-site.js" defer></script>
+  <script src="assets/dspark-learning-layer.js" defer></script>
+  <script src="assets/dspark-source-studio.js" defer></script>
+  <script src="assets/dspark-stepper.js" defer></script>
+</head>
+<body data-page="07">
+  <div data-site-nav></div>
+  <main class="page page--wide">
+    <header class="hero">
+      <p class="eyebrow">07 · 隐藏状态 / Draft KV / 滚动锚点</p>
+      <h1>Target 提交的是输入侧 hidden；下一轮接力的是本轮 bonus</h1>
+      <p class="lead">同一轮里，用户看见 <code>[a,Y]</code>，Draft KV 写入 <code>[X,a]</code>，而 <code>Y@22</code> 作为新的滚动锚点回到下一轮。</p>
+      <div class="route-switch" aria-label="选择执行路线">
+        <button type="button" data-route-choice="static-greedy">STATIC · 贪心</button>
+        <button type="button" data-route-choice="compact-sampling">COMPACT · 随机采样</button>
+        <button type="button" data-route-choice="folded-greedy">FOLDED · 贪心</button>
+      </div>
+      <div data-semantic-legend></div>
+      <div class="invariant">
+        <b>关键不变量 · 三条长度/对象轨必须分开</b>
+        <p><code>commit_lens=2</code> 约束本轮可写的 Target 输入前缀 <code>[X,a]</code>；原始缓冲区 <code>next_token_ids=[a,Y,c,d,0]</code> 由 <code>accept_lens=2</code> 裁成用户输出 <code>[a,Y]</code>；<code>next_draft_input.bonus_tokens=[Y]</code> 才是下一轮起点。</p>
+      </div>
+      <div class="evidence-strip">
+        <span><strong>源码版本</strong> f01a0c7f97ec</span>
+        <span><strong>适用范围</strong> dSpark V2 Decode · PP=1</span>
+        <span><strong>证据边界</strong> 静态源码核验；折叠尾处理器仅支持 NVIDIA CUDA；未声称 GPU 运行时验证</span>
+      </div>
+    </header>
+
+    <section aria-label="本页交接契约">
+      <div class="handoff">
+        <div class="handoff__item"><b>输入</b><span><code>AcceptOuts</code> + <code>TargetVerifyResult.logits_output</code> / <code>hidden_strided</code></span></div>
+        <div class="handoff__item"><b>状态变化</b><span>Draft KV 只写 <code>col &lt; commit_lens</code> 的有效前缀行</span></div>
+        <div class="handoff__item"><b>输出</b><span><code>GenerationBatchResult(next_draft_input=DFlashDraftInputV2(...))</code></span></div>
+        <div class="handoff__item"><b>下一消费者</b><span>Scheduler 提交跨轮状态；结果处理器输出 token；下一轮提案器读取锚点</span></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section__head">
+        <p class="section__kicker">主视图 · 两轮 / 五条同步状态轨</p>
+        <h2>沿着位置与边界看清 <code>X → a → Y</code></h2>
+        <p class="section__intro">例子固定为 <code>candidates=[X,a,b,c,d]</code>、<code>correct_len=1</code>、<code>commit_lens=2</code>、<code>new_seq_lens=[22]</code>。灰色后缀可能曾是验证候选，但不会在本轮写入 Draft KV。</p>
+      </div>
+
+      <div class="canvas-scroll">
+        <div class="route-entry-grid" aria-label="同一 AcceptOuts 在三条路线中的来源">
+          <div class="route-entry" data-routes="static-greedy"><b>STATIC · 贪心</b><span>Target argmax 先给出 <code>a</code>；下一位置 argmax <code>Y ≠ Draft b</code>，所以得到 <code>correct_len=1, bonus=Y</code>。</span></div>
+          <div class="route-entry" data-routes="compact-sampling"><b>COMPACT · 随机采样</b><span><code>a</code> 通过 <code>min(1,p/q)</code> 接受检验；<code>b</code> 被拒绝后，从残差分布随机抽到 <code>Y</code>。</span></div>
+          <div class="route-entry" data-routes="folded-greedy"><b>FOLDED · 贪心 · 仅 CUDA</b><span>结果仍是贪心前缀语义；满足 NVIDIA CUDA 图条件时由尾处理器计算接受结果。</span></div>
+        </div>
+      </div>
+
+      <div class="visual">
+        <div class="visual__bar"><strong>按时间对齐的 token / 状态轨</strong><button class="zoom-button" type="button" data-zoom-target="#rolling-rails">放大主图</button></div>
+        <div class="visual__body stepper" data-stepper data-steps="7">
+          <div class="stepper__toolbar">
+            <div class="stepper__buttons">
+              <button type="button" data-step-action="prev" aria-label="上一步">←</button>
+              <button type="button" data-step-action="next" aria-label="下一步">→</button>
+              <button type="button" data-step-action="play">播放</button>
+              <button type="button" data-step-action="reset">重置</button>
+            </div>
+            <div class="stepper__progress" aria-hidden="true"><span data-step-progress></span></div>
+            <div class="stepper__status" data-step-status aria-live="polite"></div>
+          </div>
+          <div class="step-copyline" aria-live="polite">
+            <div data-step-copy="0"><b>第 1 步 · 锚点输入</b> 本轮验证链从上轮锚点 <code>X@20</code> 开始。</div>
+            <div data-step-copy="1"><b>第 2 步 · Draft 候选</b> <code>a</code> 是随后被接受的 Draft token；<code>b/c/d</code> 属于未提交后缀。</div>
+            <div data-step-copy="2"><b>第 3 步 · 接受边界</b> Target 概率分布与当前路线的接受机制共同产生 <code>AcceptOuts(correct_len=1, bonus=Y)</code>。</div>
+            <div data-step-copy="3"><b>第 4 步 · 用户输出</b> 用户得到已接受的 Draft token <code>a</code> 与边界 bonus <code>Y</code>，即 <code>[a,Y]</code>。</div>
+            <div data-step-copy="4"><b>第 5 步 · KV 提交</b> 只有输入侧 hidden <code>[X,a]</code> 有资格写 Draft KV；后缀不写也不清零。</div>
+            <div data-step-copy="5"><b>第 6 步 · 下一轮锚点</b> <code>new_seq_lens=[22]</code>；bonus <code>Y</code> 对应下一轮锚点位置 <code>22</code>。</div>
+            <div data-step-copy="6"><b>第 7 步 · 闭合循环</b> <code>make_next_draft_input()</code> 把 <code>Y</code> 放进下一轮 <code>DFlashDraftInputV2.bonus_tokens</code>。</div>
+          </div>
+
+          <div class="rounds-scroll" id="rolling-rails">
+            <div class="rail-board">
+              <div class="rounds" role="table" aria-label="两轮 dSpark token 与状态时间轴">
+                <div class="rounds__head" role="columnheader">状态轨</div>
+                <div class="rounds__head" role="columnheader">第 t 轮 · 位置 20<small>锚点输入行</small></div>
+                <div class="rounds__head" role="columnheader">第 t 轮 · 位置 21<small>已接受 Draft 行</small></div>
+                <div class="rounds__head" role="columnheader">验证 · 位置 22<small>首个未接受 Draft / bonus 边界</small></div>
+                <div class="rounds__head" role="columnheader">验证 · 位置 23<small>后缀</small></div>
+                <div class="rounds__head" role="columnheader">验证 · 位置 24<small>后缀</small></div>
+                <div class="rounds__head commit-boundary" role="columnheader">提交边界<small>长度 / 对象分界</small></div>
+                <div class="rounds__head" role="columnheader">第 t+1 轮 · 位置 22<small>滚动锚点</small></div>
+                <div class="rounds__head" role="columnheader">第 t+1 轮<small>Draft 继续生成</small></div>
+
+                <div class="rounds__label" role="rowheader"><strong>Target 输入</strong><small>已接受输入前缀 + 验证后缀</small></div>
+                <div class="rounds__cell" data-kind="main" data-step-node="0" data-entity="X" tabindex="0"><b>X</b><small>锚点输入</small></div>
+                <div class="rounds__cell" data-kind="main" data-step-node="1" data-entity="a" tabindex="0"><b>a</b><small>Draft 输入</small></div>
+                <div class="rounds__cell" data-kind="off" data-step-node="1"><b>b</b><small class="suffix-note">候选 · 未提交</small></div>
+                <div class="rounds__cell" data-kind="off" data-step-node="1"><b>c</b><small class="suffix-note">候选 · 未提交</small></div>
+                <div class="rounds__cell" data-kind="off" data-step-node="1"><b>d</b><small class="suffix-note">候选 · 未提交</small></div>
+                <div class="rounds__cell commit-boundary" data-kind="guard" data-step-node="4"><b>[X,a]</b><small>已提交的输入侧行</small></div>
+                <div class="rounds__cell next-round-cell" data-kind="data" data-step-node="6" data-entity="Y" tabindex="0"><b>Y @22</b><small>下一轮输入锚点</small></div>
+                <div class="rounds__cell next-round-cell" data-kind="data" data-step-node="6"><b>draft′…</b><small>新提案</small></div>
+
+                <div class="rounds__label" role="rowheader"><strong>Target 分布 / 实际结果</strong><small>路线决定 argmax 或拒绝采样</small></div>
+                <div class="rounds__cell" data-kind="data" data-step-node="2" data-entity="a" tabindex="0"><b>P_T(a|X)</b><small>a 被接受：argmax 匹配或 p/q 检验</small></div>
+                <div class="rounds__cell" data-kind="data" data-step-node="2" data-entity="Y" tabindex="0"><b>a 之后的边界</b><small>bonus 结果 Y</small></div>
+                <div class="rounds__cell" data-kind="fail" data-step-node="2"><b>Draft b 未被接受</b><small>按路线发生不匹配或拒绝</small></div>
+                <div class="rounds__cell" data-kind="off" data-step-node="2"><b>无关</b><small>拒绝后的 logits</small></div>
+                <div class="rounds__cell" data-kind="off" data-step-node="2"><b>无关</b><small>拒绝后的 logits</small></div>
+                <div class="rounds__cell commit-boundary" data-kind="guard" data-step-node="2"><b>AcceptOuts</b><small>correct_len=1 · bonus=Y</small></div>
+                <div class="rounds__cell next-round-cell" data-kind="off" data-step-node="6"><b>不复用</b><small>下一轮重新前向计算</small></div>
+                <div class="rounds__cell next-round-cell" data-kind="data" data-step-node="6"><b>下一组 logits</b><small>由新输入行计算</small></div>
+
+                <div class="rounds__label" role="rowheader"><strong>用户可见输出</strong><small>Req.output_ids 状态轨</small></div>
+                <div class="rounds__cell" data-kind="off" data-step-node="0" data-entity="X"><b>X</b><small>本步之前已经可见</small></div>
+                <div class="rounds__cell" data-kind="main" data-step-node="3" data-entity="a" tabindex="0"><b>a</b><small>已接受的 Draft</small></div>
+                <div class="rounds__cell" data-kind="main" data-step-node="3" data-entity="Y" tabindex="0"><b>Y</b><small>bonus 输出</small></div>
+                <div class="rounds__cell" data-kind="off" data-step-node="3">—</div>
+                <div class="rounds__cell" data-kind="off" data-step-node="3">—</div>
+                <div class="rounds__cell commit-boundary" data-kind="main" data-step-node="3"><b>[a,Y]</b><small>accept_lens=2 的有效前缀</small></div>
+                <div class="rounds__cell next-round-cell" data-kind="off" data-step-node="6"><b>Y 已输出</b><small>作为锚点时属于内部状态</small></div>
+                <div class="rounds__cell next-round-cell" data-kind="off" data-step-node="6">—</div>
+
+                <div class="rounds__label" role="rowheader"><strong>Draft KV 提交</strong><small>物理写入受 commit_lens 约束</small></div>
+                <div class="rounds__cell" data-kind="main" data-step-node="4" data-entity="X" tabindex="0"><b>写入 K/V(X)</b><small>有效前缀</small></div>
+                <div class="rounds__cell" data-kind="main" data-step-node="4" data-entity="a" tabindex="0"><b>写入 K/V(a)</b><small>有效前缀</small></div>
+                <div class="rounds__cell" data-kind="off" data-step-node="4"><b>不写入</b><small>旧字节保持不变</small></div>
+                <div class="rounds__cell" data-kind="off" data-step-node="4"><b>不写入</b><small>旧字节保持不变</small></div>
+                <div class="rounds__cell" data-kind="off" data-step-node="4"><b>不写入</b><small>旧字节保持不变</small></div>
+                <div class="rounds__cell commit-boundary" data-kind="main" data-step-node="4"><b>commit_lens=2</b><small>新逻辑长度=22</small></div>
+                <div class="rounds__cell next-round-cell" data-kind="guard" data-step-node="5" data-entity="Y"><b>Y 尚未写</b><small>本轮没有 Y 的 Target 输入 hidden</small></div>
+                <div class="rounds__cell next-round-cell" data-kind="data" data-step-node="6"><b>后续写入</b><small>下一轮产生 Target hidden 之后</small></div>
+
+                <div class="rounds__label" role="rowheader"><strong>下一轮锚点</strong><small>DFlashDraftInputV2 状态轨</small></div>
+                <div class="rounds__cell" data-kind="off" data-step-node="5">—</div>
+                <div class="rounds__cell" data-kind="off" data-step-node="5">—</div>
+                <div class="rounds__cell" data-kind="guard" data-step-node="5" data-entity="Y" tabindex="0"><b>Y @22</b><small>滚动锚点</small></div>
+                <div class="rounds__cell" data-kind="off" data-step-node="5">—</div>
+                <div class="rounds__cell" data-kind="off" data-step-node="5">—</div>
+                <div class="rounds__cell commit-boundary" data-kind="guard" data-step-node="5"><b>bonus_tokens=[Y]</b><small>new_seq_lens=[22]</small></div>
+                <div class="rounds__cell next-round-cell" data-kind="data" data-step-node="6"><b>DFlashDraftInputV2</b><small>overlap 时携带 future_indices</small></div>
+                <div class="rounds__cell next-round-cell" data-kind="main" data-step-node="6" data-entity="Y"><b>提案器读取 Y</b><small>锚点启动下一条生成链</small></div>
+              </div>
+
+              <div class="anchor-loop" data-step-node="6" aria-label="Y 回到下一轮 bonus_tokens 的闭环">
+                <svg viewBox="0 0 960 122" preserveAspectRatio="none" aria-hidden="true">
+                  <defs><marker id="rail-loop-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--guard)"></path></marker></defs>
+                  <path d="M 920 28 C 920 110, 170 110, 170 34" class="edge-return" stroke="var(--guard)" marker-end="url(#rail-loop-arrow)"></path>
+                </svg>
+                <div class="anchor-loop__bonus">accept.bonus = Y<br><span class="mono">self : sglang.srt.speculative.dspark_components.dspark_worker_v2.DSparkWorkerV2<br>._forward_decode()</span></div>
+                <div class="anchor-loop__draft"><b>next_draft_input : DFlashDraftInputV2</b><span class="mono">sglang.srt.speculative.dflash_info_v2.DFlashDraftInputV2<br>make_next_draft_input(bonus_tokens=Y, new_seq_lens=22)</span></div>
+                <div class="loop-token" aria-hidden="true">Y</div>
+                <span class="anchor-loop__label">回环 · 下一轮</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section__head">
+        <p class="section__kicker">辅助视图 · 隐藏状态→KV 与三个后继消费者</p>
+        <h2>物理 KV 写入与跨轮状态提交是两件事</h2>
+        <p class="section__intro">上半部分追踪 worker 内的 hidden/KV 数据与持有者；下半部分追踪 worker 返回后，非重叠、重叠与输出处理各自消费什么。</p>
+      </div>
+      <div class="visual">
+        <div class="visual__bar"><strong>所有权 / 数据流 / 状态分流</strong><button class="zoom-button" type="button" data-zoom-target="#hidden-kv-fanout">放大辅图</button></div>
+        <div class="visual__body canvas-scroll" id="hidden-kv-fanout">
+          <div class="pipeline-wrap">
+            <div class="route-entry-grid" aria-label="三条路线的 hidden 来源与提交持有者">
+              <div class="route-entry" data-routes="static-greedy"><b>STATIC · 贪心</b><span><code>logits_output.hidden_states</code> → <code>TargetVerifyExecutor.commit_hidden(run_compact=False)</code></span></div>
+              <div class="route-entry" data-routes="compact-sampling"><b>COMPACT · 随机采样</b><span><code>hidden_strided</code> → <code>TargetVerifyExecutor.commit_hidden(run_compact=True)</code> → <code>inject_ragged()</code></span></div>
+              <div class="route-entry" data-routes="folded-greedy"><b>FOLDED · 贪心</b><span><code>folded_commit=True</code> 时 CUDA 图尾处理器已负责提交；后置 Python <code>commit_hidden()</code> 被跳过。</span></div>
+            </div>
+
+            <div class="pipeline" aria-label="Target auxiliary hidden 到 Draft KV pool">
+              <div class="pipeline__node" data-kind="data">
+                <span class="instance">target_verify.logits_output / hidden_strided</span>
+                <b>Target 辅助 hidden</b>
+                <span class="fqcn">sglang.srt.layers.logits_processor.LogitsProcessorOutput + torch.Tensor</span>
+                <span class="method">[B×W,H_aux] 输入侧 hidden 行</span>
+              </div>
+              <div class="pipeline__node" data-kind="guard">
+                <span class="instance">self._verify_executor : TargetVerifyExecutor</span>
+                <b>重塑 / 传递完整 hidden + commit_lens</b>
+                <span class="fqcn">sglang.srt.speculative.dspark_components.dspark_verify.TargetVerifyExecutor</span>
+                <span class="method">commit_hidden(..., commit_lens, run_compact)；这里不先裁掉后缀行</span>
+              </div>
+              <div class="pipeline__node" data-kind="main">
+                <span class="instance">self._kv_injector : TargetHiddenKvInjector</span>
+                <b>构造缓存位置 / 前缀有效掩码</b>
+                <span class="fqcn">sglang.srt.speculative.dspark_components.dspark_kv_inject.TargetHiddenKvInjector</span>
+                <span class="method">inject_target_hidden() / inject_ragged()</span>
+              </div>
+              <div class="pipeline__node" data-kind="cuda">
+                <span class="instance">draft_model : 按模型选择的 dSpark Draft</span>
+                <b>投影可处理完整行 → 每层 K/V</b>
+                <span class="fqcn">sglang.srt.models.dspark.DSparkDraftModel / Qwen3DSparkModel<br>sglang.srt.models.deepseek_v4_dspark.DeepseekV4ForCausalLMDSpark</span>
+                <span class="method">write_target_hidden_kv() → project_target_hidden()；是否物理写入由下游位置/掩码决定</span>
+              </div>
+              <div class="pipeline__node" data-kind="main">
+                <span class="instance">draft_model_runner.token_to_kv_pool</span>
+                <b>掩码 / 无效位置控制物理 K/V 写入</b>
+                <span class="fqcn">sglang.srt.mem_cache.memory_pool.MHATokenToKVPool<br>sglang.srt.mem_cache.deepseek_v4_memory_pool.DeepSeekV4TokenToKVPool</span>
+                <div class="kv-cells" aria-label="KV 写入掩码">
+                  <span class="kv-cell" data-valid="true">X<br>K/V</span>
+                  <span class="kv-cell" data-valid="true">a<br>K/V</span>
+                  <span class="kv-cell">b<br>不写入</span>
+                  <span class="kv-cell">c<br>不写入</span>
+                  <span class="kv-cell">d<br>不写入</span>
+                </div>
+                <span class="method">后缀字节不写、不清零；由掩码/无效位置与 seq_lens 保持不可见。随后 worker 令 logits_output.hidden_states=None。</span>
+              </div>
+            </div>
+
+            <div class="fanout-wrap">
+              <div class="early-publish" aria-label="重叠模式在 worker 返回前提前发布的时序">
+                <div class="early-publish__node" data-kind="main"><b>1 · accept_and_finalize()</b><span>产生 <code>accept.new_seq_lens</code>、<code>bonus</code> 与 <code>commit_lens</code>。</span></div>
+                <div class="early-publish__node"><b>2 · 仅重叠模式 · on_publish(...)</b><span>发生在接受之后、hidden 提交之前；它不是返回后的结果消费者。</span></div>
+                <div class="early-publish__node" data-kind="data"><b>3 · FutureMap.publish()</b><span>按 <code>future_indices</code> 发布 <code>new_seq_lens</code>；存在置信度时一并转发。</span></div>
+                <div class="early-publish__node" data-kind="main"><b>4 · commit_hidden()</b><span>非折叠提交路径在发布后完成 Draft KV 写入。</span></div>
+                <div class="early-publish__node" data-kind="data"><b>5 · 返回结果</b><span>之后才构造并返回 <code>GenerationBatchResult</code>。</span></div>
+              </div>
+
+              <div class="fanout" aria-label="GenerationBatchResult 的三个下一消费者">
+                <div class="fanout__source">
+                  <b>result : GenerationBatchResult</b>
+                  <span class="mono">sglang.srt.managers.utils.GenerationBatchResult</span>
+                  <span><code>next_draft_input</code><br><code>new_seq_lens=[22]</code><br><code>next_token_ids=[a,Y,c,d,0]</code><br><code>accept_lens=[2]</code> · 固定步长 W=5</span>
+                </div>
+                <div class="fanout__target" data-kind="main">
+                  <b>非重叠模式 · 直接提交</b>
+                  <span><code>scheduler : Scheduler</code><br><code>batch.spec_info = result.next_draft_input</code><br><code>batch.seq_lens = result.new_seq_lens</code></span>
+                  <span class="mono">sglang.srt.managers.scheduler.Scheduler.run_batch() · 恢复后的 ScheduleBatch 被显式推进</span>
+                </div>
+                <div class="fanout__target" data-kind="guard">
+                  <b>重叠模式 · 返回后暂存 / 下一轮解析</b>
+                  <span><code>Scheduler._relay_forward_payload(..., result)</code> → <code>FutureMap.stash(RelayPayload(bonus_tokens=Y))</code>；Scheduler 再安装 <code>batch.spec_info=result.next_draft_input</code> 与 <code>future_indices</code>。下一轮 <code>resolve_seq_lens_cpu()</code> 读取先前发布的长度，<code>resolve_forward_inputs()</code> 读取暂存的 bonus。</span>
+                  <span class="mono">sglang.srt.managers.overlap_utils.FutureMap</span>
+                </div>
+                <div class="fanout__target" data-kind="data">
+                  <b>输出 · Scheduler 结果处理器</b>
+                  <span><code>scheduler.batch_result_processor : SchedulerBatchResultProcessor</code><br><code>process_batch_result_decode()</code> → <code>_resolve_spec_v2_tokens()</code> 按固定步长 5 与 <code>accept_lens=2</code> 从底层缓冲行 <code>[a,Y,c,d,0]</code> 取有效前缀 <code>[a,Y]</code>；请求未结束且未撤回时先执行 <code>req.kv_committed_len += 2</code>，随后解码结果处理器才执行 <code>req.output_ids.extend([a,Y])</code>。</span>
+                  <span class="mono">sglang.srt.managers.scheduler_components.batch_result_processor.SchedulerBatchResultProcessor<br><a data-nav href="dspark-draft-proposal.html">下一轮 → 03 Draft 提案</a></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <details class="source-details">
+        <summary>源码锚点、为什么 / 错误边界</summary>
+        <div class="source-details__body">
+          <div class="source-anchor"><code>实际调用链 · 按实例追踪</code><span><code>self : DSparkWorkerV2</code> → <code>self._verify_executor : TargetVerifyExecutor.commit_hidden()</code> → <code>self._verify_executor.kv_injector is self._kv_injector : TargetHiddenKvInjector</code> → <code>draft_model.write_target_hidden_kv()</code> → 具体 KV pool 的前缀有效写入；随后回到 worker 构造 <code>DFlashDraftInputV2</code> 与 <code>GenerationBatchResult</code>。</span></div>
+          <div class="source-anchor"><code>标准 Draft 模型内部 · hidden 到每层 K/V</code><span><code>project_target_hidden()</code> 将 <code>[N,H_aux]</code> 投影为 <code>[N,H_d]</code>；各 Draft layer 生成 K/V，K 再执行归一化与按真实 <code>positions</code> 的 RoPE。最终只有 <code>col &lt; commit_lens</code> 的位置写入；DSv4/MLA 则由无效位置与 fused writer 实现同一提交边界。</span></div>
+          <div class="source-anchor"><code>复用边界 · Prefill 也使用 TargetHiddenKvInjector</code><span>Prefill 启动同样会调用 <code>inject_target_hidden()</code> 把 Target hidden 桥接进 Draft KV，但它处理的是 prompt/首个 bonus 的启动状态；本页只负责 Decode 接受后的滚动提交，启动例子见 <a data-nav href="dspark-prefill-bootstrap.html">02 · Prefill 启动桥接</a>。</span></div>
+          <div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:627–700</code><span><code>accept_and_finalize()</code> → 可选 <code>commit_hidden()</code> → <code>make_next_draft_input()</code> → <code>GenerationBatchResult</code>。</span></div>
+          <div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_verify.py:287–318</code><span>压紧路径调用 <code>inject_ragged()</code>；非压紧路径重塑 hidden 后调用 <code>inject_target_hidden()</code>。</span></div>
+          <div class="source-anchor"><code>python/sglang/srt/speculative/dspark_components/dspark_kv_inject.py:31–157</code><span><code>commit_lens</code> 决定前缀有效掩码与缓存位置；标准与 MLA 内存池分支都不会把后缀当作有效提交。</span></div>
+          <div class="source-anchor"><code>python/sglang/srt/managers/scheduler.py:3398–3518, 3608–3621 · overlap_utils.py:232–530</code><span>重叠模式在 worker 内提前发布长度，返回后由 <code>_relay_forward_payload()</code> 经 <code>FutureMap.stash()</code> 转发 bonus；非重叠模式在隔离区恢复后直接重绑 <code>spec_info/seq_lens</code>。</span></div>
+          <div class="source-anchor"><code>python/sglang/srt/managers/overlap_utils.py:84–116</code><span>下一轮 <code>resolve_forward_inputs()</code> 仅在重叠投机路径从 FutureMap 解析转发的 bonus 与附加字段。</span></div>
+          <div class="source-anchor"><code>python/sglang/srt/managers/scheduler_components/batch_result_processor.py:546–621</code><span><code>_resolve_spec_v2_tokens()</code> 以每请求固定步长与 <code>accept_lens</code> 裁出底层缓冲行的有效输出前缀，并在有效请求上推进 <code>Req.kv_committed_len</code>。</span></div>
+          <div class="source-anchor"><code>python/sglang/srt/managers/scheduler_components/batch_result_processor.py:724–825</code><span><code>process_batch_result_decode()</code> 将规范化后的每请求 token 列表追加到 <code>Req.output_ids</code>。</span></div>
+          <div class="callouts">
+            <div class="callout" data-kind="guard"><b>为什么 · 先执行接受</b><p>只有接受阶段才给出每个请求的 <code>commit_lens</code>；更早写 KV 无法知道哪段后缀必须保持不可见。</p></div>
+            <div class="callout" data-kind="guard"><b>为什么 · bonus 本轮不能写 KV</b><p><code>Y</code> 来自输入行 <code>a</code> 的 next-token 分布，本轮并不存在输入 token <code>Y</code> 对应的 Target hidden。直接写入既没有真实 hidden，也会把逻辑长度提前一格。</p></div>
+            <div class="callout" data-kind="fail"><b>错误 · commit_lens 偏长或偏短</b><p>偏长会让未接受后缀获得物理 K/V；若长度元数据也随之扩张，它会错误进入下一轮可见历史。偏短则丢掉已经接受的上下文，使下一轮 Draft 从不完整前缀继续。</p></div>
+            <div class="callout" data-kind="fail"><b>错误 · 跨轮携带 DFlashVerifyInput</b><p><code>DFlashVerifyInput</code> 保存本轮的行、布局和位置；把它当跨轮状态会复用旧窗口。下一轮必须使用新的 <code>DFlashDraftInputV2</code>。</p></div>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <nav class="pager" aria-label="相邻章节">
+      <a data-nav href="dspark-sampling-rejection-lab.html">← 06A · 拒绝采样修正（本页上游专题）</a>
+      <a data-nav href="dspark-folded-fast-path.html">08 · 折叠快路（CUDA 图内提交）→</a>
+    </nav>
+    <footer class="site-footer">证据边界 · 仅依据当前源码做静态核验 · 不依赖外部资源 · 请保留整个 visualizations/ 目录，以便加载共享资源。</footer>
+  </main>
+</body>
+</html>

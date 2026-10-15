@@ -215,7 +215,7 @@ class KVCacheConfigurator:
         )
         quant_method.load_scales_from_model(self.model)
         return quant_method
-
+    #pre_model_load_memory 表示加载权重前测到的剩余显存，以 GiB 为单位；不是显卡标称总容量
     def configure(self, *, pre_model_load_memory: int) -> KVCacheConfigResult:
         """Apply a resolved MemoryPoolConfig and initialize pools."""
         if not self.spec_algorithm.is_none() and self.is_draft_worker:
@@ -223,7 +223,7 @@ class KVCacheConfigurator:
                 self.memory_pool_config is not None
             ), "Draft worker requires memory_pool_config"
             config = self.memory_pool_config
-        else:
+        else: # target计算 “字节预算、token 容量、请求容量”三个量
             config = self._resolve_memory_pool_config(pre_model_load_memory)
 
         sizes = self._derive_pool_sizes(config=config)
@@ -339,8 +339,8 @@ class KVCacheConfigurator:
                 token_to_kv_pool_allocator=bundle.token_to_kv_pool_allocator,
                 unified_memory_pool=bundle.unified_memory_pool,
             )
-
-        # Initialize req_to_token_pool
+        # A1： 建立  req_to_token_pool; 整数索引表, 请求行号+序列位置，定位到 一个 kv slot，比如 7；通过这个 slot 再去token_to_kv_pool里结合模型层号，找 kv
+        # Initialize req_to_token_pool # 分配请求行、填写映射、归还请求行
         if req_to_token_pool is None:
             req_to_token_pool = self._build_req_to_token_pool(
                 max_num_reqs=sizes.max_running_requests
@@ -374,14 +374,14 @@ class KVCacheConfigurator:
         self._validate_prefill_only_disable_kv_cache_pool_family(
             is_dsa_model, is_dsv4_model, current_platform
         )
-
-        token_to_kv_pool = self._build_token_to_kv_pool(
+        # A2: 建 token_to_kv pool：保存模型计算出的 K/V 张量， 模型层号＋KV slot 得到 K/V 向量中的数值就，比如 k_buffer[层][slot, head, dim]
+        token_to_kv_pool = self._build_token_to_kv_pool( # 行按指定槽位写入或读取 K/V
             sizes=sizes,
             is_dsa_model=is_dsa_model,
             is_dsv4_model=is_dsv4_model,
             req_to_token_pool=req_to_token_pool,
         )
-
+        # A3: 负责管理 KV 存储位置的使用权：哪些槽位空闲、给新 token 分配哪些槽位、哪些槽位归还后可以再次使用。
         token_to_kv_pool_allocator = self._build_token_to_kv_pool_allocator(
             sizes=sizes,
             token_to_kv_pool=token_to_kv_pool,
@@ -634,7 +634,7 @@ class KVCacheConfigurator:
                 max_num_reqs=max_num_reqs,
                 extra_max_context_len=extra_max_context_len,
             )
-        else:
+        else: # 非pd分离的p 和 d， pd 分离的 p 三者默认都是走的这个
             req_to_token_pool = self._build_default_req_pool(
                 max_num_reqs=max_num_reqs,
                 extra_max_context_len=extra_max_context_len,
@@ -854,7 +854,7 @@ class KVCacheConfigurator:
                     req_to_token_pool=req_to_token_pool,
                     mha_pool_class=mha_pool_class,
                 )
-            else:
+            else: # 最普通的链路， 建立 mha
                 quant_method = None
                 if is_float4_e2m1fn_x2(self.kv_cache_dtype):
                     assert (
@@ -1664,14 +1664,14 @@ class KVCacheConfigurator:
         return max_num_reqs
 
     def _resolve_memory_pool_config(
-        self, pre_model_load_memory: int
-    ) -> MemoryPoolConfig:
+        self, pre_model_load_memory: int# 加载模型此前剩余 80 GiB，加载完现在剩余 30 GiB，mem_fraction_static=0.9
+    ) -> MemoryPoolConfig:#预留空间 = 80 × 0.1 = 8 GiB ; KV 预算  = 30 - 8 = 22 GiB;  所以Scheduler 先加载 Target 和 Draft 权重，再开始建池：测量当前剩余显存时，已加载权重占用的空间已经被扣除了。
         """Profile GPU memory and resolve all pool parameters into a config."""
         from sglang.srt.model_executor.pool_configurator import (
             create_memory_pool_configurator,
         )
 
-        available_bytes = self._profile_available_bytes(pre_model_load_memory)
+        available_bytes = self._profile_available_bytes(pre_model_load_memory) #就上面的公式
         config = self.config_from_budget(available_bytes)
         config.max_running_requests = self.resolve_max_num_reqs(
             config.max_total_num_tokens
@@ -1683,7 +1683,7 @@ class KVCacheConfigurator:
 
     def config_from_budget(
         self, budget_bytes: int, *, cap_tokens: Optional[int] = None
-    ) -> MemoryPoolConfig:
+    ) -> MemoryPoolConfig: # 将kv 的byte预算转化成 pool 配置器
         """Turn a KV byte budget into a pool config via the configurator, re-applying
         the external token constraints (user cap, page alignment, PP sync) and the
         optional ``cap_tokens`` clamp."""

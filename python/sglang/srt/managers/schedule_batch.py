@@ -1092,9 +1092,9 @@ class Req(ReqDllmMixin):
     @property
     def is_prefill_only(self) -> bool:
         """Check if this request is prefill-only (no token generation needed)."""
-        # NOTE: when spec is enabled, prefill_only optimizations are disabled
-
-        spec_alg = get_server_args().speculative_algorithm
+        # NOTE: when spec is enabled, prefill_only optimizations are disabled  # 解惑：指 max_new_tokens=0 的“无需生成”（如评分/logprob、前缀预缓存），不是普通请求当前正在 prefill/chunk。
+        # PD 的 Prefill 节点也不等于此标志：其接收路径将 max_new_tokens 设为 1（disaggregation/prefill.py）。
+        spec_alg = get_server_args().speculative_algorithm  # EAGLE/dFlash/dSpark 等投机算法均禁用此优化。
         return self.sampling_params.max_new_tokens == 0 and spec_alg is None
 
     @property
@@ -1906,7 +1906,7 @@ class ScheduleBatch(ScheduleBatchDisaggregationDecodeMixin):
     orig_seq_lens: torch.Tensor = None  # shape: [b], int32
 
     # The output locations of the KV cache
-    out_cache_loc: torch.Tensor = None  # shape: [b], int64
+    out_cache_loc: torch.Tensor = None  # shape: [b], int64 # 这个原生 shape 的注释太宽泛了，只有普通 decode 是batch size，其他情况都不相同;
     # DSV4-NPU: per-pool slot bundle from DSV4NPUTokenToKVPoolAllocator (None
     # elsewhere); c4/c128 state lens ride on ``batch.dsv4_state_lens``.
     out_cache_loc_dsv4: Optional[Any] = None
@@ -1947,7 +1947,7 @@ class ScheduleBatch(ScheduleBatchDisaggregationDecodeMixin):
     # For processing logprobs
     return_logprob: bool = False
 
-    # Whether this batch is prefill-only (no token generation needed)
+    # Whether this batch is prefill-only (no token generation needed)  # 解惑：整批请求均无需生成；传入 ForwardBatch 后语义不变，与当前 forward_mode 是否为 prefill 无关。
     is_prefill_only: bool = False
 
     # Speculative decoding
@@ -2025,7 +2025,7 @@ class ScheduleBatch(ScheduleBatchDisaggregationDecodeMixin):
             device=req_to_token_pool.device,
             spec_algorithm=spec_algorithm,
             return_hidden_states=any(req.return_hidden_states for req in reqs),
-            is_prefill_only=all(req.is_prefill_only for req in reqs),
+            is_prefill_only=all(req.is_prefill_only for req in reqs),  # 有一个请求需要生成，这里就是 False。
             chunked_req=chunked_req,
             chunked_req_next_prompt_token=_compute_chunked_req_next_prompt_token(
                 chunked_req,
@@ -2592,7 +2592,7 @@ class ScheduleBatch(ScheduleBatchDisaggregationDecodeMixin):
         self.extend_logprob_start_lens = (
             self.extend_logprob_start_lens + [0] * running_bs
         )
-        self.is_prefill_only = False
+        self.is_prefill_only = False  # Mixed 含 Decode 请求，不再是整批无需生成。
 
     def new_tokens_required_next_decode(
         self, selected_indices: Optional[List[int]] = None
@@ -3049,7 +3049,7 @@ class ScheduleBatch(ScheduleBatchDisaggregationDecodeMixin):
         self.return_hidden_states = (
             self.return_hidden_states or other.return_hidden_states
         )
-        self.is_prefill_only = self.is_prefill_only and other.is_prefill_only
+        self.is_prefill_only = self.is_prefill_only and other.is_prefill_only  # 合并后仍需两批都无需生成。
 
         if self.spec_info:
             self.spec_info.merge_batch(other.spec_info)

@@ -93,14 +93,14 @@ class TargetVerifyExecutor:
         *,
         folded_accept: bool,
         bs: int,
-        verify_ids_2d: torch.Tensor,
-        target_logits: Optional[torch.Tensor],
+        verify_ids_2d: torch.Tensor,  # [bs, verify_w=gamma+1]  col0=anchor(上轮bonus), col1~gamma=草稿token
+        target_logits: Optional[torch.Tensor],  # [bs*verify_w, vocab]  target模型verify forward输出的logits
         draft_block: DraftBlockResult,
         sampling_info,
         draft_input: DFlashDraftInputV2,
         layout: Optional[RaggedVerifyLayout],
-        prefix_lens: torch.Tensor,
-        draft_tokens: torch.Tensor,
+        prefix_lens: torch.Tensor,  # [bs]  各请求已commit的序列长度(token数)
+        draft_tokens: torch.Tensor,  # [bs, gamma]  草稿模型采样出的gamma个token(不含anchor)
     ) -> AcceptOuts:
         """Produce the per-request accept outcome after target verify.
 
@@ -112,7 +112,7 @@ class TargetVerifyExecutor:
         if folded_accept:
             return self.verify_epilogue.read_accept(bs)
 
-        correct_len, bonus, cap_trim_lens = accept_draft_tokens(
+        correct_len, bonus, cap_trim_lens = accept_draft_tokens(  # 返回 [bs]的 correct_len(int32)/bonus(int64)/cap_trim_lens(int32)
             candidates=verify_ids_2d,
             target_logits=target_logits,
             draft_block=draft_block,
@@ -127,12 +127,12 @@ class TargetVerifyExecutor:
                 bs=bs, dtype=correct_len.dtype, device=correct_len.device
             )
 
-        finalized = FinalizeAcceptLens.execute(
+        finalized = FinalizeAcceptLens.execute(  # commit_lens=[bs]int32, new_seq_lens=[bs]int64, cap_trim_lens=[bs]int32
             correct_len=correct_len,
             cap_trim_lens=cap_trim_lens,
             prefix_lens=prefix_lens,
         )
-        out_tokens = BuildOutTokens.execute(
+        out_tokens = BuildOutTokens.execute(  # → [bs, verify_w]  col0~correct_len为接受token+bonus, 其余列填0
             draft_tokens=draft_tokens,
             correct_len=correct_len,
             bonus=bonus,
@@ -140,12 +140,12 @@ class TargetVerifyExecutor:
             gamma=self.gamma,
         )
         return AcceptOuts(
-            correct_len=correct_len,
-            bonus=bonus,
-            cap_trim_lens=finalized.cap_trim_lens,
-            commit_lens=finalized.commit_lens,
-            new_seq_lens=finalized.new_seq_lens,
-            out_tokens=out_tokens,
+            correct_len=correct_len,  # [bs] int32  接受的草稿token数, 范围[0,gamma]
+            bonus=bonus,  # [bs] int64  第一个不匹配位置的target预测token
+            cap_trim_lens=finalized.cap_trim_lens,  # [bs] int32  ragged截断量: 本该accept但因窗口不够宽被丢弃的草稿数(无ragged时全0)
+            commit_lens=finalized.commit_lens,  # [bs] int32  = correct_len+1, 实际commit的token数
+            new_seq_lens=finalized.new_seq_lens,  # [bs] int64  = prefix_lens+commit_lens, 更新后序列长度
+            out_tokens=out_tokens,  # [bs, verify_w]  col0~correct_len有效(接受的draft+bonus), 其余列为0
         )
 
     def _simulated_correct_len(
@@ -358,15 +358,15 @@ class TargetVerifyExecutor:
         self,
         *,
         batch: ScheduleBatch,
-        layout: RaggedVerifyLayout,
-        draft_block_ids: torch.Tensor,
-        draft_tokens: torch.Tensor,
+        layout: RaggedVerifyLayout,  # 例：bs=2、verify_w=4、verify_lens=[4,2]，有效行共 6；若匹配 8-token 档，则 graph_num_tokens=8。
+        draft_block_ids: torch.Tensor,  # [bs, gamma]  col0=anchor(上轮bonus), col1~=MASK
+        draft_tokens: torch.Tensor,  # [bs, gamma]  草稿模型采样出的token
         bs: int,
         device: str,
         sampling_info,
-        inject_gate: bool = False,
+        inject_gate: bool = False,  # 仅控制已捕获 epilogue 的 KV 注入 gate；还须具备 folds_commit 能力，且本轮确实重放图。
     ) -> tuple[TargetVerifyResult, torch.Tensor]:
-        ragged_window = BuildRaggedVerifyWindow.execute(
+        ragged_window = BuildRaggedVerifyWindow.execute(  # 将draft数据压紧成compact flat格式
             batch=batch,
             layout=layout,
             draft_block_ids=draft_block_ids,
@@ -375,53 +375,53 @@ class TargetVerifyExecutor:
             device=device,
             verify_num_draft_tokens=self.verify_num_draft_tokens,
             model_runner=self.model_runner,
-        )
+        )  # → RaggedVerifyWindow: verify_ids/positions/verify_cache_loc 均为 [graph_num_tokens] e.g.[8]
         if self.verify_epilogue is not None:
-            self.verify_epilogue.begin_step(layout.verify_lens, armed=inject_gate)
-        target_verify = self._run_ragged(
+            self.verify_epilogue.begin_step(layout.verify_lens, armed=inject_gate)  # 原地刷新 verify_lens_buf、清理多余请求槽位，并写 inject_gate_buf；图仍读取这些固定地址。
+        target_verify = self._run_ragged(  # 按 compact 布局的 graph_num_tokens 行执行；选档 padding 后不保证少于 bs*verify_w，此例二者都是 8。
             batch=batch,
             layout=layout,
             ragged_window=ragged_window,
             sampling_info=sampling_info,
         )
-        logits_output = target_verify.logits_output
+        logits_output = target_verify.logits_output  # 此时仍是 compact token 轴；logits 为 [graph_num_tokens, vocab]，hidden_states 为 [graph_num_tokens, hidden_dim]。
 
-        stride = self.verify_num_draft_tokens
+        stride = self.verify_num_draft_tokens  # = verify_w = gamma+1, e.g. 4
         if self.verify_epilogue is not None and target_verify.can_run_cuda_graph:
-            strided_logits = self.verify_epilogue.strided_logits
-            hidden_strided = self.verify_epilogue.strided_hidden
+            strided_logits = self.verify_epilogue.strided_logits  # graph内epilogue已做scatter, 直接读结果 [max_bs*stride, vocab]
+            hidden_strided = self.verify_epilogue.strided_hidden  # [max_bs*stride, hidden_dim]
             assert strided_logits is not None and hidden_strided is not None, (
                 "verify epilogue buffers unwritten after a graph replay -- the "
                 "replayed graph was captured without the epilogue"
             )
-            strided_logits = strided_logits[: bs * stride]
-            hidden_strided = hidden_strided[: bs * stride]
+            strided_logits = strided_logits[: bs * stride]  # 截取有效部分 [bs*stride, vocab]
+            hidden_strided = hidden_strided[: bs * stride]  # 截取有效部分 [bs*stride, hidden_dim]
         else:
-            compact_logits = logits_output.next_token_logits
-            strided_logits = ScatterCompactToStrided.execute(
+            compact_logits = logits_output.next_token_logits  # [graph_num_tokens, vocab] e.g.[8,32000]: req0=行0~3, req1=行4~5, 行6~7为padding
+            strided_logits = ScatterCompactToStrided.execute(  # 将压紧的6有效行散布回[bs*stride,vocab]=[8,32000]
                 compact=compact_logits,
                 layout=layout,
-                fill_value=0.0,
+                fill_value=0.0,  # req1未验证的col2/col3位置填0
                 verify_num_draft_tokens=stride,
             )
-            compact_hidden = logits_output.hidden_states
+            compact_hidden = logits_output.hidden_states  # [graph_num_tokens, hidden_dim] 同compact_logits布局
             if compact_hidden is None:
                 raise RuntimeError(
                     "DSpark verify requires target hidden states, got None."
                 )
-            hidden_strided = ScatterCompactToStrided.execute(
+            hidden_strided = ScatterCompactToStrided.execute(  # [graph_num_tokens, hidden] → [bs*stride, hidden]
                 compact=compact_hidden,
                 layout=layout,
                 fill_value=0.0,
                 verify_num_draft_tokens=stride,
             )
-        apply_logits_adjustments_strided(
-            next_token_logits=strided_logits,
+        apply_logits_adjustments_strided(  # 按每请求的完整 stride 原地调整 logits，不会因填充值为 0 而跳过；有效验证范围由 verify_lens 限制。
+            next_token_logits=strided_logits,  # [bs*stride, vocab]
             sampling_info=sampling_info,
             verify_num_draft_tokens=stride,
         )
-        logits_output.next_token_logits = strided_logits
-        logits_output.hidden_states = hidden_strided
+        logits_output.next_token_logits = strided_logits  # 写回: [bs*stride, vocab] 与run_non_compact格式统一
+        logits_output.hidden_states = hidden_strided  # 写回: [bs*stride, hidden] 供后续commit_hidden使用
         return target_verify, hidden_strided
 
     def _verify_backend_self_adds_seq_lens(self) -> bool:
@@ -657,17 +657,17 @@ class DsparkVerifyEpilogue:
 
 def accept_draft_tokens(
     *,
-    candidates: torch.Tensor,
-    target_logits: torch.Tensor,
+    candidates: torch.Tensor,  # [bs, verify_w=gamma+1]  col0=anchor, col1~gamma=草稿token
+    target_logits: torch.Tensor,  # [bs*verify_w, vocab]  target forward输出的logits(展平)
     draft_block: DraftBlockResult,
     sampling_info,
     draft_input: DFlashDraftInputV2,
-    gamma: int,
-    verify_num_draft_tokens: int,
+    gamma: int,  # 草稿token数, verify_w = gamma+1
+    verify_num_draft_tokens: int,  # = gamma+1, 验证窗口宽度
     cutoff_layout: Optional[RaggedVerifyLayout] = None,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    greedy_mask = draft_block.greedy_mask
-    cutoff_verify_lens = None if cutoff_layout is None else cutoff_layout.verify_lens
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:  # correct_len[bs], bonus[bs], cap_trim_lens[bs]
+    greedy_mask = draft_block.greedy_mask  # [bs] bool  各请求是否走贪心
+    cutoff_verify_lens = None if cutoff_layout is None else cutoff_layout.verify_lens  # [bs] int 或 None, ragged实际验证长度
     all_greedy = sampling_info is None or sampling_info.is_all_greedy
     if all_greedy:
         return AcceptGreedy.execute(
@@ -676,12 +676,12 @@ def accept_draft_tokens(
             verify_num_draft_tokens=verify_num_draft_tokens,
             cutoff_verify_lens=cutoff_verify_lens,
         )
-    bs, gamma_rows, vocab = draft_block.corrected_logits.shape
+    bs, gamma_rows, vocab = draft_block.corrected_logits.shape  # corrected_logits: [bs, gamma, vocab]
     draft_probs = SoftmaxTemp.execute(
-        logits=draft_block.corrected_logits.reshape(bs * gamma_rows, vocab),
-        temperatures=draft_block.temperatures,
+        logits=draft_block.corrected_logits.reshape(bs * gamma_rows, vocab),  # [bs*gamma, vocab]
+        temperatures=draft_block.temperatures,  # [bs]
         rows_per_request=gamma_rows,
-    ).view(bs, gamma_rows, vocab)
+    ).view(bs, gamma_rows, vocab)  # → [bs, gamma, vocab]  各草稿位置的概率分布
     expect(_VERIFY_DRAFT_PROBS, draft_probs)
     if not sampling_info.is_any_greedy:
         return AcceptSampling.execute(
@@ -694,13 +694,13 @@ def accept_draft_tokens(
             verify_num_draft_tokens=verify_num_draft_tokens,
             cutoff_verify_lens=cutoff_verify_lens,
         )
-    greedy_len, greedy_bonus, greedy_trim = AcceptGreedy.execute(
+    greedy_len, greedy_bonus, greedy_trim = AcceptGreedy.execute(  # 均为 [bs]
         candidates=candidates,
         target_logits=target_logits,
         verify_num_draft_tokens=verify_num_draft_tokens,
         cutoff_verify_lens=cutoff_verify_lens,
     )
-    sampling_len, sampling_bonus, sampling_trim = AcceptSampling.execute(
+    sampling_len, sampling_bonus, sampling_trim = AcceptSampling.execute(  # 均为 [bs]
         candidates=candidates,
         target_logits=target_logits,
         draft_probs=draft_probs,
@@ -710,13 +710,13 @@ def accept_draft_tokens(
         verify_num_draft_tokens=verify_num_draft_tokens,
         cutoff_verify_lens=cutoff_verify_lens,
     )
-    selected = SelectMixedAccept.execute(
-        greedy_mask=greedy_mask,
-        greedy_len=greedy_len,
-        greedy_bonus=greedy_bonus,
-        greedy_trim=greedy_trim,
-        sampling_len=sampling_len,
-        sampling_bonus=sampling_bonus,
-        sampling_trim=sampling_trim,
+    selected = SelectMixedAccept.execute(  # 按greedy_mask逐请求选择贪心或采样的结果
+        greedy_mask=greedy_mask,  # [bs] bool
+        greedy_len=greedy_len,  # [bs]
+        greedy_bonus=greedy_bonus,  # [bs]
+        greedy_trim=greedy_trim,  # [bs]
+        sampling_len=sampling_len,  # [bs]
+        sampling_bonus=sampling_bonus,  # [bs]
+        sampling_trim=sampling_trim,  # [bs]
     )
-    return selected.correct_len, selected.bonus, selected.cap_trim_lens
+    return selected.correct_len, selected.bonus, selected.cap_trim_lens  # 均为 [bs]
