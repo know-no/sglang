@@ -1,10 +1,10 @@
 # 推理学习：模型算法、注意力、算子与投机解码
 
-本册覆盖原题 Q02、Q04、Q21–Q34，以及 2026-10-20 新增的 Q56–Q62、Q68。新增题从社区资料线索提炼知识点和生产问题，重新组织为机制推导、源码追踪与场景验收题。先建立形状、状态和成本模型，再追本仓库的执行链；每题可以按“口述机制 → 手算例子 → 找到状态写入与下一消费者 → 设计生产验收”的顺序练习。回到 [完整题目总目录](README.md)，或对照 [引擎研发](engine-development.md) 与 [平台部署](platform-deployment.md)。
+本册覆盖原题 Q02、Q04、Q21–Q34，以及 2026-10-20 新增的 Q56–Q62、Q68。新增题从社区资料线索提炼知识点和生产问题，重新组织为机制推导、源码追踪与场景验收题。先建立形状、状态和成本模型，再追本仓库的执行链；每题把机制、手算、状态写入与下一消费者、生产诊断连接为完整解答。回到 [完整题目总目录](README.md)，或对照 [引擎研发](engine-development.md) 与 [平台部署](platform-deployment.md)。
 
-Q01–Q50 最初整理于 2026-10-15，Q51–Q68 最初整理于 2026-10-20；本轮对本册全部 24 题重写解释，并按当前 HEAD `bb669346d5` 核对所用关键源码链。执行示例默认 NVIDIA CUDA；通用 `TpModelWorker` 路径与 MLX override、ROCm/NPU 后端并不等同，投机题分别说明 EAGLE、dFlash 与 dSpark 的边界。
+Q01–Q50 最初整理于 2026-10-15，Q51–Q68 最初整理于 2026-10-20；本轮对本册全部 24 题重写解释，并按当前 HEAD `441c855fef` 核对所用关键源码链（runtime源码与`bb669346d5`相同）。执行示例默认 NVIDIA CUDA；通用 `TpModelWorker` 路径与 MLX override、ROCm/NPU 后端并不等同，投机题分别说明 EAGLE、dFlash 与 dSpark 的边界。
 
-论文与官方文档用于说明算法、模型和硬件原理，本地源码用于说明当前执行者、状态写入与下一消费者；训练理论不表示本仓库实现了训练链。数值例子均是明确假设后的静态手算，GPU、Graph、PD 与生产测试均写成验证建议和验收条件，未声称已经实测通过。每题的“学习目标”用于选择练习目标，参考答案用于理解因果，末尾的口述示例只展示展开方式。
+论文与官方文档用于说明算法、模型和硬件原理，本地源码用于说明当前执行者、状态写入与下一消费者；训练理论不表示本仓库实现了训练链。数值例子均是明确假设后的静态手算，GPU、Graph、PD 与生产测试均写成验证建议和验收条件，未声称已经实测通过。每题的“学习目标”用于选择练习目标，参考答案直接解答主问及两项追问；生产情景给出诊断、判断和动作，学习检查点紧接逐问解答。
 
 <a id="q02"></a>
 ## Q02 Prefill 与 Decode 的瓶颈为何不同
@@ -35,7 +35,13 @@ GQA、KV 量化、SWA 分别改变 heads、每元素字节和可见历史；权�
 
 判断瓶颈要给出可被推翻的预测：若权重带宽主导，增加 M 应改善每 token 成本；若长 KV 主导，固定 M 增长历史应明显增加 attention 时间；若 launch 主导，Graph 命中应主要消掉 GPU 空隙；若跨机 collective 主导，单个 GEMM 加速帮助有限。最后把队列、准备、执行、通信和输出拼成关键路径，检查 TTFT、ITL 与 goodput，不能只优化最显眼的核。
 
-讲解可这样展开：“我先把本轮位置数 M 和历史长度 T 分开。小 M 的 Linear 缺少权重重用，大 T 的 attention 又会读大量 KV；这解释了常见现象，也给出了长上下文、大 batch、量化和投机下的反例。随后用固定 M 扫 T、固定 T 扫 M 的证据判断当前服务到底卡在哪里。”
+#### 追问1的回答
+
+**batch 从1增到128的两种结果。** 本例Linear从约33.55 MFLOPs增至4.295 GFLOPs，权重仍约32 MiB，权重重用使计算占比上升；但8KV heads、d128、BF16、8K历史的每请求每层KV约32 MiB，128请求的有效历史内容约4 GiB。前者摊薄权重读取，后者增加attention与可能的collective负载。若实测Linear每token下降而attention/通信增长更大，整体就变慢，这不矛盾。单轮延迟增加也不必然意味着吞吐下降，必须按该轮实际交付的token数归一化。
+
+#### 追问2的回答
+
+**这些开关会改变结论的条件。** GQA减少KV表示及投影宽度，但Q heads不变，QK/AV不同比减少；长历史增加读KV，可能使本来launch主导的Decode变为attention主导；权重量化主要减少权重字节，KV量化才直接减历史字节，各自还引入scale/转换成本；Verify把一个请求的本轮位置从1变成多个候选，可能提高Linear重用又增加被拒工作。PD把P/D放到不同资源池，减少长Prefill干扰D的机会，却加入目的页等待、网络传输和恢复；因此D侧ITL改善与端到端TTFT恶化可以同时发生。所选runner返回logits后，还要经过采样、结果拷贝与Scheduler消费，不能把model kernel耗时当用户总时延。
 
 ### 源码调用链与证据
 
@@ -53,14 +59,20 @@ Scheduler.run_batch(batch: ScheduleBatch)
 
 ### 生产实践追问
 
-- **输入从 2K 变 32K，ITL 翻倍，先改什么？** 固定活跃请求数、输出长度与 runner，分层记录 attention/Linear/collective 时间及有效 KV 长度。若增长集中在 attention 且随 T 增长，才进入 KV 布局、窗口或 split 调优；若 GPU 时间稳定而队列增长，应先处理接纳和竞争。验收同时看固定到达率下的 ITL 分位数与完成率。
-- **Graph 只改善短请求，是否失效？** 记录实际 replay 命中、eager 回退原因和 CPU 到 GPU 的空隙，按短/长历史分别统计。命中且空隙缩小、长请求 kernel 时间未变，说明收益被 KV 工作摊薄；没有命中则先修资格或 shape 覆盖，不能据开关值判断。
-- **PD 后 Decode 更快，整体更慢，结论是什么？** 对同一请求拼出排队、Prefill、KV 交接、Decode 时间线，在相同 GPU 总预算下核算 goodput。传输或两侧队列吞掉收益时，需调整资源配比/路由，而非继续用 Decode tokens/s 宣称部署成功。
+- **输入从 2K 变 32K，ITL 翻倍，先改什么？** 固定活跃请求数、输出长度与 runner，分层记录 attention/Linear/collective 时间及有效 KV 长度。若增长集中在 attention 且随 T 增长，才进入 KV 布局、窗口或 split 调优；若 GPU 时间稳定而队列增长，应先处理接纳和竞争。验收同时看固定到达率下的 ITL 分位数与完成率。 **具体处理：** 若KV主导，优先选适配长历史的attention路径/切分并在质量允许时采用KV量化；若队列主导，限制接纳或增加有效D容量。两种情况分别验收kernel斜率和请求分位数，不盲目扩大batch。
+- **Graph 只改善短请求，是否失效？** 记录实际 replay 命中、eager 回退原因和 CPU 到 GPU 的空隙，按短/长历史分别统计。命中且空隙缩小、长请求 kernel 时间未变，说明收益被 KV 工作摊薄；没有命中则先修资格或 shape 覆盖，不能据开关值判断。 **具体处理：** 资格未命中就修shape覆盖/回退条件；已命中且只消除CPU空隙则保留Graph，把长历史问题交给attention/KV路径处理。
+- **PD 后 Decode 更快，整体更慢，结论是什么？** 对同一请求拼出排队、Prefill、KV 交接、Decode 时间线，在相同 GPU 总预算下核算 goodput。传输或两侧队列吞掉收益时，需调整资源配比/路由，而非继续用 Decode tokens/s 宣称部署成功。 **具体处理：** 把增加的传输/排队与节约的干扰分别计价；短请求固定开销超预算时留在聚合池，长请求只有在同预算goodput提升时走PD。
 
 ### 学习检查点
 
 1. 为什么把 batch 从 1 提到 64 既可能增加权重重用，也可能加重 KV 流量？
+
+   **解答：** Linear的同一份权重被64行共用，理想每token权重流量下降；若64条请求各自有8K历史，唯一KV内容却约扩大64倍，还可能增加collective和批次等待。因此这两个趋势来自不同数据对象，可同时存在。
+
 2. 为什么 prefix 命中 90% 不能推出后缀 attention 只剩原来 10% 的成本？
+
+   **解答：** 命中免去前缀位置重新计算投影/KV；新后缀query仍对可见的已缓存前缀计算score并读KV。比如8K前缀+1个新token，即使前缀全命中，新query仍可能访问完整8K历史，所以后缀attention成本不按未命中比例缩放。
+
 
 <a id="q04"></a>
 ## Q04 KV 容量和并行分片如何估算
@@ -89,7 +101,15 @@ Scheduler.run_batch(batch: ScheduleBatch)
 
 最后做真实预算。举一个纯教学账本：某 rank 80 GiB，权重占 40 GiB，Graph、临时 activation、通信/workspace 及安全余量合计预留 8 GiB，则可给 KV 32 GiB。沿用 TP4 每 token 每 rank 32 KiB，理想可放 `32 GiB/32 KiB=1048576` 个本地 token 槽位；若每请求固定 8192 且无共享，理想是 128 条。页碎片、投机预留、最大 request 槽位或峰值临时量会进一步限制接纳，128 只能是账本上限，不能宣称安全并发。当前配置器把预算推导成 token/request 池规模，`ModelRunner` 保存配置结果；接纳还需服从调度侧可用槽位与请求预算。
 
-这套分层估算的收益是能定位偏差：payload 错通常是维度/复制口径；池比 payload 大常是预留或碎片；池预算合理却运行 OOM，则应查池外峰值或分配时序。删掉安全余量看似增加容量，却可能在最大 Prefill 或 Graph 捕获时越界；过度预留则压低接纳并发。讲解时应明确报出“全模型有效 1 GiB、TP4 本地有效 256 MiB、物理池另算、服务峰值再验收”，随后解释每一步的假设。
+这套分层估算的收益是能定位偏差：payload 错通常是维度/复制口径；池比 payload 大常是预留或碎片；池预算合理却运行 OOM，则应查池外峰值或分配时序。删掉安全余量看似增加容量，却可能在最大 Prefill 或 Graph 捕获时越界；过度预留则压低接纳并发。
+
+#### 追问1的回答
+
+**8192有效位置与并发口径。** 全模型每token为128 KiB，8192位置为1 GiB；若是4条请求各8192且无共享，则有效总量4 GiB。TP4按2KV heads/rank存储时，每rank分别为256 MiB和1 GiB，四个rank合计仍对应原有效内容。后一数字1 GiB只是每rank这四条请求的有效KV，不含本rank权重、池的额外槽位、Draft、Graph或workspace，不能当作服务总显存。
+
+#### 追问2的回答
+
+**从字节上限到接纳并发。** 空闲字节除以32 KiB/token/rank，只给上述TP4假设下的理想token槽数；还要扣页舍入、输出增长、候选预留以及池外峰值，再受request槽数和实际可用token约束。长度17、page16会占32槽，不是17槽；相反4条请求共享同一8192前缀时，逻辑长度和可为32768，但唯一前缀页可只存8192位置。配置器据预算返回token/request池，ModelRunner保存池与上限，Scheduler后续才按真实余量准入；“总物理内存尚未满”不等于当前池/槽位一定可接纳。
 
 ### 源码调用链与证据
 
@@ -107,14 +127,20 @@ ModelRunner.alloc_memory_pool()
 
 ### 生产实践追问
 
-- **估算 100 条，60 条就 OOM，怎么定位？** 先核对每 rank 权重/池的实际字节，按时间对齐 Graph 捕获、最大 Prefill、投机窗口与运行峰值；再比较逻辑 token、唯一物理 token、已分配槽位。若 KV 尚有空槽但总显存耗尽，问题在池外预算；若槽位耗尽并触发回退，问题在长度/共享/预留估算。以同一长度分布重放，要求峰值有余量且接纳行为可解释。
-- **TP4 改 TP8 没有减半，哪里找证据？** 逐 rank 检查 KV head 数、MLA/混合池类、层范围、dtype 和实际 buffer shape，分别加总有效和分配字节。若 head 复制或 latent 未按此维切分，减半预期即不成立；不能靠总显存读数倒推 KV 行为。
-- **FP8 KV 只有 1.5 倍容量，是否实现错误？** 分开统计 payload、scale、固定权重、其它状态和 workspace，并核实 backend 真正按量化 dtype 读写。若固定开销解释差值且长度/质量测试通过，收益合理；若 pool 仍用 BF16 或发生额外展开，则沿实际分支修正预算。
+- **估算 100 条，60 条就 OOM，怎么定位？** 先核对每 rank 权重/池的实际字节，按时间对齐 Graph 捕获、最大 Prefill、投机窗口与运行峰值；再比较逻辑 token、唯一物理 token、已分配槽位。若 KV 尚有空槽但总显存耗尽，问题在池外预算；若槽位耗尽并触发回退，问题在长度/共享/预留估算。以同一长度分布重放，要求峰值有余量且接纳行为可解释。 **具体处理：** 池外峰值不足就下调静态KV预算/最大Prefill或图档，槽位不足就限制长度/并发或修未释放引用；按归因调整，不把所有OOM都当KV公式错。
+- **TP4 改 TP8 没有减半，哪里找证据？** 逐 rank 检查 KV head 数、MLA/混合池类、层范围、dtype 和实际 buffer shape，分别加总有效和分配字节。若 head 复制或 latent 未按此维切分，减半预期即不成立；不能靠总显存读数倒推 KV 行为。 **具体处理：** 发现KV head复制或latent未分片后，按实际本地shape重算，不继续承诺2倍容量；若确为可均分却未生效，再修并行配置/支持分支。
+- **FP8 KV 只有 1.5 倍容量，是否实现错误？** 分开统计 payload、scale、固定权重、其它状态和 workspace，并核实 backend 真正按量化 dtype 读写。若固定开销解释差值且长度/质量测试通过，收益合理；若 pool 仍用 BF16 或发生额外展开，则沿实际分支修正预算。 **具体处理：** 固定开销解释1.5倍则接受真实预算；若量化池未选中则纠正dtype/backend，再补量化质量与长上下文验收。
 
 ### 学习检查点
 
 1. 若 8192 是“每条请求长度”，并发 4 且无共享，题给模型的总有效 payload 为多少？为什么 TP4 后仍不能称为 1 GiB 的服务总显存？
+
+   **解答：** 有效总量4×1GiB=4GiB；均匀TP4后每rank1GiB。该1GiB既不是四卡总量，也不是单卡服务总显存，因为权重、页/池预留、Graph、临时activation、workspace和Draft等尚未计入。
+
 2. 为什么逻辑 token 数、已分配 token 槽位和有效 KV 内容不能互相代替？
+
+   **解答：** 逻辑token数描述请求长度；分配槽位包含页舍入、候选和预留；有效KV描述已计算且可消费的内容。共享页可让多请求逻辑位置对应一份物理内容，预留槽又可能尚未有有效内容，因此不能相互替换。
+
 
 <a id="q21"></a>
 ## Q21 注意力架构如何改变计算与缓存
@@ -145,7 +171,13 @@ SWA 解决另一件事：一个 query 只看最近 W 个位置。若 W=4096，�
 
 循环/线性注意力、Mamba 类层则可能把历史压成固定大小的 temporal/convolution state，容量更接近“请求数×每层状态”而非“历史长度×KV 内容”。然而 prefix 恢复和投机验证会要求额外快照或中间状态；接受第几个候选，必须选对应 state 版本。普通 KV、滑窗 KV 和循环 state 因此不能共用一个回收规则。正确设计先列每类层的输入依赖和状态，再追配置器分配的子池、模型实际写入和 backend 下一轮读取。
 
-口述时可以围绕三个问题组织：“每位置存多少？未来还要看多远？保存的是逐位置内容还是压缩状态？”MHA/GQA/MQA 主要改变第一项，SWA 改第二项，MLA 与循环模型改变表示；它们可组合，但容量、计算和恢复分别验证，不能用一个缩放倍数承诺全部收益。
+#### 追问1的回答
+
+**投影和计算具体怎样变。** H=4096、Q heads32、d128时，数学存储约定下W_Q始终为[4096,4096]，attention输出拼接宽4096，W_O也为[4096,4096]。Hkv为32/8/1时，W_K和W_V各为[4096,4096]、[4096,1024]、[4096,128]，每位置BF16 K+V为16/4/0.5 KiB；8192历史对应128/32/4 MiB。QK与AV仍为32个不同Q heads分别求score/输出，故忽略softmax等时，单新query与T历史的两部分约4×T×32×128 FLOPs，而不是按Hkv再次缩小。
+
+#### 追问2的回答
+
+**为什么不能共用一个预算式。** MLA保存latent+位置分量，例如512+64元素，而非两份完整heads×d；SWA只有窗口层按min(T,W)保留，full层仍按T；循环层保存模型专属的卷积/temporal state，容量通常与请求数而非完整T线性相关，投机还可能保存候选step state。模型写入本轮KV/state后，下一轮backend读取各自表示，所以删除full层旧页会丢真实依赖，删除循环快照会使接受后选错状态；只是改一项heads参数无法代表这些对象。
 
 ### 源码调用链与证据
 
@@ -162,14 +194,20 @@ flowchart LR
 
 ### 生产实践追问
 
-- **GQA 换型后显存少而吞吐不变，怎么解释？** 固定 Q heads、batch、长度和精度，分别核对 KV pool 字节、KV projection、attention、其它层时间；再看 kernel 是否重复展开/读取共享 KV。若 attention 占比原本很小，容量收益仍成立；若 KV 读仍高于预期，应检查实际布局和 backend，而非否定架构。
-- **SWA 长请求缓存仍很大，哪里查？** 统计 full/SWA 层数、各子池形状和回收阈值，以连续两轮 query 标出未来还依赖的页。只有窗口子池随 W 有界而 full 子池随 T 增长，才符合混合模型预期；回收后需对齐完整生成结果，防止把容量下降当正确性证明。
-- **混合模型只在投机接受后错误，怎么缩小？** 固定一个只接受前两候选的例子，记录各候选的 recurrent state、最终提交索引及下一轮读取的 state。若 token/KV 索引正确但 state 取了拒绝分支版本，应修版本选择；验收覆盖零接受、部分接受、全接受及请求交错。
+- **GQA 换型后显存少而吞吐不变，怎么解释？** 固定 Q heads、batch、长度和精度，分别核对 KV pool 字节、KV projection、attention、其它层时间；再看 kernel 是否重复展开/读取共享 KV。若 attention 占比原本很小，容量收益仍成立；若 KV 读仍高于预期，应检查实际布局和 backend，而非否定架构。 **具体处理：** 若KV池下降但attention占比低，保留容量收益并把性能工作转向真正主导层；若出现KV展开/重复读，换或修能重用共享heads的路径。
+- **SWA 长请求缓存仍很大，哪里查？** 统计 full/SWA 层数、各子池形状和回收阈值，以连续两轮 query 标出未来还依赖的页。只有窗口子池随 W 有界而 full 子池随 T 增长，才符合混合模型预期；回收后需对齐完整生成结果，防止把容量下降当正确性证明。 **具体处理：** 仅窗口子池未回收就修其策略；若full层占用符合T增长，不将其误删。用跨窗口后的输出reference确认回收语义。
+- **混合模型只在投机接受后错误，怎么缩小？** 固定一个只接受前两候选的例子，记录各候选的 recurrent state、最终提交索引及下一轮读取的 state。若 token/KV 索引正确但 state 取了拒绝分支版本，应修版本选择；验收覆盖零接受、部分接受、全接受及请求交错。 **具体处理：** 把最终state明确选择到最后接受输入对应版本，丢弃拒绝分支状态；继续两轮对照以证明下一消费者读到正确版本。
 
 ### 学习检查点
 
 1. 为什么 MQA 的缓存节省很大，却不意味着 QK 与 AV 的工作随 KV heads 同比下降？
+
+   **解答：** MQA复用一组K/V，减少保存和投影，却仍有32个Q heads发出不同query；各自score和加权输出仍需计算。kernel重用可减少实际字节，不能把它当QK/AV数学操作数量同比减少。
+
 2. 一个 full/SWA 混合模型中，把所有层按窗口回收会破坏什么输入依赖？
+
+   **解答：** full层的新query可依赖任意仍在上下文中的旧位置；按窗口回收会把窗口外K/V删掉，使这部分score/加权贡献缺失。SWA层可回收不代表full层也可回收，混合模型必须按层类型管理。
+
 
 <a id="q22"></a>
 ## Q22 FlashAttention 与 online softmax 的两块推导
@@ -200,7 +238,13 @@ flowchart LR
 
 收益是避免物化完整 score/probability，增加片上重用；代价是循环、指数和归约，以及 m/l/a 占用寄存器或共享内存，tile 太大可能反而降低并发。因果/滑窗 mask 和尾部决定哪些位置参与；整行全 mask 时 `−inf−(−inf)` 不能直接套公式，需明确输出约定。FP32 累加降低误差，但重排运算仍可能改变低位；数学等价不承诺逐位一致。本仓库 Triton decode 内能看到同一递推，用它学习状态更新，不应据此称它覆盖外部 FlashAttention 的所有实现。
 
-技术讨论时最有说服力的是边算边说：“m 改变了计量基准，所以旧分子分母必须一起换算；我保存的是足以继续合并的统计，而不是不可恢复的块平均。省去大中间矩阵，靠的是这个不变量。”
+#### 追问1的回答
+
+**重标定同时作用于分子与分母。** 原统计是以exp(m旧)为除数；改成exp(m新)后，两者都必须乘exp(m旧−m新)，否则不再代表同一组历史权重。本例若仅缩放l，a保留3.5再加6.75，错误输出为10.25/2=5.125；若仅缩放a但保留旧l，则为8.5/2.75≈3.0909。两种都破坏了共同指数基准。
+
+#### 追问2的回答
+
+**局部平均为什么错。** 第一块局部输出7/3、原始质量Z₁=3；第二块输出(4×5+1×7)/5=27/5=5.4、质量Z₂=5。简单平均约3.8667，正确全局输出为 `(3×7/3+5×27/5)/(3+5)=34/8=4.25`。局部输出丢失质量，LSE=logZ能把它恢复：用exp(LSE−maxLSE)为各块重新加权。当前stage1保留局部output/LSE，stage2据此合并，最终attention输出才交给后续投影；若丢LSE，单靠块输出无法一般性恢复全局softmax。
 
 ### 源码调用链与证据
 
@@ -228,14 +272,20 @@ e_max = n_e_max
 
 ### 生产实践追问
 
-- **长序列或大 score 出 NaN，先看哪里？** 先用上面的四元素 reference 确认 m/l/a，再依次注入极大有限值、部分 `−inf`、全 mask、NaN/`+inf`。记录首次变成非有限数的中间量，区分缺少重标定和未定义输入策略；验收应按约定检查有限性、LSE 与输出，不能只看平均误差。
-- **只有非整齐长度失败，怎样找最小反例？** 固定一行，使有效长度恰在 tile/page 边界前后变化，核对参与归约的 mask 和读取索引；填充位置放极大值以检出泄漏。若 padding 影响 m 或 l，说明 mask 没覆盖统计路径，即使最终 store 有 mask 也不正确。
-- **换 fused kernel 后生成分叉，怎么判断？** 同输入逐层比较 FP32 reference、LSE、绝对/相对误差与 top-logit margin，再查误差是否随长度放大。误差在预设阈值内仍可能使近似平票 argmax 改变，应分别报告数值容差和生成差异；两者都通过既定验收才可上线。
+- **长序列或大 score 出 NaN，先看哪里？** 先用上面的四元素 reference 确认 m/l/a，再依次注入极大有限值、部分 `−inf`、全 mask、NaN/`+inf`。记录首次变成非有限数的中间量，区分缺少重标定和未定义输入策略；验收应按约定检查有限性、LSE 与输出，不能只看平均误差。 **具体处理：** 找到全mask则走明确空行策略，找到有限大值溢出则修共同max重标定；NaN输入按约定传播/拒绝，不通过调epsilon掩盖。
+- **只有非整齐长度失败，怎样找最小反例？** 固定一行，使有效长度恰在 tile/page 边界前后变化，核对参与归约的 mask 和读取索引；填充位置放极大值以检出泄漏。若 padding 影响 m 或 l，说明 mask 没覆盖统计路径，即使最终 store 有 mask 也不正确。 **具体处理：** 让无效位置在max阶段为−inf、sum为0，并屏蔽读取/写入；修完保留tile/page前后一个位置的回归样例。
+- **换 fused kernel 后生成分叉，怎么判断？** 同输入逐层比较 FP32 reference、LSE、绝对/相对误差与 top-logit margin，再查误差是否随长度放大。误差在预设阈值内仍可能使近似平票 argmax 改变，应分别报告数值容差和生成差异；两者都通过既定验收才可上线。 **具体处理：** 状态/索引错先修正确性；仅有数值重排则按预定误差及生成质量门槛裁决，近似平票分叉单独记录，不通过平均误差放行实现错误。
 
 ### 学习检查点
 
 1. 在上例中若只缩放 l、不缩放 a，输出会错到多少？错误来自什么不变量被破坏？
+
+   **解答：** 错到5.125：旧a未乘0.5，仍按旧m=ln2计量；新块和l却按ln4计量，分子分母不在同一基准。
+
 2. 为什么局部 softmax 输出还必须携带 LSE 才能正确合并？
+
+   **解答：** 局部o只说明各块内部的平均值，不说明块质量Z。LSE=logZ保留质量；全局o=ΣZ_jo_j/ΣZ_j。相同o可对应任意Z，因此仅o不能唯一确定合并权重。
+
 
 <a id="q23"></a>
 ## Q23 Decode attention 的 split KV 取舍
@@ -258,13 +308,21 @@ e_max = n_e_max
 
 先考虑 GPU 为什么可能没活干：batch=1、8 个 query heads，本轮每 head 只有一个 query，却各自要扫 32768 个历史位置。若实现只给每个 query/head 一组工作，只有少量 program 很忙，其它资源无法参与长循环。split-KV 沿历史切 8 份，每份约 4096 个位置，粗略把 8 份工作扩成 64 份，让更多 SM 同时扫描。它减少单份工作长度，交换的是并行度；总有效历史仍是那 32768 个位置，QK/AV 的总乘加没有凭空消失，也没有替请求多生成任何 token。
 
-新问题是八份扫描各自做了 softmax，如何合回同一行？对分片 j 定义 `Z_j=Σexp(s)`、`LSE_j=log Z_j`，局部输出 `o_j=Σexp(s)v/Z_j`。全局分子恰是 `ΣZ_jo_j`，全局分母是 `ΣZ_j`，所以 `o=Σexp(LSE_j−M)o_j/Σexp(LSE_j−M)`，其中 `M=max LSE_j` 仅用于数值稳定。o_j 是 value 维向量，Z_j 是该分片的概率质量标量；它们承担不同职责，只有 o_j 不足以恢复全局结果。
+八份扫描各自做局部softmax后，必须恢复各份概率质量再合并到同一行。对分片 j 定义 `Z_j=Σexp(s)`、`LSE_j=log Z_j`，局部输出 `o_j=Σexp(s)v/Z_j`。全局分子恰是 `ΣZ_jo_j`，全局分母是 `ΣZ_j`，所以 `o=Σexp(LSE_j−M)o_j/Σexp(LSE_j−M)`，其中 `M=max LSE_j` 仅用于数值稳定。o_j 是 value 维向量，Z_j 是该分片的概率质量标量；它们承担不同职责，只有 o_j 不足以恢复全局结果。
 
 具体取两份：第一份总未归一化质量为 2，局部输出 1；第二份质量为 6，输出 5。全局为 `(2×1+6×5)/(2+6)=4`。若担心指数溢出，以 M=ln6 重标定，权重变 `[1/3,1]`，仍得到 `(1/3+5)/(1/3+1)=4`；直接平均得到 3，错误是把两份质量强行当成相等。当前 stage1 把局部归一化输出与 LSE 写入中间 buffer，stage2 读取有效 split、按同一原则累积并写最终输出；中间 buffer 是下一阶段真实输入，不能只看第一阶段结果。
 
 切分会增加每份 output/LSE 的写读、额外归并 kernel 和调度。假设某 shape 的长扫描能从 80 μs 降到 20 μs，归并又花 5 μs，则可能获益；若原来仅 8 μs，切分后第一阶段 5 μs、归并 5 μs，反而更慢。这些是解释取舍的假设数值，需实测判定。batch 足够大时，原有 query 已提供大量并发；再切分会增加开销、重复读取 Q，并可能破坏 KV 重用。split 数不是越大越好，而是受有效长度、heads、head_dim、dtype、tile 和设备资源共同约束。
 
-正确性还依赖 metadata：短请求可能出现空 split，不能把未初始化的局部输出或 `−inf` LSE 当正常块合并；页索引和尾部 mask 必须与真实长度一致。在 DCP 下，历史跨 rank 分片，需要跨 rank 传递/归并统计，增加网络边界，不能用单卡两阶段耗时代表全链。技术讲解可以从“并行任务不够”开始，接着推导 LSE 合并，再指出收益应比较 `stage1+stage2` 和完整 ITL；这样能解释为何长单并发受益、大 batch 退化，而不是背固定 split 参数。
+正确性还依赖 metadata：短请求可能出现空 split，不能把未初始化的局部输出或 `−inf` LSE 当正常块合并；页索引和尾部 mask 必须与真实长度一致。在 DCP 下，历史跨 rank 分片，需要跨 rank 传递/归并统计，增加网络边界，不能用单卡两阶段耗时代表全链。
+
+#### 追问1的回答
+
+**8个split改变的是并行任务而不是有效历史总量。** 对batch1、8个Q heads、T32768，粗略由8个长扫描任务变成64个扫描约4096位置的任务；仍需覆盖全部32768历史。增加的中间状态是每query/head/split的value输出向量及一个LSE，stage2还要读它们归并。若batch已提供足够任务，新增这些状态和归并只会增加成本，split应减小或关闭。
+
+#### 追问2的回答
+
+**合并必须按概率质量。** 对LSE=(ln2,ln6)、o=(1,5)，质量权重为2/8、6/8，结果4；取maxLSE稳定后是(1/3,1)再归一化，同样为4。若两个局部输出恰好都是c，即使质量不同，正确结果和简单平均都等于c；这是退化输入把错误实现遮住，不是平均合并正确的证据。使o₁≠o₂且Z₁≠Z₂才有区分力，空split则不能贡献未初始化o。DCP还需在跨rank统计合并后，才有完整attention输出。
 
 ### 源码调用链与证据
 
@@ -280,14 +338,20 @@ stage1 切分与对齐见 [split 的区间计算](/Users/magician/PycharmProject
 
 ### 生产实践追问
 
-- **单并发 32K 快了，大 batch 慢了，怎么设策略？** 在相同 head/dtype/backend 下分组记录 batch、每请求长度、实际 split 数及两阶段时间，比较总 attention 时间而非 stage1。若大 batch 原已饱和、归并增长超过扫描收益，则按工作量设置阈值；验收用线上长度/batch 分布加权，且短请求分位数不得被长请求收益掩盖。
-- **短请求偶发 NaN，如何构造反例？** 测长度 1、split−1、split、tile±1，检查空 split 的区间、LSE 和 stage2 有效掩码，给未使用槽填哨兵。若空槽能污染结果，应修参与条件/初始化；最终与不切分 reference 比较输出和 LSE。
-- **DCP 扩卡无收益，先归因哪一段？** 同步每 rank 本地 stage 时间、等待和跨 rank LSE/output 合并时间，检查最长 rank 与网络拓扑。只有本地扫描下降超过新增通信且输出误差符合约定，才说明该 shape 值得跨卡；单卡 split 成功不构成多卡结论。
+- **单并发 32K 快了，大 batch 慢了，怎么设策略？** 在相同 head/dtype/backend 下分组记录 batch、每请求长度、实际 split 数及两阶段时间，比较总 attention 时间而非 stage1。若大 batch 原已饱和、归并增长超过扫描收益，则按工作量设置阈值；验收用线上长度/batch 分布加权，且短请求分位数不得被长请求收益掩盖。 **具体处理：** 若大batch归并开销超过扫描收益，按batch/长度降低split或保留不切分分支，阈值依据两阶段总时延设定。
+- **短请求偶发 NaN，如何构造反例？** 测长度 1、split−1、split、tile±1，检查空 split 的区间、LSE 和 stage2 有效掩码，给未使用槽填哨兵。若空槽能污染结果，应修参与条件/初始化；最终与不切分 reference 比较输出和 LSE。 **具体处理：** 空split输出不用参与合并，明确LSE有效标记/区间mask；修复后覆盖T小于split数和tile尾部，不能只初始化为任意零值。
+- **DCP 扩卡无收益，先归因哪一段？** 同步每 rank 本地 stage 时间、等待和跨 rank LSE/output 合并时间，检查最长 rank 与网络拓扑。只有本地扫描下降超过新增通信且输出误差符合约定，才说明该 shape 值得跨卡；单卡 split 成功不构成多卡结论。 **具体处理：** 网络尾部主导则减少跨rank分片或调整拓扑/group；本地扫描主导才继续调单卡split，不把两种成本混调。
 
 ### 学习检查点
 
 1. split-KV 为什么可能在计算量没有减少时降低延迟？
+
+   **解答：** 它把同一长任务分给更多并行program，降低最长扫描时间；即使总读写/计算不减，设备原本空闲的资源可参与，从而降低延迟，前提是收益覆盖中间buffer和第二阶段成本。
+
 2. 两个 split 输出相等但 LSE 不等时，简单平均是否仍会得到正确输出？这能否作为合并实现正确的证明？
+
+   **解答：** 恰好会相同：ΣZ_jc/ΣZ_j=c，简单平均也为c。但这是特殊输入，无法证明一般合并正确；用o=(1,5)、Z=(2,6)才能揭示平均得到3而正确为4。
+
 
 <a id="q24"></a>
 ## Q24 算子 Roofline 和延迟下界
@@ -308,7 +372,7 @@ stage1 切分与对齐见 [split 的区间计算](/Users/magician/PycharmProject
 
 ### 参考答案
 
-Roofline 的作用是给判断建立尺度：这个任务至少需要多少计算、至少搬多少数据，哪一种资源更难供给？固定 `X[M,K]×W[K,N]→Y[M,N]`，取 N=K=4096，BF16。一个输出元素对 K 个数做点积，按一次乘法和一次加法各计一 FLOP，常用近似为 `F=2MNK`。理想情况下 X/W 各读一次、Y 写一次，流量是 `2(MK+KN+MN)` 字节。这里没有算旧 C 的读取、量化 scale、临时量、通信或重复读；它是明确假设的乐观账本，而不是 profiler 的 HBM 计数。[NVIDIA GEMM 指南](https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html)据此讨论形状和性能。
+Roofline用必要FLOPs、必要数据字节和对应供给速率，判断计算或带宽哪项下界更高。固定 `X[M,K]×W[K,N]→Y[M,N]`，取 N=K=4096，BF16。一个输出元素对 K 个数做点积，按一次乘法和一次加法各计一 FLOP，常用近似为 `F=2MNK`。理想情况下 X/W 各读一次、Y 写一次，流量是 `2(MK+KN+MN)` 字节。这里没有算旧 C 的读取、量化 scale、临时量、通信或重复读；它是明确假设的乐观账本，而不是 profiler 的 HBM 计数。[NVIDIA GEMM 指南](https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html)据此讨论形状和性能。
 
 M=1 时，F=`2×1×4096²=33554432`，约 33.55 MFLOPs；字节为 33570816，约 32.02 MiB，强度 `I=F/Bytes≈1 FLOP/byte`。M=128 时，F=4294967296，约 4.295 GFLOPs；流量为 35651584 bytes=34 MiB，I≈120.47。原因不是权重变小，而是同一份约 32 MiB 权重服务了 128 行：计算增大 128 倍，理想流量却只增加输入输出部分。若 kernel 无法实现这个重用，实际流量会超过账本，因此还需观察布局和缓存。
 
@@ -316,7 +380,17 @@ M=1 时，F=`2×1×4096²=33554432`，约 33.55 MFLOPs；字节为 33570816，�
 
 若 M=1 实测 80 μs，不能立即说带宽 kernel 很差：单次 launch、调度间隙、输入准备、非合并访问或不足的并行 wave 都可能占比高。若 M=128 实测 100 μs，也要检查这个 shape 的可达 Tensor Core 效率、tile 尾部、寄存器/shared memory 资源与实际读写，而不能拿数据手册最高数字强判。冷/热 cache、重复次数、是否把量化和 permute 放进计时范围也改变比较含义；不同口径的 TFLOPS 没有直接可比性。
 
-Attention 要另列 QK、AV、softmax 和 KV 数据。普通物化 score 的实现有大矩阵写读，FlashAttention 则可避免这部分 HBM 中间量，不能把未发生的字节算入其“实际带宽”。优化还受关键路径约束：若一个 GEMM 只占端到端 10%，即使无限快，总时间最多从 100 降至 90，约 1.11 倍加速。技术讨论中先给带单位的下界，再解释实测差距从何取证，最后回到完整 Linear 或请求的收益；这种回答同时展示手算和诊断，不会把一个漂亮 TFLOPS 当成产品结论。
+Attention 要另列 QK、AV、softmax 和 KV 数据。普通物化 score 的实现有大矩阵写读，FlashAttention 则可避免这部分 HBM 中间量，不能把未发生的字节算入其“实际带宽”。优化还受关键路径约束：若一个 GEMM 只占端到端 10%，即使无限快，总时间最多从 100 降至 90，约 1.11 倍加速。
+
+#### 追问1的回答
+
+**两个GEMM的强度与分界。** M=1时33554432 FLOPs/33570816 bytes≈0.9995 FLOP/byte，M=128时4294967296/35651584≈120.47。以100 TFLOP/s、1 TB/s的假设设备，分界为100 FLOP/byte；前者乐观下界由带宽约33.57 μs决定，后者由计算约42.95 μs决定。每个单位都来自同一形状和数据类型，不能把MiB当10⁶ bytes带入TB/s。
+
+再给一个attention例子：batch1、单新query、32个Q heads、d_k=d_v=128、T=8192、Hkv=8。QK约 `2×32×8192×128=67.11 MFLOPs`，AV同量，合计134.22 MFLOPs；BF16有效K/V内容为32 MiB，Q/O各8 KiB，忽略缓存写入及其它步骤时强度约4 FLOP/byte。若kernel不物化score，不能额外强加 `[32,8192]` score/probability的HBM写读。在同一假设设备上，计算下界约1.34 μs，读取32 MiB下界约33.55 μs，倾向带宽限制。多query、head重用、split与cache会改变实际字节；这是静态下界，不是实测。
+
+#### 追问2的回答
+
+**远高于下界不等于实现差。** 这个max只覆盖理想工作量与资源供给，没有launch、metadata、同步、tile尾部、wave不足、reduction或量化变换；若实测区间还含这些步骤，直接比较已错口径。当前benchmark按2MNK换算TFLOPS，Linear实际先由quant_method选择执行器，attention又经metadata与stage2返回o；完整调用成本和单GEMM不是同一对象。只有确认真实工作、有效峰值、时钟区间和瓶颈后，才能把剩余差距归因到具体kernel。
 
 ### 源码调用链与证据
 
@@ -333,14 +407,20 @@ benchmark_deepgemm_fp8_gemm.py 构造 shape 与量化输入
 
 ### 生产实践追问
 
-- **kernel 达到峰值 80%，请求只快 3%，原因在哪？** 从同一请求 timeline 量出该核在关键路径的占比，计算“占比×局部耗时下降”的上限，再看其它计算/通信/排队是否重叠或转移。若理论本就只有几个百分点，结果合理；若明显低于上限，再找新增准备与同步成本。
-- **FP8 GEMM 快但完整 Linear 慢，如何验算？** 以真实 M/N/K 和输入布局分别记录量化、scale/布局变换、GEMM、bias 时间，确保计时 callable 包含线上执行的所有步骤。只有完整路径降低且误差合格才算收益；单独 GEMM 的 F/P 不能覆盖被漏计步骤。
-- **算出的带宽很低，是否该改访存？** 同时列有效输入输出字节与硬件 HBM 计数，区分 cache 命中、重复读和 launch 主导；再用大工作量 shape 检验瓶颈是否迁移。若实际 HBM 很小而总时间几乎固定，优先检查启动/调度，不能用“有效字节/耗时”否定硬件带宽。
+- **kernel 达到峰值 80%，请求只快 3%，原因在哪？** 从同一请求 timeline 量出该核在关键路径的占比，计算“占比×局部耗时下降”的上限，再看其它计算/通信/排队是否重叠或转移。若理论本就只有几个百分点，结果合理；若明显低于上限，再找新增准备与同步成本。 **具体处理：** 若3%接近Amdahl上限，保留收益并转向其它关键段；若远低于上限，查新增准备/同步/竞争，不继续只追局部峰值。
+- **FP8 GEMM 快但完整 Linear 慢，如何验算？** 以真实 M/N/K 和输入布局分别记录量化、scale/布局变换、GEMM、bias 时间，确保计时 callable 包含线上执行的所有步骤。只有完整路径降低且误差合格才算收益；单独 GEMM 的 F/P 不能覆盖被漏计步骤。 **具体处理：** 复用已有量化输入/scale、减少不必要重排，或对退化shape回退BF16；决定依据是完整callable，而不是舍去quant后报快。
+- **算出的带宽很低，是否该改访存？** 同时列有效输入输出字节与硬件 HBM 计数，区分 cache 命中、重复读和 launch 主导；再用大工作量 shape 检验瓶颈是否迁移。若实际 HBM 很小而总时间几乎固定，优先检查启动/调度，不能用“有效字节/耗时”否定硬件带宽。 **具体处理：** 启动受限就合并提交/利用Graph，实际重复HBM读才修tile/重用/合并访问；先匹配资源再选择优化。
 
 ### 学习检查点
 
 1. 同样 32 MiB 权重，为什么 M 增大通常提升算术强度？
+
+   **解答：** 权重KN不变，FLOPs随M线性增加，输入输出只增加O(MK+MN)。在权重仍占主要字节且能被复用时，每次搬同一权重服务更多行，所以F/Bytes上升；超过cache/tile能力后要按实际流量重新计算。
+
 2. 一个 kernel 的 FLOPs 为零或很低，是否可能值得优化？应换用什么度量？
+
+   **解答：** 可以。copy、permute或索引准备可能几乎不做浮点运算，却耗大量字节或launch时间；应用有效带宽、实际事务、同步/launch耗时和关键路径占比衡量。零FLOP不等于零成本，不能用TFLOPS评价这类核。
+
 
 <a id="q25"></a>
 ## Q25 Kernel 融合的依赖与资源成本
@@ -361,7 +441,7 @@ benchmark_deepgemm_fp8_gemm.py 构造 shape 与量化输入
 
 ### 参考答案
 
-融合为什么可能有用？假设连续两个算子先把中间结果写到 HBM，下一个立刻又读回来；如果中间量能留在寄存器/shared memory，就少一次写读和 launch。但“相邻”并不代表“可交换”或“可覆盖”：融合前先要画清谁依赖什么，谁还需要旧值。取 `x,r:[M,4096]`，r 是跨子层保留的残差，w 是长度 4096 的权重。先相加 `r'=r+x`，再归一化 `y_i=r'_i×w_i/√((Σ_j r'_j²)/4096+ε)`，求和沿一行 hidden 轴；输出同时有 y 和 r'，前者给后续投影，后者留在残差链。
+融合能够消除相邻算子的中间写读和部分launch成本。假设连续两个算子先把中间结果写到 HBM，下一个立刻又读回来；如果中间量能留在寄存器/shared memory，就少一次写读和 launch。但“相邻”并不代表“可交换”或“可覆盖”：融合前先要画清谁依赖什么，谁还需要旧值。取 `x,r:[M,4096]`，r 是跨子层保留的残差，w 是长度 4096 的权重。先相加 `r'=r+x`，再归一化 `y_i=r'_i×w_i/√((Σ_j r'_j²)/4096+ε)`，求和沿一行 hidden 轴；输出同时有 y 和 r'，前者给后续投影，后者留在残差链。
 
 用一行两维的小例子观察状态：x=[1,3]，r=[3,1]，w=[1,1]，忽略 ε。相加后 r'=[4,4]，均方为 `(16+16)/2=16`，所以 y=[1,1]。融合完成后调用方必须看到 residual=[4,4]、input=[1,1]。若只返回 y，下个残差相加会失去 [4,4]；若把 residual 也覆盖为 y，则后续结果改变。当前 fused add RMSNorm 的契约正是原地更新两块 buffer，并返回 `(x,residual)`，因此调用者能否允许覆盖、是否有其它消费者持有旧 x，属于正确性前提，而非性能细节。
 
@@ -371,7 +451,15 @@ RoPE 需要 token position 和正确旋转维，移动它可能改变对 KV 的�
 
 融合还会让一个 kernel 同时负担更多活跃数据，寄存器或 shared memory 超标会减少驻留，甚至 spill 到 local memory；额外 padding、归约和同步也可能增加总时间。假设原来两个各 4 μs 的核，其中 2 μs 被通信遮住，关键路径是 6 μs；合成 7 μs 核即使 launch 少了一半仍更慢。要比较完整 timeline，而非孤立相加。资源/带宽分析方法可参照 [CUDA Best Practices](https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html)。
 
-口述时可以从这个例子出发：“我先写出相加后的 r' 和归一化后的 y，因为它们有两个后续消费者。确认允许原地覆盖后，再算消除的中间写读；最后检查融合是否因归约资源、数值顺序或破坏重叠抵消收益。”
+#### 追问1的回答
+
+**两个原地结果各有消费者。** 对x=[1,3]、residual=[3,1]，add后residual=[4,4]，RMSNorm输出[1,1]；当前fused_add_rmsnorm把前者写回residual、后者写回x并返回二者。下一投影消费x，后续残差相加消费residual；因此只验证x会漏掉残差链被覆盖的错误。如果外部仍需旧x，必须保留副本或不走原地分支，不能因“融合”而改变所有权。
+
+其它融合也有明确条件。RoPE对投影后的q/k做 `q'=R(position)q`，可在同一kernel内旋转并写KV，但必须已知position及旋转维；任意改成先旋转hidden再乘投影一般要求R与W可交换，这通常不成立。RMSNorm后接量化可复用已在片上的y，但per-token动态scale必须在该行所需统计完成后再编码；若scale依赖整行最大值，要加对应归约，不能直接拿RMS分母充当量化scale。已有消费者需要未量化y时也不能只保留低精度结果。
+
+#### 追问2的回答
+
+**决定看完整关键路径而非occupancy方向。** 假设某个融合场景确实少搬4 MiB，在固定有效带宽1 TB/s下对应搬运时间约4.19 μs；这只是该带宽假设下的流量折算，不是端到端节省的上界或下界。融合还可能减少launch，但若资源增加使核多8 μs或丢失通信遮蔽，融合应撤回/缩小范围。反之即使occupancy下降，只要实际spill没有抵消重用、整层关键路径减少且双输出语义/精度通过，就保留。当前guard不满足时fallback是必要边界，不应为了让所有shape走一条融合路径删掉。
 
 ### 源码调用链与证据
 
@@ -396,14 +484,20 @@ return x, residual  # 两个返回值的含义不同，不能丢掉 residual
 
 ### 生产实践追问
 
-- **融合误差只出现在 residual 分支，如何查？** 用上述两维例子和真实 dtype 同时检查返回的 x/residual，追踪是否存在旧 x 别名、post-residual 顺序及 cast 差异。验收逐个 buffer 对 reference，而非只比最终 normalized 输出；错误值首次出现的位置应能定位到写入契约。
-- **kernel 数减半却慢了，取什么证据？** 对相同 shape 记录 kernel 资源、spill、驻留限制和完整通信 timeline，核实中间流量是否真的减少。若新增资源开销或丢失 overlap 大于节约，应缩小融合范围/改 tile，而非继续合并更多步骤。
-- **常规 batch 正确，Graph 或尾形状错误怎么办？** 覆盖零 token、非整齐 hidden、非连续输入与静态地址重放，检查 guard、输出别名和 capture 生命周期。只有各分支语义与指针契约都成立，且代表性完整层收益为正，才可替代原路径。
+- **融合误差只出现在 residual 分支，如何查？** 用上述两维例子和真实 dtype 同时检查返回的 x/residual，追踪是否存在旧 x 别名、post-residual 顺序及 cast 差异。验收逐个 buffer 对 reference，而非只比最终 normalized 输出；错误值首次出现的位置应能定位到写入契约。 **具体处理：** 修原地返回值/别名与cast顺序；若模型确需旧输入就改为独立输出或fallback，不能让调用方隐式读被覆盖数据。
+- **kernel 数减半却慢了，取什么证据？** 对相同 shape 记录 kernel 资源、spill、驻留限制和完整通信 timeline，核实中间流量是否真的减少。若新增资源开销或丢失 overlap 大于节约，应缩小融合范围/改 tile，而非继续合并更多步骤。 **具体处理：** 资源或重叠成本超过收益则拆回相应步骤或缩tile，只有关键路径净降才保留融合；少launch不是保留理由。
+- **常规 batch 正确，Graph 或尾形状错误怎么办？** 覆盖零 token、非整齐 hidden、非连续输入与静态地址重放，检查 guard、输出别名和 capture 生命周期。只有各分支语义与指针契约都成立，且代表性完整层收益为正，才可替代原路径。 **具体处理：** 为不满足dtype/形状/别名契约的分支保留fallback；Graph地址生命周期错误先修引用/缓冲所有权，再重新测同路径。
 
 ### 学习检查点
 
 1. 为什么原地 residual 融合不能只测试 normalized output 正确？
+
+   **解答：** 因为后续投影只暴露x的错误，后续残差链才消费residual；本例x=[1,1]可正确而residual误写[1,1]，到下一次相加才出现差异。必须同时比两个返回buffer及别名契约。
+
 2. 如果融合节省 4 MiB 中间访存却使 occupancy 大幅下降，应如何组织证据做决定？
+
+   **解答：** 先证实实际少了4MiB而不是只在纸上删中间量，再量资源、spill、核时间和通信重叠；1TB/s下4MiB对应约4.19μs的乐观搬运收益。实际整层关键路径净下降且数值正确才保留，否则减少融合范围/调整tile或回退，不按occupancy单指标投票。
+
 
 <a id="q26"></a>
 ## Q26 量化的收益成本和质量验证
@@ -430,11 +524,19 @@ return x, residual  # 两个返回值的含义不同，不能丢掉 residual
 
 因此 8 MiB 的 W4 只是 payload 下界。若每 128 个权重配一个 BF16 scale，`4096²/128×2=256 KiB` 元数据还要加入，zero point、padding 和 repack 又另算。执行时可能解包到寄存器、反量化后参与混合精度乘法，也可能走专用 kernel；不能由 checkpoint 文件体积判断计算精度。activation 动态量化还要扫输入以产生 scale，再编码，某些路径可复用前层生成的 `(x,input_scale)`，另一些由当前路径处理。当前 `Fp8LinearMethod.apply` 的 Marlin、MXFP8、block FP8、普通 FP8 分支说明了这个区别，必须追最终 callable。
 
-为什么更小反而更慢？M=1 的 GEMM 本就短，动态 quant、scale 布局变换和新增 launch 可能超过节省的权重读取；某 shape 不适配 tile 会回退；较大 M 时原本重用良好的 BF16 GEMM 也可能缺少带宽优化空间。假设 BF16 完整 Linear 10 μs，量化后 GEMM 6 μs、quant/repack 5 μs，总计 11 μs，这已足以反驳“低精度必快”。同理，如果服务被长 KV 或跨机通信限制，Linear 变快并不保证 ITL 同比下降。
+压缩后的完整执行路径可能因额外转换或低效kernel而更慢。M=1 的 GEMM 本就短，动态 quant、scale 布局变换和新增 launch 可能超过节省的权重读取；某 shape 不适配 tile 会回退；较大 M 时原本重用良好的 BF16 GEMM 也可能缺少带宽优化空间。假设 BF16 完整 Linear 10 μs，量化后 GEMM 6 μs、quant/repack 5 μs，总计 11 μs，这已足以反驳“低精度必快”。同理，如果服务被长 KV 或跨机通信限制，Linear 变快并不保证 ITL 同比下降。
 
 质量应沿数据流观察：算子误差是否由饱和、scale 错轴或布局错误引起；误差怎样影响 logits；任务、长上下文和 sampling 统计是否仍符合门槛。近似量化允许一定数值差异，近似平票处的 greedy 分叉未必是软件 bug；但错误 scale 或漏反量化是实现错误，两者要分开。删掉 scale 生成或读取即使更快也改变数值含义，不能用速度为它辩护。
 
-技术讨论中可用一个账本贯穿回答：“32 MiB 权重变成 8 MiB，只说明 W4 payload；我还要加 scale/重排，再追完整 Linear 的耗时与误差。KV 则单独看池和 attention 读写。收益成立的条件是完整路径加速且质量达标，而不是文件更小。”
+#### 追问1的回答
+
+**三种scale的具体差别。** per-tensor令整张activation或权重共用s，只读很少元数据，却让极值决定所有数的刻度；per-token通常对[M,K]每行一个s，共M个，适合不同token范围但需要行统计；per-block以固定子块共享s，元数据按块数增长，要求block划分、权重repack与GEMM取scale索引一致。对4096²权重每128元素一个BF16 scale，增加256KiB；若错误把行scale当列scale，张量shape可以合法而恢复值系统错误。block不是越小越好，精度改善要支付元数据和转换成本。
+
+#### 追问2的回答
+
+**两类反常现象分别怎样解释。** 低batch若权重带宽主导，压权重可快；大batch原BF16已充分重用权重并使用高效Tensor Core，低精度新增quant/scale/repack、不同tile或fallback就可能使完整Linear更慢。反过来低batch也可被动态quant固定开销拖慢，不能把任一趋势当通则。我按真实M/N/K记录完整各步骤，过小或不适配shape保留原精度路径；已有(x,input_scale)可跳过重复生成，但必须同scale轴、dtype、布局和有效生命周期。
+
+Perplexity是许多位置log-prob的聚合，接近不代表每个条件分布、罕见token或长链误差都相同。greedy在小logit margin处可因微小误差选另一个词，之后前缀不同导致整段分叉；sampling还会受概率重分配影响。我先定位第一处相同前缀下的logits/scale饱和与argmax margin：scale/索引错误修实现；合法低精度误差则按预设任务和分布门槛决定格式或回退，不能仅用接近的perplexity承诺输出逐词等价。
 
 ### 源码调用链与证据
 
@@ -452,14 +554,20 @@ Linear.quant_method.apply(layer, x, bias)
 
 ### 生产实践追问
 
-- **FP8 Linear 退化，第一组数据是什么？** 固定真实 M/N/K、layout 和 batch，记录实际分派，分别量 quant、scale/重排、GEMM 与输出处理；检查是否复用输入 scale。若额外步骤超过 GEMM 节约，应改复用/融合或保留 BF16 分支；验收完整 Linear 与服务 ITL，而非只报 GEMM TFLOPS。
-- **只有长上下文质量下降，怎么区分权重和 KV？** 固定权重精度，单独切换 KV 路径，记录 scale、饱和比例、各长度 attention 输出/LSE 和首个 logits 分歧；再固定 KV 切权重。能把问题归到单一对象后再改 scale/格式，要求代表性长度及任务指标同时过线。
-- **checkpoint 写 FP8，显存和速度却不符预期？** 核对加载后的实际权重 dtype/layout、未量化层、scale 和 workspace，以及 `apply` 最终 backend。只有真实 buffer 字节和 callable 与计划一致，才继续调性能；否则先修配置/支持分支。
+- **FP8 Linear 退化，第一组数据是什么？** 固定真实 M/N/K、layout 和 batch，记录实际分派，分别量 quant、scale/重排、GEMM 与输出处理；检查是否复用输入 scale。若额外步骤超过 GEMM 节约，应改复用/融合或保留 BF16 分支；验收完整 Linear 与服务 ITL，而非只报 GEMM TFLOPS。 **具体处理：** 确认额外步骤后，复用合法scale/融合必要转换，或对退化shape选原精度；缺少高效backend时不要把checkpoint压缩率当性能收益。
+- **只有长上下文质量下降，怎么区分权重和 KV？** 固定权重精度，单独切换 KV 路径，记录 scale、饱和比例、各长度 attention 输出/LSE 和首个 logits 分歧；再固定 KV 切权重。能把问题归到单一对象后再改 scale/格式，要求代表性长度及任务指标同时过线。 **具体处理：** KV路径单独出错则调整KV scale/格式或回退，权重路径出错则处理权重饱和/重排；只有相同前缀首错被解释且任务过线才放量。
+- **checkpoint 写 FP8，显存和速度却不符预期？** 核对加载后的实际权重 dtype/layout、未量化层、scale 和 workspace，以及 `apply` 最终 backend。只有真实 buffer 字节和 callable 与计划一致，才继续调性能；否则先修配置/支持分支。 **具体处理：** 先使加载后tensor与计划相符，再比较速度；漏量化层/副本是容量账本问题，scale或layout错是正确性问题，分别修复。
 
 ### 学习检查点
 
 1. 为什么把 weight 从 BF16 换到 4-bit 不能直接推出 attention KV 流量减少？
+
+   **解答：** 权重量化作用于Linear的W；attention历史来自独立KV池，只有另选KV dtype/scale及对应写读kernel才减少其字节。W4A16本身既不改变Hkv，也不改变历史KV元素大小。
+
 2. 已有 `(x,input_scale)` 的路径为什么可能改变融合与缓存重用方案？
+
+   **解答：** 已有量化x和scale可被符合契约的下游直接消费，避免重复扫描求scale、编码和临时buffer；还可能让Norm→quant融合一次生成后复用。前提是scale轴/布局/格式与该执行器一致，不能跨请求或原地覆盖后继续复用旧scale。
+
 
 <a id="q27"></a>
 ## Q27 Tensor Parallel 的张量切分与通信
@@ -490,7 +598,13 @@ bias 必须只加一次。上例若 b=5，两 rank 各在部分和中加 5，再
 
 收益和代价随 M 变化：TP4 把本地权重与大部分乘加约分四份，但 Row 的 all-reduce 传的是 `[M,4096]`，还会产生更小的局部 GEMM。小 batch 时通信固定延迟和 tile 利用率可压过节约；跨机更明显。TP 也不自动将 KV 按比例切分，attention TP group 与专家 TP group 可能不同，详见 [Q04](#q04)、[Q68](#q68)。评估要逐条标出通信输入尺寸、dtype、group、guard 和返回值的消费者。
 
-口述可沿一条张量走：“上投影的列分片是完整的局部特征，所以 activation 留在本地；下投影的同形输出是不同特征的部分和，所以在需要完整 hidden 之前必须求和。是否能省通信，取决于消费者和归约责任，不能只数 Linear 个数。”
+#### 追问1的回答
+
+**TP4两个Linear的局部形状。** 数学约定X[M,4096]复制在各rank，W₁沿输出切成四份[4096,2752]，每rank得到Y_r[M,2752]；activation留在本地。W₂按输入切为[2752,4096]，每rank乘出Z_r[M,4096]部分和，求和后才是完整Z[M,4096]。SwiGLU的gate/up都需按同一中间特征切分，再本地相乘，不能让两个2752片来自不同特征范围。
+
+#### 追问2的回答
+
+**通信与bias。** Column的本地列已是完整数值，接逐元素activation和对应Row分片无需gather；只有消费者要求完整中间维才设置gather_output。Row的同shape输出是部分和，需在消费者要求完整hidden前约简；当前skip_all_reduce/ForwardFlags可把它交给decoder的后续融合/归约路径，责任并没有消失。若调用方没有承接归约就直接residual或输出，结果不正确。当前普通Row只有rank0在GEMM内加bias，或skip_bias_add交外部加一次：TP4若四rank都加b，合并为ΣZ_r+4b，正确为ΣZ_r+b，多3b；b=5就多15。group还须按实际attention/TP分支选择，不能用EP组替代。
 
 ### 源码调用链与证据
 
@@ -522,14 +636,20 @@ return output, output_bias
 
 ### 生产实践追问
 
-- **TP4 改 TP8 后低并发更慢，怎么证明原因？** 固定总请求负载，记录局部 GEMM 的 M/N/K、时间和每次 collective 的 payload/group/等待；比较节省的计算与增加的通信、tile 尾部。若通信延迟已高于节约，应考虑较小 TP 加副本；验收相同 GPU 预算下 SLA 与 goodput。
-- **skip_all_reduce 后偶发错误，查谁？** 从返回的部分和追到下一消费者，确认它是否调用对应 group 的归约/融合；用上面 50+250 的可辨识输入检查完整和，再核 bias 次数。若某分支直接做 residual 或输出而未约简，属于缺失依赖，不能当数值容差处理。
-- **DP attention 与 MoE 共存时 group 搞混，如何验收？** 列每 rank 的 attention TP、MoE TP/EP 成员和张量布局，给不同 rank 注入不同值验证求和范围；同时核集合调用次序。成员/shape/次序都一致并通过端到端输出后，才进入通信优化。
+- **TP4 改 TP8 后低并发更慢，怎么证明原因？** 固定总请求负载，记录局部 GEMM 的 M/N/K、时间和每次 collective 的 payload/group/等待；比较节省的计算与增加的通信、tile 尾部。若通信延迟已高于节约，应考虑较小 TP 加副本；验收相同 GPU 预算下 SLA 与 goodput。 **具体处理：** 若新增collective固定延迟/局部GEMM退化超过收益，用较小TP加副本比较同预算达标容量；模型放不下时先调整精度/布局，不能直接降TP。
+- **skip_all_reduce 后偶发错误，查谁？** 从返回的部分和追到下一消费者，确认它是否调用对应 group 的归约/融合；用上面 50+250 的可辨识输入检查完整和，再核 bias 次数。若某分支直接做 residual 或输出而未约简，属于缺失依赖，不能当数值容差处理。 **具体处理：** 恢复缺失的正确group归约或把部分和显式交给已实现的融合消费者，并修bias只加一次；不得用放宽数值阈值掩盖漏求和。
+- **DP attention 与 MoE 共存时 group 搞混，如何验收？** 列每 rank 的 attention TP、MoE TP/EP 成员和张量布局，给不同 rank 注入不同值验证求和范围；同时核集合调用次序。成员/shape/次序都一致并通过端到端输出后，才进入通信优化。 **具体处理：** 按实际成员/顺序统一group与tensor布局，不能只改group size；先用不同rank数值核贡献范围，再恢复性能配置。
 
 ### 学习检查点
 
 1. 如果 Row 的每个 rank 都加 bias 后再求和，结果会多出多少？
+
+   **解答：** TP大小p时多(p−1)b；TP4多3b。因为每个局部部分和都加了b，all-reduce把bias也加p次。可只rank0加入，或约简后统一加入一次。
+
 2. Column 输出为何可以直接接 activation，而不必立即恢复完整中间维？
+
+   **解答：** Column把输出特征分成独立完整列，逐元素activation不跨特征依赖；Row正好按相同输入特征片消费。因此可省中间gather，而不是先还原再切一遍。
+
 
 <a id="q28"></a>
 ## Q28 MoE 从路由到 combine 的整层成本
@@ -560,7 +680,13 @@ Dense FFN 是每个 token 走同一组权重，MoE 则先决定去哪些专家�
 
 优化可减少重排、提高 grouped GEMM 利用率、调整通信资源或选择合适模式，但受 token 上界、buffer、dtype 和路由分布制约。小专家 batch 会变成许多碎片任务，padding 到计算 tile 还会产生无效乘加，实际执行量可能高于有效 assignment 的账本；低延迟模式不等于所有吞吐负载都优；某 DeepEP 低延迟分支有每 rank token 上界，也不能推广为所有后端常数。删掉 combine 或权重处理会改变数学结果；过度压通信资源则可能使 GEMM 再快也等数据。
 
-技术讨论时可以直接围绕“2048 份 assignment 怎么走完”讲解：先画真实 expert/rank 直方图，再把路由、传输、重排、计算、合并放到同一时间线；只有最慢 rank 的整层关键路径下降且输出等价，才叫 MoE 优化成功。
+#### 追问1的回答
+
+**相同assignment也有不同最长rank。** 2048份在8专家均匀为每个256；若某专家900、其余合计1148，热专家及拥有它的rank可能拖住combine，另外rank空闲也不能提前交付完整结果。小专家batch可能需要padding到tile并浪费乘加，大热点又增加发送量/等待；相同总assignment不保证相同grouped GEMM形状，更不保证相同all-to-all链路分布。只优化平均GEMM不会消除最长rank尾部。
+
+#### 追问2的回答
+
+**四项契约各由谁负责。** 通信由create_moe_dispatcher按选定A2A/backend和group创建的dispatcher负责；实际expert计算由MoeRunner及runner_core选择；格式桥接在runner的pre/post permute与dispatcher的Dispatch/Combine输入契约间完成。top-k ids/weights先由TopK产生，correction bias的专家选择与原分数取混合权重/renormalize规则分开，不能由通信模块随意改权重。GEMM产出的通常是派发/专家顺序数据，dispatcher.combine才能恢复原token顺序并加权汇合；当前尾部guard需要时调用的仍是TP all-reduce，不因含EP条件就变成EP group。该完整hidden才交给后续层。
 
 ### 源码调用链与证据
 
@@ -580,14 +706,20 @@ flowchart LR
 
 ### 生产实践追问
 
-- **GEMM 快 30%，整轮慢 10%，第一步怎么拆？** 保留真实路由 id/权重和每 expert/rank token 直方图，分别标出 dispatch、pre/post permute、GEMM、combine、尾部 collective，并检查通信/GEMM 资源竞争。若热点尾部或新增格式转换主导，先处理该段；验收整层与整轮分位数，均匀随机 benchmark 只能作对照。
-- **平均负载均衡但延迟抖动，证据是什么？** 看每轮最大 expert batch、最大 rank 接收量、padding 量和链路耗时，而非跨轮平均值。将慢轮的路由复现并定位最长 rank，判断是路由偏斜还是网络/调度；优化后要求慢轮尾部收敛且不改变 top-k 权重语义。
-- **换 DeepEP 模式后崩溃或错输出，怎样验收？** 先核模式专属 token/buffer 上限、dispatch 输出格式、runner 输入格式和 combine 顺序；用单 token 双专家的可手算案例校验，再测上界附近和非均匀路由。通过边界与数值检查后再比较通信收益，不能从另一模式支持范围类推。
+- **GEMM 快 30%，整轮慢 10%，第一步怎么拆？** 保留真实路由 id/权重和每 expert/rank token 直方图，分别标出 dispatch、pre/post permute、GEMM、combine、尾部 collective，并检查通信/GEMM 资源竞争。若热点尾部或新增格式转换主导，先处理该段；验收整层与整轮分位数，均匀随机 benchmark 只能作对照。 **具体处理：** 通信资源挤占就调通信/计算资源配比或拆融合，格式转换主导就统一契约/减少必要重排，热点主导则在不改变路由语义前提下调整专家布局/均衡支持；按整层最长rank验收。
+- **平均负载均衡但延迟抖动，证据是什么？** 看每轮最大 expert batch、最大 rank 接收量、padding 量和链路耗时，而非跨轮平均值。将慢轮的路由复现并定位最长 rank，判断是路由偏斜还是网络/调度；优化后要求慢轮尾部收敛且不改变 top-k 权重语义。 **具体处理：** 若hot-rank集中，采用该部署支持的专家布局/负载均衡或限制突发；若通信抖动与路由无关则查链路/调度，不修改TopK权重来掩盖。
+- **换 DeepEP 模式后崩溃或错输出，怎样验收？** 先核模式专属 token/buffer 上限、dispatch 输出格式、runner 输入格式和 combine 顺序；用单 token 双专家的可手算案例校验，再测上界附近和非均匀路由。通过边界与数值检查后再比较通信收益，不能从另一模式支持范围类推。 **具体处理：** 模式上界超出则限制dispatch token或选择支持该负载的模式；格式/权重错先修适配，再测上界附近及偏斜输入。
 
 ### 学习检查点
 
 1. 为什么总计 2048 次 assignment 相同，不代表两个路由分布的时延相同？
+
+   **解答：** 分布决定每expert矩阵M、tile padding、各rank收发量与最长任务。同样2048可均匀8×256，也可900集中到一expert；系统等最长路径，算术总量相同不保证延迟相同。
+
 2. expert GEMM 的输出为何不能直接交给下一层，而需要 combine 的顺序与权重契约？
+
+   **解答：** 每token有top-k份输出，且专家/通信布局已经重排；combine要恢复原token位置并按路由权重合成。例A/B输出[2,4]/[6,8]、权重0.75/0.25，正确[3,5]，直接相加[8,12]或错位都改变数学结果。
+
 
 <a id="q29"></a>
 ## Q29 投机无损的 greedy 与 sampling 含义
@@ -618,7 +750,17 @@ flowchart LR
 
 当前 dSpark 的候选来自 Markov head `corrected_logits` 加 temperature 的实际 sampler，接受侧据此重建 Q；P 的已核路径包括 verify logits 调整、temperature 及 top-k/top-p 分支。其它普通 Sampler 参数需逐项核支持分支，不能概括成自动全部等价。拒绝 kernel 用 `coin*q<p` 实现接受规则，再按正残差纠正。dFlash 当前另有 target-only sampling verifier，并传零 draft_probs 缓冲，不能把上述显式 Q 修正路径套过去；EAGLE 树验证也有自己的采样与状态整理入口。算法边界必须依实际执行者说明。
 
-口述时可先讲重叠质量，再手算三词表：“接受给我 min(p,q)，拒绝只补 p−q 的缺口；这样才恢复 p。然后我会检查实际 proposal、P/Q 变换和接受后前缀是否一致，因为公式正确并不能修复错误的条件状态。”
+#### 追问1的回答
+
+**接受与拒绝一起恢复P。** 对p=(0.6,0.3,0.1)、q=(0.2,0.5,0.3)，候选来自q，接受概率(1,0.6,1/3)，直接接受质量(0.2,0.3,0.1)；拒绝总质量0.4，从正残差归一化后的(1,0,0)抽纠正词，于是总质量回到p。若拒绝后直接从p抽，总分布变为(0.44,0.42,0.14)，并非p。全接受后的bonus从当时已接受前缀对应的Target下一分布采样；一次拒绝后丢弃其后的提案，因为它们的条件前缀已不再成立。
+
+#### 追问2的回答
+
+**当前真实P/Q与dFlash分支。** dSpark先计算base_logits，再由Markov head按已选前词得到 `corrected_logits[bs,gamma,vocab]`。sampling提案Q_j=softmax(corrected_logits_j/max(temperature,1e−5))；普通路径用multinomial，fast路径用指数噪声的等价categorical采样，接受侧用同一corrected_logits/temperature重建Q。该已核提案路径不额外做Target的top-k/top-p；全greedy按argmax，混合batch按greedy_mask选择相应结果，不能把一个sampling Q强加给greedy决策。
+
+Target P来自verify logits及其已应用的logits/grammar调整；无top-k/p时按temperature softmax，有时进入build_dflash_verify_target_probs，语义是temperature后top-k优先再top-p并重归一化，稀疏实现最后scatter回dense P。其它普通Sampler参数不由这些分支自动承诺，只有真正执行的变换才属于当前P。P与Q可以不同，因为p/q与残差正是在修正这种差异；错误地把Q也截成P的支持集、或用未经温度变换的Q接受，都不再满足“候选确实按Q生成”的前提。
+
+dFlash当前sampling走target-only kernel，传入的零draft_probs是可写的排除质量缓冲，不是声称真实proposal Q为零。以链式、threshold_single=threshold_acc=1为例，固定候选B时直接按Target的p(B)=0.3接受；拒绝后kernel把B位置的Target质量记入scratch，从正部 `Target−已排除质量` 采纠正，得到A概率6/7、C概率1/7。无条件输出仍为A0.7×6/7=0.6、B0.3、C0.7×1/7=0.1；这与dSpark的显式P/Q比值算法不同。树中还有兄弟候选累计质量，非1阈值另有策略语义，不能把上面的精确结论推广到任意阈值。两种路径都要在接受后提交正确前缀并由下一轮/CPU消费者使用，分布推导不替错误KV兜底。
 
 ### 源码调用链与证据
 
@@ -644,18 +786,24 @@ if coin * q < p:  # 候选来自 Q；这对应 min(1, P/Q) 的接受规则
     cur_prob_row = step
 ```
 
-Q 的提案来源见 [sample_draft_block](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/dspark_components/dspark_draft.py:177)，接受侧重建 Q 见 [accept_draft_tokens](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/dspark_components/dspark_verify.py:658)；P 与 kernel 参数见 [DSpark AcceptSampling](/Users/magician/PycharmProjects/sglang/python/sglang/kernels/ops/speculative/dspark/dspark_accept.py:80)。接受/残差见 [reject_sampling.py](/Users/magician/PycharmProjects/sglang/python/sglang/kernels/ops/speculative/reject_sampling.py:66)、[残差计算](/Users/magician/PycharmProjects/sglang/python/sglang/kernels/ops/speculative/reject_sampling.py:109)；dFlash 的不同分支见 [target-only sampling 调用](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/dflash_utils.py:676)。
+Q 的提案来源见 [sample_draft_block](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/dspark_components/dspark_draft.py:177)，接受侧重建 Q 见 [accept_draft_tokens](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/dspark_components/dspark_verify.py:658)；P 与 kernel 参数见 [DSpark AcceptSampling](/Users/magician/PycharmProjects/sglang/python/sglang/kernels/ops/speculative/dspark/dspark_accept.py:80)。接受/残差见 [reject_sampling.py](/Users/magician/PycharmProjects/sglang/python/sglang/kernels/ops/speculative/reject_sampling.py:66)、[残差计算](/Users/magician/PycharmProjects/sglang/python/sglang/kernels/ops/speculative/reject_sampling.py:109)；target-only 内核按Target质量接受、拒绝后记录排除质量，见 [真实接受与scratch写入](/Users/magician/PycharmProjects/sglang/sgl-kernel/csrc/speculative/speculative_sampling.cuh:64)、[最终残差采样](/Users/magician/PycharmProjects/sglang/sgl-kernel/csrc/speculative/speculative_sampling.cuh:103)；dFlash 的不同分支见 [target-only sampling 调用](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/dflash_utils.py:676)。
 
 ### 生产实践追问
 
-- **接受率很高但采样频率偏了，怎么定位？** 先固定小词表 p/q，大量独立运行接受核，比较接受质量、拒绝频率和最终频率；再核实际 proposal 频率是否等于传入 Q。若小模型算法通过、完整模型失败，继续查 temperature/top-k/top-p、verify logits 调整及前缀/KV，不能先靠降低温度掩盖偏差。
-- **Greedy 相同、sampling 不同是否 bug？** 同 seed 不逐 token 相同本身不足定性；先用已知分布统计与误差区间检验，再查首拒绝的 residual 是否按正差归一化。若恢复目标频率但轨迹不同，可接受为随机消费差异；若频率系统偏离，则不能以 greedy 通过豁免。
-- **换 Draft sampler 后无损性还成立吗？** 保存候选的实际条件 logits/温度/采样方式和接受侧 Q，逐位置重建分布并检查支持集。只要候选生成与 Q 不匹配就必须修正；验收覆盖首拒绝、全接受、混合 greedy/sampling 及各已支持的参数组合。
+- **接受率很高但采样频率偏了，怎么定位？** 先固定小词表 p/q，大量独立运行接受核，比较接受质量、拒绝频率和最终频率；再核实际 proposal 频率是否等于传入 Q。若小模型算法通过、完整模型失败，继续查 temperature/top-k/top-p、verify logits 调整及前缀/KV，不能先靠降低温度掩盖偏差。 **具体处理：** 若实际proposal与Q不一致，先修重建Q或候选sampler；若P构造错，修温度/过滤/grammar顺序；小词表恢复后再恢复完整模型，不能以高接受率放行。
+- **Greedy 相同、sampling 不同是否 bug？** 同 seed 不逐 token 相同本身不足定性；先用已知分布统计与误差区间检验，再查首拒绝的 residual 是否按正差归一化。若恢复目标频率但轨迹不同，可接受为随机消费差异；若频率系统偏离，则不能以 greedy 通过豁免。 **具体处理：** 频率在预定统计区间内且状态一致时允许同seed轨迹差异；若有稳定偏差，停用该sampling分支并修残差/支持集，而不是改seed寻找通过样本。
+- **换 Draft sampler 后无损性还成立吗？** 保存候选的实际条件 logits/温度/采样方式和接受侧 Q，逐位置重建分布并检查支持集。只要候选生成与 Q 不匹配就必须修正；验收覆盖首拒绝、全接受、混合 greedy/sampling 及各已支持的参数组合。 **具体处理：** 保存每个step真正变换后的条件分布；变换变更后同步接受侧Q与测试。未闭合的参数组合显式不纳入无损承诺。
 
 ### 学习检查点
 
 1. 在上例中拒绝后直接从 p 重采样，为什么一般不能恢复 p？
+
+   **解答：** 本例接受部分已贡献(0.2,0.3,0.1)，再把拒绝0.4按p分配会得到(0.44,0.42,0.14)，重复给已覆盖质量加权。正确补的是p相对q的正缺口，本例全部补到A。
+
 2. 为什么 Q 与 P 可以不同，却必须忠实描述真正生成候选的 sampler？
+
+   **解答：** 算法使用q(x)把“候选被提出的频率”换算成目标接受质量min(p,q)。Q可以不同于P，但若候选实际来自q₁而接受核用q₂，质量变成q₁×min(1,p/q₂)，一般不再等于min(p,q₂)，残差修正也失效。
+
 
 <a id="q30"></a>
 ## Q30 EAGLE 树接受后的 KV 和状态压紧
@@ -680,13 +828,21 @@ Q 的提案来源见 [sample_draft_block](/Users/magician/PycharmProjects/sglang
 
 当前 EAGLE verify 返回 `predict、accept_lens、accept_index`。`accept_index` 表示选了哪些树节点，是连接“被接受的逻辑路径”和“验证时物理位置”的关键。topk>1 时 `_finalize_accept_tree_path` 依据该索引移动接受的 Target KV，把 predict 和非空 hidden_states 压到每请求块前部；压紧函数返回的新 predict 必须继续使用，旧数组仍是树布局。topk=1 则是线性链，已具备顺序关系，不需要同样的树搬移。这一 guard 必须保留，不能把所有投机路径描述成固定搬一遍。
 
-bonus 还带来一位错位。验证输入中的位置经过 Target 后生成“下一 token”的预测；最终多交付的 bonus 是新采样的输出，它未必作为本轮输入被计算过。当前 KV 搬移使用 `accept_lens−1`，不能从输出接受长度直接推断每个输出 token 都有同位置新 KV。bonus 提取按真正接受路径索引，stride 来自 `accept_index.shape[1]`，对应路径宽度而非整棵树节点总数；若用 `num_draft_tokens` 代替，在树比路径宽时就会从错误请求或分支取值。
+bonus 还带来一位错位。验证输入中的位置经过 Target 后生成“下一 token”的预测；最终多交付的 bonus 是新采样的输出，它未必作为本轮输入被计算过。调用处传入 `accept_lens−1`，但形参是正确 draft 数 `num_correct_drafts`；callee把连续目标范围的终点设为 `seq_lens+num_correct_drafts+1`，实际保留的是 `accept_lens` 个本轮输入位置。比如正确接受两个draft时，输出为 `[d₁,d₂,x]`、accept_lens=3，保留的输入KV是 `[旧anchor,d₁,d₂]` 共3个，新bonus x还没有执行输入KV；不能误读为只搬两个位置，也不能把这3个输入KV当成3个输出词的同位置KV。bonus 提取按真正接受路径索引，stride 来自 `accept_index.shape[1]`，对应路径宽度而非整棵树节点总数；若用 `num_draft_tokens` 代替，在树比路径宽时就会从错误请求或分支取值。
 
 提交后的 Target 状态还不是结束。后续 Draft Extend 要消费正确 token/hidden，推进 Draft 对应前缀；`new_seq_lens` 发布后，下轮 metadata 和位置也必须以新前缀为准。混合 recurrent 模型可能另外选择接受 step 对应的中间 state，否则 KV 正确仍不够。当前 EAGLE worker 的 verify→publish→Draft Extend 是真实下一消费者；Scheduler 的延迟结果处理再把有效接受区间提交到请求状态，普通解码的单 token 消费方式不能直接套用，详见 [Q33](#q33)。
 
 overlap 增加的是时序问题：GPU 可能已进入下一轮，CPU 才处理上一轮接受结果。若 verify 临时 buffer/cache loc 提前释放或复用，下轮就会读取被覆盖内容。当前 result 通过 `extra_keep_alive_refs` 持有 verify ForwardBatch，寿命因此延伸到需要的时点；去掉它可能变成偶发错误，而非稳定首轮失败。dFlash 和 dSpark 的 block/ragged 线性验证有各自提交方式，不采用同一棵树的 `accept_index` 压紧；共享的是“只提交被接受前缀，下一轮消费状态一致”的原则。
 
-讲解时可以拿 100、102、105 这条路径说：“接受长度回答增长多少，accept_index 回答接受了谁；我还要把这些节点的 KV、token 和 hidden 变成下一轮能消费的布局，推进 Draft，再保证异步消费者读完前对象不失效。漏掉其中一项，长度正确也不能保证后续生成正确。”
+#### 追问1的回答
+
+**四个数分别表示什么。** 假设每请求验证6个树节点、最大路径4个位置，本轮只接受路径中的3个输出；物理节点索引可以是0、2、5。6控制每请求树验证存储区，4是accept_index每请求路径宽度，3是本轮accept_lens，0/2/5才标识实际节点。bonus在 `predict[accept_index]` 形成的路径布局中取，所以stride用accept_index.shape[1]=4，不能用6。topk=1时树常退化为链、节点数与路径宽重合，错误stride可能恰好不显现。
+
+#### 追问2的回答
+
+**提交什么、接下来谁读。** 当前单层EAGLE树finalize分支依据accept_index移动被接受Target KV。调用传入num_correct_drafts=accept_lens−1，move函数内部再加1把旧anchor计入输入范围；accept_lens=3时保留旧anchor与两个正确draft的3份KV，新bonus仍未作为输入执行。predict及存在的hidden_states一起压到每请求前部。随后EAGLEWorkerV2先on_publish(new_seq_lens)，再由draft_worker._draft_extend_for_decode用接受后的token/hidden推进Draft，返回的result还由Scheduler延迟处理有效输出。若finalize_tree_path不启用、topk=1或多层实现有专门布局，应按各自分支处理，不能强加同一搬移操作。
+
+混合模型的persistent conv/SSM state也必须对应最后接受的输入step。当前commit_mamba_states_after_verify根据accept_index[req,accept_lens−1]减每请求树偏移得到last_correct_step_indices，再交给backend/model的commit hook；跨mamba tracking间隔还选择对应跟踪step。ReplaySSM ring有专门推进cursor并提交conv的分支，不等同一律复制完整SSM tensor。下一轮模型读取的是这些persistent/ring状态；若保留拒绝分支末尾，文本/KV索引正确也会生成错误。verify ForwardBatch通过keep_alive引用保留到后续读完，避免overlap复用污染。
 
 ### 源码调用链与证据
 
@@ -713,18 +869,24 @@ predict = _compact_accept_to_front(
 )  # 返回值必须继续用，旧 predict 仍是树布局
 ```
 
-整理与 hidden 的同步写入见 [树路径 finalize](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/eagle_worker_common.py:402)；bonus 的实际 stride 见 [bonus 提取](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/eagle_worker_common.py:608)；返回与临时引用见 [GenerationBatchResult](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/eagle_worker_common.py:640)。下一消费者见 [EAGLE verify 后 draft_extend](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/eagle_worker_v2.py:1194)。
+move函数的形参与连续目标范围见 [num_correct_drafts契约](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/spec_utils.py:694)、[范围终点加1](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/spec_utils.py:734)。整理与 hidden 的同步写入见 [树路径 finalize](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/eagle_worker_common.py:402)；bonus 的实际 stride 见 [bonus 提取](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/eagle_worker_common.py:608)；返回与临时引用见 [GenerationBatchResult](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/eagle_worker_common.py:640)。recurrent状态的实际提交与分支见 [commit_mamba_states_after_verify](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/spec_utils.py:781)。下一消费者见 [EAGLE verify 后 draft_extend](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/eagle_worker_v2.py:1194)。
 
 ### 生产实践追问
 
-- **长度正确，第二轮起分叉，如何抓首错？** 固定一条非连续接受路径，记录 accept_index、提交前后 KV 槽位内容、predict/hidden 的压紧结果与新长度；让下一轮 query 对照逐 token reference。若差异首次出现在错误兄弟槽位，修路径搬移/映射；若 Target 正确而 Draft 后续变差，继续查 Draft Extend 的输入。
-- **topk=1 通过，topk>1 失败，重点查哪？** 使用树节点总数大于路径宽度的最小例子，核 bonus 的实际 stride、请求偏移、`accept_lens−1` 与 finalize guard。验收分别覆盖线性链、分叉、首拒绝、全路径接受以及多请求不同路径，不用单链结果替树路径背书。
-- **只开 overlap 后偶发出错，怎样判定生命周期问题？** 标记 verify ForwardBatch、cache loc 和 hidden 的分配/复用时点，对齐 stream/event 与 CPU 结果消费；保留引用后若首错消失，还需证实原复用发生在读完成前。验收以多轮、多 batch 交错的状态一致性为准，单轮输出正确不足。
+- **长度正确，第二轮起分叉，如何抓首错？** 固定一条非连续接受路径，记录 accept_index、提交前后 KV 槽位内容、predict/hidden 的压紧结果与新长度；让下一轮 query 对照逐 token reference。若差异首次出现在错误兄弟槽位，修路径搬移/映射；若 Target 正确而 Draft 后续变差，继续查 Draft Extend 的输入。 **具体处理：** KV错就修路径选择与搬移，Target正确而Draft Extend错则修压紧token/hidden的消费者输入；逐轮定位到首次错误状态后再恢复其它优化。
+- **topk=1 通过，topk>1 失败，重点查哪？** 使用树节点总数大于路径宽度的最小例子，核 bonus 的实际 stride、请求偏移、`accept_lens−1` 与 finalize guard。验收分别覆盖线性链、分叉、首拒绝、全路径接受以及多请求不同路径，不用单链结果替树路径背书。 **具体处理：** 使用6节点/4路径宽的反例修bonus stride与请求偏移，保持topk=1身份变换，不能为树修复额外破坏单链。
+- **只开 overlap 后偶发出错，怎样判定生命周期问题？** 标记 verify ForwardBatch、cache loc 和 hidden 的分配/复用时点，对齐 stream/event 与 CPU 结果消费；保留引用后若首错消失，还需证实原复用发生在读完成前。验收以多轮、多 batch 交错的状态一致性为准，单轮输出正确不足。 **具体处理：** 保留verify时GPU tensor引用或延后buffer复用，直到真实stream消费者结束；不以无界全局同步掩盖原寿命缺口。
 
 ### 学习检查点
 
 1. 为什么正确的 accept_lens 不能证明下一轮读到的是正确 KV？
+
+   **解答：** accept_lens只表示有效增长量，不描述接受了树中哪几个节点，也不自动搬内容。槽位100、102、105若仍按树布局保存，下轮读连续100、101、102会包含兄弟分支；必须用accept_index同步映射/搬移及hidden/state。
+
 2. 如果 bonus 提取误用树总节点数作 stride，为什么 topk=1 测试可能发现不了？
+
+   **解答：** 单链里每请求树总宽与路径宽可能相等，错误公式与正确公式数值重合；分叉树节点更多、路径较短时才会跨请求取错bonus。因此必须有树节点数大于路径宽的测试。
+
 
 <a id="q31"></a>
 ## Q31 dFlash 和 dSpark 的提案与验证计数
@@ -755,7 +917,15 @@ dSpark 当前使用另一种约定：gamma 就是新提案数。gamma=16 时 Dra
 
 这一区分会直接影响正确性和性能：错误 stride 会在扁平输出数组中跨请求取 token；把 padding 当有效提交会污染 KV 和请求输出；把上限当有效工作则会高估吞吐。结果中保存本轮 `speculative_num_draft_tokens`，延迟到 CPU 后仍按这个 stride 切有效前缀，不能读取已经自适应改变的最新 worker 配置。当前 dSpark 已有 Graph 与 overlap 支持，还区分 proposal folded、Target accept folded 和 commit folded；不能借旧资料说整个功能强制关闭，也不能看到一个 folded 字段就称整轮在单图里完成。
 
-口述可以直接给两行表意：“dFlash 16 是 1 anchor+15 新 draft，最大 16 新输出；dSpark gamma16 是 16 新 draft，完整窗口17、最大17输出。然后我会另报 ragged 实际验证和真实 commit，因为这些上限不是本轮有效计数。”
+#### 追问1的回答
+
+**anchor不需要再次猜。** anchor是上一轮已经选定的bonus，本轮只把它作为位置0输入：Target行0预测候选d₁，行1输入d₁预测d₂，最后有效输入行预测新bonus。dFlash B16由1anchor+15个新draft构成，完整接受最多交付15draft+1新bonus=16；dSpark gamma16由1anchor+16新draft构成，完整窗口17、最多交付17。旧anchor不再次采样也不再次计入本轮新输出，首拒绝时两者都仅交付一个Target纠正词。
+
+#### 追问2的回答
+
+**配置窗口不是本轮有效行数。** dSpark W17只是上限；planner若给某请求verify_lens=5，有效验证窗口只含5个输入位置，Graph为了tier形状还可运行额外padding。最后commit取接受前缀，可能小于有效窗口。于是gamma、W、逐请求verify_lens、Graph执行行、commit必须分开；CPU按result记录的stride切取有效输出，不能把padding计入用户产出。
+
+dFlash B16与dSpark gamma15即使都有最大窗口16，也不等于Draft计算结构/成本相同。当前dFlash从block hidden[:,1:]经词表head/采样得到候选；dSpark在Draft forward之后还有compute_base_logits与Markov head条件修正/逐step候选选择，且各自Graph folding、sampling、ragged与KV更新分支不同。模型权重/hidden宽、执行行数和kernel链都未由窗口相等固定；相等只证明接口位置上限一致，不证明每轮执行代价或接受分布一致。
 
 ### 源码调用链与证据
 
@@ -783,14 +953,20 @@ draft_next = self._greedy_sample_from_vocab_parallel_head(
 
 ### 生产实践追问
 
-- **两个部署都配置 16，为何接受长度差 1？** 把各自 anchor、新 draft、verify 输入、bonus 和有效输出画成位置表，检查指标含不含 bonus。统一为 correct drafts 或真实 commit 后再比较，若差异只来自口径应修报表；不能据原始均值判断 Draft 更好。
-- **ragged 后 tokens/s 异常升高，如何核实？** 每轮同时记录 W、逐请求 verify_lens、graph tier、commit_lens 和用户保留输出，检查分母按有效提交而非 padding/配置上限计算。用扁平数组的哨兵测试 stride 和请求边界；只有输出计数与请求增长对齐才认可收益。
-- **开 Graph 计数不一致，查哪条分支？** 对齐显式 sampler 与 folded sampler 的输出 shape、accept/finalize buffer 和本轮 result stride，分别验证短窗口、完整窗口与动态配置切换。验收每轮有效前缀一致，Graph 命中率只是执行证据，不能替代计数正确性。
+- **两个部署都配置 16，为何接受长度差 1？** 把各自 anchor、新 draft、verify 输入、bonus 和有效输出画成位置表，检查指标含不含 bonus。统一为 correct drafts 或真实 commit 后再比较，若差异只来自口径应修报表；不能据原始均值判断 Draft 更好。 **具体处理：** 统一correct drafts或真实commit的分子，再用各自实际verify行和周期时间比较；若差1只因含bonus口径，修指标而非调模型。
+- **ragged 后 tokens/s 异常升高，如何核实？** 每轮同时记录 W、逐请求 verify_lens、graph tier、commit_lens 和用户保留输出，检查tokens/s的分子按实际保留输出计数，不把padding或配置上限计成输出；分母使用相同计时范围内的真实耗时。用扁平数组的哨兵测试 stride 和请求边界；只有输出计数与请求增长对齐才认可收益。 **具体处理：** 按commit和实际保留输出重计吞吐，剔除padding/配置上限；若stride有跨请求污染，立即修结果协议再做性能比较。
+- **开 Graph 计数不一致，查哪条分支？** 对齐显式 sampler 与 folded sampler 的输出 shape、accept/finalize buffer 和本轮 result stride，分别验证短窗口、完整窗口与动态配置切换。验收每轮有效前缀一致，Graph 命中率只是执行证据，不能替代计数正确性。 **具体处理：** 让folded与显式路径返回同shape/计数，动态窗口按result本轮stride解释；哪条分支不一致就修哪条，不以关闭所有Graph替代计数修复。
 
 ### 学习检查点
 
 1. dFlash B=16 与 dSpark gamma=15 在最大验证窗口上相同，是否意味着 Draft 计算结构与成本相同？
+
+   **解答：** 不意味着。两者只是最多16个验证输入位置；dSpark还有当前Markov条件head和实际proposal/accept路径，dFlash的block采样与KV更新也有不同实现。相同窗口不能确定模型维度、算子数、Graph命中、实际ragged行或提交长度，所以不能推成本相等。
+
 2. 为什么 W=17 不能推出每请求本轮一定验证 17 个位置？
+
+   **解答：** W是配置最大窗口，planner可能因预算/置信度缩短每请求verify_lens，Graph另有padding，接受又只提交有效前缀。W17、实际5行、commit3可以同时成立，各指不同数量。
+
 
 <a id="q32"></a>
 ## Q32 Target hidden 怎样建立 Draft KV
@@ -815,13 +991,19 @@ Target 的 hidden 是对输入位置的表示，Draft KV 则是 Draft 注意力�
 
 把一轮 Decode 从头画完：已处理前缀长度为 128，上一轮输出 anchor b 尚待作为本轮输入，位置是 128。Draft 提出 d₁、d₂、d₃，Target Verify 输入 `[b,d₁,d₂,d₃]`，位置分别 128、129、130、131。若 d₁/d₂ 接受、d₃ 被拒并由 Target 给出纠正 x，本轮新输出是 `[d₁,d₂,x]`，实际 commit=3，已处理长度变为 131。有效输入 hidden 却是 b、d₁、d₂ 对应的三行，写入位置 128–130；x 成为下轮位置 131 的 anchor，本轮并没有把 x 作为输入计算过。
 
-为什么正好这样提交？验证行 128 输入 b，输出条件分布用于决定 d₁；行 129 输入 d₁，决定 d₂；行 130 输入 d₂，决定 x。因此输出 run 与已经建立的输入 KV run 相差一个位置。若拿新输出 `[d₁,d₂,x]` 去对应这三行 hidden，token 和位置关系就错位；若把被拒绝 d₃ 的 hidden 当有效上下文写入并允许下轮读取，则污染前缀。`commit_lens` 在这里控制的是已确认输入前缀的物化范围，而不能简单理解为“所有候选都已经算过，随便留着”。
+这次提交范围由每行输入到下一token预测的因果关系决定。验证行 128 输入 b，输出条件分布用于决定 d₁；行 129 输入 d₁，决定 d₂；行 130 输入 d₂，决定 x。因此输出 run 与已经建立的输入 KV run 相差一个位置。若拿新输出 `[d₁,d₂,x]` 去对应这三行 hidden，token 和位置关系就错位；若把被拒绝 d₃ 的 hidden 当有效上下文写入并允许下轮读取，则污染前缀。`commit_lens` 在这里控制的是已确认输入前缀的物化范围，而不能简单理解为“所有候选都已经算过，随便留着”。
 
 当前非 folded commit 的执行者是 `TargetVerifyExecutor.commit_hidden`，compact/ragged 与非 compact 组织方式不同，最终交给 injector。非 compact 将 hidden 按 `[bs,W,hidden]` 理解，连同二维 cache loc、positions 和 commit_lens 传入；injector 做必要 dtype 转换，再调用 Draft writer，MLA 有专门 mask。若当前 Target epilogue 已 folds_commit，worker 跳过显式 commit_hidden，因为责任已在折叠路径完成，不能因此断言漏写。之后 `make_next_draft_input` 返回 bonus 和 new_seq_lens，下一轮提案读取已推进的上下文。
 
 映射只是地址证明，不是内容证明。`req_to_token` 说明逻辑位置指向哪个槽，`out_cache_loc` 说明本轮写哪里；正确内容还要求 hidden 的层集合/顺序、batch 行顺序、position/RoPE、投影权重、dtype/scale 和 stream 依赖都一致。跨请求错行、位置错一位或读到上一轮内容，地址都可能完全合法。删除写入会让 Draft 读旧状态；过早复用 buffer 会造成 overlap 偶发错；多写拒绝分支只有在被严格屏蔽且不当有效状态时才不影响后续，不能靠 allocator 可用性推断语义。
 
-口述可围绕这三个集合：“这轮输出 d₁,d₂,x，真正建立上下文的是输入 b,d₁,d₂，下轮带着 x 和长度131继续。我要同时核对哪几行 hidden、写到哪些 loc，以及下一轮何时能读到它们。”dFlash 的 block cache 更新与 EAGLE Draft Extend 需沿各自路径检查，不能因为共享容器就套用本题 writer。
+#### 追问1的回答
+
+**两阶段hidden和写范围。** Prefill请求Target捕获FULL辅助hidden；对每请求prefix_len=p、extend_len=e，compute_position从p生成e个位置，batch.out_cache_loc给本段e个写地址，injector把这些输入hidden投影成Draft KV。Target Prefill采出的新token作为下轮bonus，不在本轮输入hidden里。普通DSparkDraftModel混入的DSparkDraftMixin.write_target_hidden_kv接收target_hidden[N_e,H_aux]，先project_target_hidden到Draft上下文宽度，再逐Draft层做kv_proj_only、K norm和position RoPE，得到K/V的[N_e,local_kv_heads,head_dim]并写pool；stacked参数可将多层投影合并，但不改变各层缓存语义。非compact Verify对应[bs×W,H_aux]，有效写入仍由逐请求commit_lens限制。DeepSeekV4专用writer则经CommitKvProj和SWA fused norm/RoPE写入，不冒充同一MHA布局。Decode Verify对 `[b,d₁,d₂,d₃]` 得各输入行hidden，commit=3时只物化位置128的b、129的d₁、130的d₂；输出[d₁,d₂,x]的x作为下轮位置131输入，还没有它自身输入KV。compact走inject_ragged，非compact用[bs,W,*]和commit_lens限制写范围，folded commit则由epilogue承担同一语义。
+
+#### 追问2的回答
+
+**三个不变量不同。** req_to_token把“请求逻辑位置”映射到物理token槽；out_cache_loc列出本次forward/注入的写目标；Draft pool内容则必须是在正确请求、层集合、位置、权重、dtype/scale与stream时序下生成的真实K/V/latent。前两者只证明地址组织合法，不能证明内容是本轮或属于本请求。比如同一loc写position129而应写128，RoPE产生错误旋转，下一query score就变；再比如hidden批次行错位，地址仍不越界却读到另一个请求的上下文。next_draft_input把新bonus和长度交给下一轮，读取时必须看到刚提交的内容。
 
 ### 源码调用链与证据
 
@@ -856,18 +1038,24 @@ self.kv_injector.inject_target_hidden(
 )
 ```
 
-Prefill 的初始消费链见 [DSpark _forward_prefill](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:389)；节选见 [TargetVerifyExecutor.commit_hidden](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/dspark_components/dspark_verify.py:287)；实际转交 Draft writer 与 MLA mask 见 [TargetHiddenKvInjector](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/dspark_components/dspark_kv_inject.py:31)。下一轮状态返回见 [next_draft_input](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:684)。
+Prefill 的初始消费链见 [DSpark _forward_prefill](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:389)；节选见 [TargetVerifyExecutor.commit_hidden](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/dspark_components/dspark_verify.py:287)；实际转交 Draft writer 与 MLA mask 见 [TargetHiddenKvInjector](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/dspark_components/dspark_kv_inject.py:31)。普通Draft writer的投影、norm/RoPE与pool写入见 [DSparkDraftMixin.write_target_hidden_kv](/Users/magician/PycharmProjects/sglang/python/sglang/srt/models/dspark.py:505)，V4专用分支见 [DeepSeekV4 writer](/Users/magician/PycharmProjects/sglang/python/sglang/srt/models/deepseek_v4_dspark.py:649)。下一轮状态返回见 [next_draft_input](/Users/magician/PycharmProjects/sglang/python/sglang/srt/speculative/dspark_components/dspark_worker_v2.py:684)。
 
 ### 生产实践追问
 
-- **req_to_token 全对但输出错误，下一步查什么？** 固定上述 128→131 例子，给 hidden 行加可辨识标记，对比实际 writer 选行、cache loc、positions 和下轮读取内容。若地址正确但行/位置不匹配，应修注入组织；若内容正确但下轮读旧值，再查 stream/event，不能继续只测 allocator。
-- **ragged 正确，非 compact 错或反之，怎样定位？** 以两个请求不同 commit 长度检查 `[bs,W,*]` reshape、二维 loc、valid mask 和注入数量；给 padding/拒绝行放哨兵。验收只提交各自有效输入前缀，短请求不跨到下一请求行，且下一轮 logits 与逐步 reference 一致。
-- **folded 路径没有显式 commit_hidden，如何证实完成？** 核 epilogue.folds_commit 与实际 graph 分支，对齐折叠前后 Draft pool 内容及 next_draft_input。只有等价写入已发生且在下轮读前可见，才能解释为折叠；一个布尔 guard 或图捕获成功不构成内容证据。
+- **req_to_token 全对但输出错误，下一步查什么？** 固定上述 128→131 例子，给 hidden 行加可辨识标记，对比实际 writer 选行、cache loc、positions 和下轮读取内容。若地址正确但行/位置不匹配，应修注入组织；若内容正确但下轮读旧值，再查 stream/event，不能继续只测 allocator。 **具体处理：** 按位置标记重排hidden行/写入mask；若position错先修compute_position/二维位置组织，若读旧内容再补正确event依赖。
+- **ragged 正确，非 compact 错或反之，怎样定位？** 以两个请求不同 commit 长度检查 `[bs,W,*]` reshape、二维 loc、valid mask 和注入数量；给 padding/拒绝行放哨兵。验收只提交各自有效输入前缀，短请求不跨到下一请求行，且下一轮 logits 与逐步 reference 一致。 **具体处理：** 修各自compact/非compact的行到loc映射与commit有效mask，保证短请求不读取/写入下一请求；拒绝/padding行保留哨兵作回归。
+- **folded 路径没有显式 commit_hidden，如何证实完成？** 核 epilogue.folds_commit 与实际 graph 分支，对齐折叠前后 Draft pool 内容及 next_draft_input。只有等价写入已发生且在下轮读前可见，才能解释为折叠；一个布尔 guard 或图捕获成功不构成内容证据。 **具体处理：** 确实folds_commit时检查epilogue的写入，未folds时必须显式commit_hidden；缺一条就补对应实现，不能只改布尔状态声称已提交。
 
 ### 学习检查点
 
 1. 在本例中，为何本轮新输出包含 x，写入 Draft KV 的 hidden 却不包含 x 的输入表示？
+
+   **解答：** 本轮位置130输入d₂才产生用于选择x的输出logits，x尚未成为Target/Draft输入；因此有x这个新输出，却没有x对应的输入hidden。下一轮才以位置131的anchor=x建立它的输入KV。
+
 2. 若 cache_loc 全都正确但 positions 偏移一位，为什么仍会影响未来提案？
+
+   **解答：** K的旋转依赖写入时position，Q/K相对位置关系进入点积；loc正确只保证写到合法槽，position错一位仍改变score。非RoPE路径也可能有位置相关编码，所以不能靠地址测试证明内容语义。
+
 
 <a id="q33"></a>
 ## Q33 接受长度与投机加速收益的区别
@@ -894,11 +1082,17 @@ GPU 输出通常是每请求固定 stride 的 padded token 区域，并非数组
 
 真正的收益是付出一次投机周期，换来多少有效推进。以普通 Decode 5 ms/token 为基线，配置 A 每轮14 ms、平均真实 commit=4，则摊到3.5 ms/token，理想加速约 `5/3.5=1.43`；配置 B 接受提高到5，但一轮26 ms，变成5.2 ms/token，比基线还慢。多出来的12 ms 可能来自更长 Draft、更多 Target verify 行、padding、metadata 与注入；不能只解释为“接受质量变好了”。这些数字是因果示例，真实服务还存在并发、重叠与排队，不能把比值当成已经测得的吞吐。
 
-为什么更大 gamma 常有递减收益？靠后的候选更容易被前面的拒绝作废，而它们已经消耗提案/验证和预留资源；窗口变大还可能升到更大的 graph tier，增加 padding。更多候选槽位挤占 KV 容量，使活跃 batch 下降，单请求摊销获益也可能被总吞吐损失抵消。可把效率写为“每轮实际 commit/本轮实际 verify 行”，但它只描述验证利用率，仍没有包含 Draft 与整轮时间。不同指标必须各归其位。
+更大gamma的收益递减来自靠后候选更易失效而成本已经支付。靠后的候选更容易被前面的拒绝作废，而它们已经消耗提案/验证和预留资源；窗口变大还可能升到更大的 graph tier，增加 padding。更多候选槽位挤占 KV 容量，使活跃 batch 下降，单请求摊销获益也可能被总吞吐损失抵消。可把效率写为“每轮实际 commit/本轮实际 verify 行”，但它只描述验证利用率，仍没有包含 Draft 与整轮时间。不同指标必须各归其位。
 
 当前 dSpark 支持 Graph 和 overlap，需要检查实际命中和分段折叠。`proposal.folded` 指提案 sampler 的折叠；Target folded_accept 另受 epilogue、compact、graph、logits 调整/grammar 等 guard 约束，commit 也可能在 epilogue 或显式路径完成。关闭某路径的旧历史限制不能直接沿用，反过来“开了 Graph”也不代表所有步骤都被包含。重叠区间相交只说明调度时间关系，是否减少关键路径需看读写等待和竞争。
 
-讲解可拿 A/B 数字作结：“接受率告诉我 Draft 猜得怎样，commit 告诉我状态真正推进多少，周期时间告诉我为此付出多少。我会先统一计数，再看每轮成本/有效产出和容量变化，最后在固定 GPU、负载与 SLA 下报告 goodput；这三层一致才算加速。”
+#### 追问1的回答
+
+**各长度控制对象。** correct_len计真正接受的Draft；commit_lens=correct_len+1，推进new_seq_lens并限定提交；当前result.accept_lens就是commit_lens，CPU用它取有效run。block_accept_lens=commit_lens+cap_trim_lens只用于cap/ragged截断前扩展接受指标，不控制KV；cap_lens来自layout.verify_lens，记录本轮逐请求有效验证窗口，既不是cap_trim也不是接受数。若correct=2、cap_trim=3，则commit=accept_lens=3、block_accept_lens=6；只有真实commit语义可控制提交，最终grammar/结束处理后的用户保留run还要另计。
+
+#### 追问2的回答
+
+**公平比较gamma/ragged/folding/overlap。** 固定模型/精度/采样、总GPU、到达trace及长度/缓存分布，逐轮同时报proposal数、有效verify行、Graph padding、真实commit、各阶段时间和活跃batch，并按SLO统计goodput。gamma提高若14ms/4变26ms/5，成本从3.5变5.2ms/推进位置，已经反证加速；ragged若降低有效行但跨大tier，未必减少图执行工作。proposal.folded只表示相应提案采样折叠，accept/commit有独立guard；overlap按实际最长路径计时，不能把重叠阶段相加或把区间相交当真正隐藏。CPU还按result自带stride与实际保留run更新Req，不能拿最新窗口/指标block接受数扩大产出。
 
 ### 源码调用链与证据
 
@@ -928,14 +1122,20 @@ next_draft_input=next_draft_input,
 
 ### 生产实践追问
 
-- **接受均值涨 20%，吞吐跌 10%，怎么分账？** 同时记录 correct、commit、block/cap、实际 verify 行、graph padding、Draft/Target/注入时间和活跃 batch。先按真实 commit 重算周期成本，再查新增验证浪费或容量下降；以固定到达率的完成率/ITL 判定，不用 block 指标替用户产出。
-- **自适应窗口后偶发跨请求 token，查哪里？** 比较 result 保存的 stride 与 CPU 消费时 worker 最新窗口，用不同请求的哨兵输出核切片边界。若旧结果按新窗口解释即定位协议错误；验收覆盖连续两轮窗口改变、不同接受长度、grammar/EOS，而非只做稳定窗口测试。
-- **Graph 指标很好但收益小，怎样解释？** 分别记录 proposal folded、folded_accept、folded_commit 与实际 replay，并在 timeline 标注未折叠的 quant/metadata/注入和等待。若剩余关键路径未被覆盖，图命中与低收益可同时成立；还需排除模拟接受配置后才比较真实性能。
+- **接受均值涨 20%，吞吐跌 10%，怎么分账？** 同时记录 correct、commit、block/cap、实际 verify 行、graph padding、Draft/Target/注入时间和活跃 batch。先按真实 commit 重算周期成本，再查新增验证浪费或容量下降；以固定到达率的完成率/ITL 判定，不用 block 指标替用户产出。 **具体处理：** 成本升在候选/图档就降低gamma或改预算/tier，在容量就调整预留/接纳；只有同trace真实commit和SLO收益为正才保留更大接受配置。
+- **自适应窗口后偶发跨请求 token，查哪里？** 比较 result 保存的 stride 与 CPU 消费时 worker 最新窗口，用不同请求的哨兵输出核切片边界。若旧结果按新窗口解释即定位协议错误；验收覆盖连续两轮窗口改变、不同接受长度、grammar/EOS，而非只做稳定窗口测试。 **具体处理：** 用result记录的stride修切片与grammar保留顺序，保证旧结果不受新窗口污染；再覆盖两轮动态切换。
+- **Graph 指标很好但收益小，怎样解释？** 分别记录 proposal folded、folded_accept、folded_commit 与实际 replay，并在 timeline 标注未折叠的 quant/metadata/注入和等待。若剩余关键路径未被覆盖，图命中与低收益可同时成立；还需排除模拟接受配置后才比较真实性能。 **具体处理：** 只为未覆盖且launch主导的阶段做进一步折叠，或接受已命中的有限收益；模拟接受配置必须关闭后再报告真实速度。
 
 ### 学习检查点
 
 1. 若 correct_len=2、cap_trim=3，当前 accept_lens 与 block_accept_lens 分别是多少？哪个能直接控制 KV 提交？
+
+   **解答：** accept_lens=correct_len+1=3，block_accept_lens=3+cap_trim3=6；KV与new_seq_lens只能依据真实commit=3的语义推进，不能依据纯metrics的6。cap_lens记录实际verify窗口，不是这两个数的别名。
+
 2. 为什么完整模型的平均 commit 增加，不足以证明服务的 goodput 增加？
+
+   **解答：** 周期可能因Draft/Verify/注入/padding增加得更多，候选预留还可能降低可接纳batch，排队与SLO随之恶化。14/4=3.5ms比26/5=5.2ms更好，平均commit更高却每有效位置更贵；goodput还须扣违约/失败。
+
 
 <a id="q34"></a>
 ## Q34 投机解码的正确性验证矩阵
@@ -966,7 +1166,13 @@ Sampling 需要分布证据。固定同一上下文，做独立抽样并预先�
 
 最后才扩展执行矩阵：eager/graph、overlap on/off、单/多 batch、filter/merge、prefix、chunk、grammar、各已支持采样参数及接近 EOS；TP/DP/PP/CP/PD 按当前支持范围选择，不能假定所有笛卡尔积都支持。Graph 需要多次 replay 和地址复用，overlap 要让上一轮 CPU 消费与下一轮 GPU 交错；CPU reference 无法证明这些时序。真实 PD 还必须看到传输、接收提交与消费，而非端点健康。每层通过应记录代码/配置/权重/硬件与实际分支，才能复现和界定结论。
 
-讲解可用一条故障树表达：“先证明已知 P/Q 的算法，再证明接受后状态，再对模型 greedy 与 sampling 分别验证，最后扩大到 Graph/overlap/并行。某层失败就停在首分歧归因；某层通过也不会越级宣布整个生产系统正确。”本册给的是验证计划与现有入口，没有把未执行实验说成结果。
+#### 追问1的回答
+
+**四层分别验证不同断言。** 接受层用已知p/q和随机数对照接受、首拒绝残差、bonus及cap；状态层核每轮真实KV/hidden/position和accepted path，下一轮再读取检验；生成层用固定权重/模板/精度的Target-only作greedy首分歧及sampling条件分布对照；执行层让相同请求在eager/Graph、overlap开关、批次过滤/合并和窗口变化下多轮运行，检查地址复用/event与CPU有效token消费。某一层失败就定位该层的第一条错误边，不能拿最终字符串掩盖状态污染，也不能以关闭优化后成功宣称原路径已修好。
+
+#### 追问2的回答
+
+**采样统计与seed是两种性质。** 同seed完全相同最多说明在该配置中可复现，错误实现也能每次稳定地产生偏分布；正确实现若使用不同的随机数消费顺序，可以同seed文本不同。固定上下文、独立采样N=10000、目标p(A)=0.2时，标准误0.004；频率0.202仅差0.5个标准误，不足以拒绝正确性，0.23相差7.5个标准误则强烈提示偏差。预先定义词/上下文集、检验与多重比较处理，并增加多轮联合/任务对照，避免只挑通过的词或seed。若首token频率正确但多轮有偏，还需查错误条件前缀/提交；只比一次同seed字符串无法做这个判断。
 
 ### 源码调用链与证据
 
@@ -983,14 +1189,20 @@ Sampling 需要分布证据。固定同一上下文，做独立抽样并预先�
 
 ### 生产实践追问
 
-- **最终文本错了但不知道哪层，怎样缩小？** 用固定输入保存逐轮候选、P/Q/接受结果、提交索引和下一轮状态，找到第一条与 reference 不同的边；状态一致才进入 logits/采样分析。验收修复需在原最小反例及相邻边界通过，不能只换长文本“看起来正常”。
-- **sampling 统计偶尔失败，怎么判断随机波动？** 预先固定上下文集、N、检验及多重比较处理，记录效应大小和置信区间，增加样本后看偏差是否收敛；同时做已知分布核验排除计数错误。若偏差方向稳定且超过统计尺度，应继续查实际 proposal/P/Q，不可反复换 seed 直到通过。
-- **eager 通过，能否上线 Graph+overlap？** 还需多轮 replay、窗口变化、batch 合并/过滤、取消/回收与流依赖证据，检查临时 buffer 在最后消费者前不复用。分别报告组件 GPU、完整生成和真实 PD 的通过范围；若某项未运行，明确作为待验收项，不能由 source reachability 推断通过。
+- **最终文本错了但不知道哪层，怎样缩小？** 用固定输入保存逐轮候选、P/Q/接受结果、提交索引和下一轮状态，找到第一条与 reference 不同的边；状态一致才进入 logits/采样分析。验收修复需在原最小反例及相邻边界通过，不能只换长文本“看起来正常”。 **具体处理：** 在首次不一致边修采样或提交，保留原最小反例和相邻边界作回归；前缀已错就不继续用后续logits差异判断分布算法。
+- **sampling 统计偶尔失败，怎么判断随机波动？** 预先固定上下文集、N、检验及多重比较处理，记录效应大小和置信区间，增加样本后看偏差是否收敛；同时做已知分布核验排除计数错误。若偏差方向稳定且超过统计尺度，应继续查实际 proposal/P/Q，不可反复换 seed 直到通过。 **具体处理：** 若增样本后偏差收敛且在预设区间内，保留结论；稳定超尺度偏差则隔离该sampling配置并修P/Q/残差，不反复换seed直到通过。
+- **eager 通过，能否上线 Graph+overlap？** 还需多轮 replay、窗口变化、batch 合并/过滤、取消/回收与流依赖证据，检查临时 buffer 在最后消费者前不复用。分别报告组件 GPU、完整生成和真实 PD 的通过范围；若某项未运行，明确作为待验收项，不能由 source reachability 推断通过。 **具体处理：** 没有多轮replay/交错状态证据就不把eager通过标为Graph+overlap通过；修生命周期后在原优化路径重验，PD另需传输到消费闭环。
 
 ### 学习检查点
 
 1. 一个 kernel parity sweep 通过，为什么仍不能证明完整 speculative decoding 的数学分布和跨 stream 状态都正确？
+
+   **解答：** kernel sweep只覆盖给定tensor、形状和参数上的局部实现；它可能没有验证实际proposal是否来自所用Q、目标采样变换是否正确、跨轮KV/hidden提交、Graph地址复用与stream事件。各层需要独立证据，已有CUDA测试文件也不代表本次已运行。
+
 2. 若两个 sampling 实现使用相同 seed 却产生不同文本，应先比较什么才能判断是不是错误？
+
+   **解答：** 先固定同一条件前缀比较P/Q及最终条件频率与统计尺度，再检查首次状态/位置差异和实际随机数消费。频率正确且状态一致可解释为轨迹不同；频率系统偏移或缓存错才是错误，不能以同seed差异直接定性。
+
 
 <a id="q56"></a>
 ## Q56 MoE 总参数激活参数与常驻显存
@@ -1013,7 +1225,7 @@ Sampling 需要分布证据。固定同一上下文，做独立抽样并预先�
 
 “每 token 激活约37B”是在描述一条 token 路径参与的参数，不是说其它参数从显存中消失。原始 [DeepSeek-V3 技术报告](https://arxiv.org/html/2412.19437v2)给出主模型约671B总参数、每 token约37B激活；[官方配置](https://huggingface.co/deepseek-ai/DeepSeek-V3/blob/main/config.json)给出 H=7168、61层、前3层dense、后58层MoE、每层256个routed专家、top8、1个shared专家、专家中间维2048。一个 token 只选8个routed专家，但下一个 token 或同批另一请求可能选另外8个；若希望任意请求无需临时搬权重就能执行，整套专家权重仍需按部署方案常驻。
 
-先手算最贵部分。SwiGLU 有 gate/up 两个 `H×I` 矩阵和一个 `I×H` down 矩阵，所以不带 bias 的单专家参数 `P_e=3HI=3×7168×2048=44,040,192`。58层全部 routed 权重为 `58×256×P_e=653.909B`，单 token 选中的 routed 为 `58×8×P_e=20.435B`，shared 为 `58×P_e=2.554B`。为什么不能把671B乘8/256？因为 attention、dense、shared和输出头并不随 routed 专家稀疏；这一步只缩放 routed 子图。37B也不是“8个专家的参数之和”，而是官方对完整激活路径的概括。
+先手算最贵部分。SwiGLU 有 gate/up 两个 `H×I` 矩阵和一个 `I×H` down 矩阵，所以不带 bias 的单专家参数 `P_e=3HI=3×7168×2048=44,040,192`。58层全部 routed 权重为 `58×256×P_e=653.909B`，单 token 选中的 routed 为 `58×8×P_e=20.435B`，shared 为 `58×P_e=2.554B`。671B不能整体乘8/256，因为 attention、dense、shared和输出头并不随 routed 专家稀疏；这一步只缩放 routed 子图。37B也不是“8个专家的参数之和”，而是官方对完整激活路径的概括。
 
 把主干其余部分列出来，才能校验量级。V=129280、heads=128、Q rank=1536、KV rank=512，内容/位置/V维为128/64/128；矩阵按输入×输出计数，实际转置存储不改变参数个数。
 
@@ -1034,7 +1246,15 @@ Sampling 需要分布证据。固定同一上下文，做独立抽样并预先�
 
 容量必须回到驻留：671B全BF16原始payload约1.342 TB十进制，FP8理想payload仍约671 GB，还未计scale、非量化层、KV和临时空间。EP/TP/PP是在rank间分摊，offload是用传输/等待换容量，都不是删除未激活专家。当前shared融合可在各EP rank安排物理shared slot，这是布局副本，不改变逻辑模型参数。缺权重时即使该步只需37B，路由一选到不在设备的专家，就会等待搬运或无法执行。
 
-口述可以明确说：“37B帮我估激活路径，671B帮我估逻辑模型，真实tensor分片/副本帮我估每卡驻留；三者不能替代。先手算专家和attention/head账本，再按实际路由与通信算服务成本，才能判断既装得下又服务得动。”
+#### 追问1的回答
+
+**256/top8/shared分别进哪本账。** 逻辑总参数按每MoE层256 routed+1 shared，共58层；单token的FFN执行只走8 routed+1 shared。单专家44,040,192参数，故全routed653.909B、激活routed20.435B、shared2.554B；前3层dense1.189B仍全部执行。若把MLA投影11.413B、router0.106B、未绑定lm_head0.927B及一个被查embedding行也加到这一条路径，近似得到 `20.435+2.554+1.189+11.413+0.106+0.927≈36.625B`，与官方约37B量级一致；小向量和官方激活口径有取整边界。全部embedding表在模型总参数中约0.927B，但一次lookup只取一行，不应在激活执行量里把整表都算一遍。
+
+FLOPs再按实际子图计：仅58层的9专家三矩阵45.98G；加3层dense约2.378G，MLA五投影矩阵若每token各执行一次约22.827G，router约0.213G、全lm_head约1.853G，合计约73.25 GFLOPs/token的矩阵前向说明性账本。它不含随T变化的QK/AV、softmax/Norm/激活、通信、padding和吸收后执行差异，也不保证Prefill每位置都计算head，所以不是实际V3统一总FLOPs。逻辑矩阵参数与吸收后的执行图必须分开。
+
+#### 追问2的回答
+
+**FP8与EP具体改变什么。** 可量化权重payload由BF16的约2 bytes/元素降到FP8的1，理想主干由1.342TB降至671GB十进制；未量化Norm/head等、scales、repack对齐、KV和workspace另计。EP把routed专家按rank分布，例如EP8且均匀时每rank32个routed专家，而每token选8个仍可能跨多个rank派发；attention/dense/shared是否复制或另做TP由真实group决定。当前shared融合可有每EP rank物理slot，不能把副本算成新增逻辑专家。未激活专家若不常驻就必须走显式offload与等待，不能从容量计划中无条件删除；下游dispatcher/GEMM/combine仍需真实权重、scale和通信。
 
 ### 源码调用链与证据
 
@@ -1051,14 +1271,20 @@ DeepseekV2DecoderLayer._is_layer_sparse(layer_id)
 
 ### 生产实践追问
 
-- **用37B宣布单卡能装，如何当场纠正？** 先列全部权重张量、dtype和分片/副本，按每rank求和，再加KV与峰值；同时画一次batch可能覆盖的专家集合。若计划依赖offload，必须加入实际传输/排队预算，不能把未命中专家视作不存在；验收要覆盖不同路由而非单一热专家。
-- **算出671B却加载文件约685B，哪里不同？** 区分61层主干、MTP附加模块、共享/输出头复用和物理格式，按模块与张量去重后复算。若差额由约14B MTP及格式解释，口径成立；否则检查重复副本或漏计组件，不强行用取整解释全部差值。
-- **激活FLOPs低却吞吐差，怎么追？** 记录实际每expert/rank assignment、权重访问集合、dispatch/permute/GEMM/combine和最长rank，分开计算45.98G FFN示例与实际整层耗时。若网络/小专家batch主导，应优化布局与搬运；不能只靠稀疏FLOPs承诺加速。
+- **用37B宣布单卡能装，如何当场纠正？** 先列全部权重张量、dtype和分片/副本，按每rank求和，再加KV与峰值；同时画一次batch可能覆盖的专家集合。若计划依赖offload，必须加入实际传输/排队预算，不能把未命中专家视作不存在；验收要覆盖不同路由而非单一热专家。 **具体处理：** 先按每rank实际常驻tensor否决装不下的方案；若依赖offload，增加各路由/缓存未命中下的权重传输预算并限制接纳，不能用37B替全部驻留。
+- **算出671B却加载文件约685B，哪里不同？** 区分61层主干、MTP附加模块、共享/输出头复用和物理格式，按模块与张量去重后复算。若差额由约14B MTP及格式解释，口径成立；否则检查重复副本或漏计组件，不强行用取整解释全部差值。 **具体处理：** 确认MTP附加14B与主干边界，若实际不需要就不加载对应模块；若需Draft/MTP则容量和版本账本一并加入，不把文件体积强行归入671B。
+- **激活FLOPs低却吞吐差，怎么追？** 记录实际每expert/rank assignment、权重访问集合、dispatch/permute/GEMM/combine和最长rank，分开计算45.98G FFN示例与实际整层耗时。若网络/小专家batch主导，应优化布局与搬运；不能只靠稀疏FLOPs承诺加速。 **具体处理：** 通信/小batch主导就调整专家布局、dispatch或分组策略，容量副本主导则重分片/量化；保留正确TopK和完整质量门槛，不把低FLOPs当运行证据。
 
 ### 学习检查点
 
 1. 为什么单 token 只激活 8 个 routed experts，仍可能要求部署保有 256 个专家的权重？
+
+   **解答：** 任意后续token/同批请求可选不同专家；若要不等待offload地执行任意路由，就需在设备集合中保有全部256专家的可访问权重。top8只限制单token计算路径，不是删除248专家；EP分摊驻留，offload则付额外传输。
+
 2. 为什么上面的 45.98 GFLOPs 只能作为特定 FFN 子图的静态数值？
+
+   **解答：** 45.98G只按58层、8routed+1shared、三线性矩阵且乘加各计1算出；没有前3层dense、attention投影/历史计算、router/head/非线性、通信或实际kernel padding。输入shape和执行吸收路径改变后还须重算，因此不能等同完整模型每token实测成本。
+
 
 <a id="q57"></a>
 ## Q57 MLA 压缩缓存为何不等于等比例加速
@@ -1081,7 +1307,7 @@ DeepseekV2DecoderLayer._is_layer_sparse(layer_id)
 
 MLA的直觉是“保存一份能重建多头信息的压缩历史”，而不是把每个head的完整K/V全部留下。按V3官方配置，128个heads，Q/K内容维128、位置维64，V维128，KV latent=512、Q latent=1536。若缓存展开K/V，每位置每层为 `128×(192+128)=40960` 元素；若假设同维度GQA仅8个KV heads，则为2560；经典紧凑MLA为 `512+64=576`。Q latent用于本轮query生成，不是每个历史位置要持久保存的KV，不能再加1536。
 
-把一个具体请求算到底：BF16、61层、8192位置、不分片不量化，MLA内容为 `8192×61×576×2=575668224 bytes=549 MiB`；展开MHA对照为38.125 GiB，元素比约71.11。这只是表示的存储对照，不是三套模型质量或部署跑分，也不含页、索引、scale和workspace。位置64维为何仍在？历史内容latent可共享压缩，位置key需要与相应query位置共同形成score，所以不能只报512作为全部缓存。[V3论文MLA章节](https://arxiv.org/html/2412.19437v2#S2.SS1.SSS1)与[官方配置](https://huggingface.co/deepseek-ai/DeepSeek-V3/blob/main/config.json)分别提供数学和维度依据。
+把一个具体请求算到底：BF16、61层、8192位置、不分片不量化，MLA内容为 `8192×61×576×2=575668224 bytes=549 MiB`；展开MHA对照为38.125 GiB，元素比约71.11。这只是表示的存储对照，不是三套模型质量或部署跑分，也不含页、索引、scale和workspace。64维位置分量仍需保留。历史内容latent可共享压缩，位置key需要与相应query位置共同形成score，所以不能只报512作为全部缓存。[V3论文MLA章节](https://arxiv.org/html/2412.19437v2#S2.SS1.SSS1)与[官方配置](https://huggingface.co/deepseek-ai/DeepSeek-V3/blob/main/config.json)分别提供数学和维度依据。
 
 关键变换来自矩阵结合律。对历史位置j，内容key `k_j=W_UK c_j`，c_j是512维latent；原分数 `q_iᵀk_j=q_iᵀW_UKc_j=(W_UKᵀq_i)ᵀc_j`。与其每轮为每个历史j重建key，不如只把本轮query投到latent空间，再读c_j。value类似：`Σ_jα_ij(W_UV c_j)=W_UV(Σ_jα_ijc_j)`，先加权聚合latent，最后再恢复value。这把随历史重复的展开工作转成query侧和输出侧投影，同时令紧凑缓存可直接参与计算；若仍逐历史展开完整KV，就未兑现这一执行收益。
 
@@ -1089,7 +1315,15 @@ MLA的直觉是“保存一份能重建多头信息的压缩历史”，而不�
 
 当前CUDA路径先由实际handler按mode、prefix、CP/Graph等条件选MHA one-shot/chunked或absorbed MLA；MLA分支准备Q与位置项，`attn_mqa`消费latent+位置cache，输出再经w_vc与o_proj回hidden。Prefill、普通Decode、Target Verify可能走不同选择，speculative_attention_mode也有边界。于是“架构使用MLA”只保证模型定义，不保证本轮执行同一个kernel或同一个临时布局；需要把cache pool、所选handler和算子形状放在同一条链上。
 
-口述可从549MiB开始：“缓存少约71倍，是省去了逐head展开的历史表示；K和V吸收通过结合律让它可直接计算，但本轮投影、512维latent工作和位置项仍在。只有确认当前mode的实际路径及关键瓶颈，才能推断延迟，不能把存储压缩率当加速率。”
+#### 追问1的回答
+
+**同一配置下三种缓存维度。** 对128Q heads、内容128、位置64、value128，展开MHA每层每位置K=[128,192]、V=[128,128]，共40960元素；假设8KV-head GQA为K=[8,192]、V=[8,128]，共2560；紧凑MLA为共享c_j=[512]及位置k_j^R=[64]，共576。Q的1536低秩中间表示只服务本轮query，不进入历史KV。61层×8192位置×576×2 bytes=549MiB，与展开对照38.125GiB都是有效内容口径，尚未含分片/量化/物理池额外量。
+
+#### 追问2的回答
+
+**完整吸收矩阵与位置边界。** 采用列向量，每head有内容q_i^h∈R¹²⁸、W_UK^h∈R¹²⁸×⁵¹²、c_j∈R⁵¹²。原 `q_i^{hT}W_UK^h c_j` 可改为 `q̃_i^h=(W_UK^h)^Tq_i^h∈R⁵¹²` 再点乘c_j；这样只为本轮query做128→512变换，不为全部历史重建key。attention权重为α_ij^h后，先聚合 `z_i^h=Σ_jα_ij^h c_j∈R⁵¹²`，再由W_UV^h∈R¹²⁸×⁵¹²得到value输出。若把O投影按head切成W_O^h∈R⁷¹⁶⁸×¹²⁸，最终为 `Σ_h W_O^h W_UV^h z_i^h`；数学上也可预合成7168×512的每head矩阵，但当前已核路径仍以w_vc BMM恢复128维、拼接后o_proj执行，不能把可做的代数变换说成现码已经离线合并。
+
+位置项是 `(R_i q_i^R)^T(R_j k_j^R)=q_i^{RT}R_i^TR_j k_j^R`，R_i^TR_j随相对位置改变。一个固定离线权重不能同时代表任意i/j，因此解耦64维必须按位置旋转并进入score；内容吸收不消除它。512维latent点积、Q侧BMM、位置旋转、V侧BMM、o_proj及其它层仍要执行，存储减少71倍不保证总时延71倍。当前handler按mode/prefix/Graph/CP选MHA或MLA，输出经V恢复和o_proj返回模型hidden，下一层消费这份hidden。
 
 ### 源码调用链与证据
 
@@ -1119,14 +1353,20 @@ flowchart LR
 
 ### 生产实践追问
 
-- **缓存确实缩小，长上下文延迟只改善一点，怎么分解？** 固定batch/历史长度，确认真实MLA pool与handler，分别量Q侧BMM、位置处理、latent attention、V恢复/o_proj、MoE和通信；对照各项随T的斜率。若主要时间已在投影/其它层，压缩率不转成同比延迟合理；若仍展开历史KV，则先查路径选择。
-- **只在prefix命中或Verify时性能异常，怎么查？** 记录mode、prefix长度、CP/Graph资格和speculative_attention_mode，对比实际handler及中间tensor维度。用同等有效query/history工作量比较，判断是MHA/MLA分支切换还是缓存错误；验收各分支输出和布局，不能按普通Decode结果外推。
-- **有人建议去掉64维位置缓存，如何反驳并验证？** 写出q_pe/k_pe参与score的项，以相同内容但不同位置构造reference；核cache shape与RoPE位置。若删除后位置依赖改变，即已破坏数学定义；容量收益不能弥补正确性损失。
+- **缓存确实缩小，长上下文延迟只改善一点，怎么分解？** 固定batch/历史长度，确认真实MLA pool与handler，分别量Q侧BMM、位置处理、latent attention、V恢复/o_proj、MoE和通信；对照各项随T的斜率。若主要时间已在投影/其它层，压缩率不转成同比延迟合理；若仍展开历史KV，则先查路径选择。 **具体处理：** 确认未意外展开后，若投影/其它层已主导就优化这些段而非继续用缓存比承诺加速；若handler切错则修mode/backend配置。
+- **只在prefix命中或Verify时性能异常，怎么查？** 记录mode、prefix长度、CP/Graph资格和speculative_attention_mode，对比实际handler及中间tensor维度。用同等有效query/history工作量比较，判断是MHA/MLA分支切换还是缓存错误；验收各分支输出和布局，不能按普通Decode结果外推。 **具体处理：** 对prefix/Verify的实际分支分别建立正确shape和输出reference，修不兼容layout或选择适配路径；不把普通Decode性能平移到其它mode。
+- **有人建议去掉64维位置缓存，如何反驳并验证？** 写出q_pe/k_pe参与score的项，以相同内容但不同位置构造reference；核cache shape与RoPE位置。若删除后位置依赖改变，即已破坏数学定义；容量收益不能弥补正确性损失。 **具体处理：** 拒绝删除必要64维位置状态，按正确RoPE/缓存表示恢复；只有替代架构自身重新定义并验证位置机制时才可改变，不是无损容量优化。
 
 ### 学习检查点
 
 1. 为什么 576 个缓存元素不是“每位置总计算只需 576 次乘加”？
+
+   **解答：** 576是每位置每层持久保存的元素数；一次query有128heads，可能对T个位置做512维内容点积及64维位置点积，还有AV聚合、Q/V投影与输出投影。因此缓存宽度既不是点积总数，也没有包含历史长度和heads，不能当总乘加。
+
 2. 把位置旋转错误地吸收到固定权重中，会破坏哪个随 token 位置变化的关系？
+
+   **解答：** 会破坏R_i^TR_j随query/key相对位置变化的关系，使相同内容在不同距离获得本应不同的分数却被固定变换混同。固定吸收只有在额外特殊约束成立时才可能，普通任意位置RoPE不满足。
+
 
 <a id="q58"></a>
 ## Q58 训练显存优化为何不能原样搬到推理
@@ -1147,7 +1387,7 @@ flowchart LR
 
 ### 参考答案
 
-训练为什么容易被显存限制？一份权重之外，还要为更新它保存状态。取明确的mixed-precision Adam例子：每参数BF16权重2 bytes、BF16梯度2、FP32 master权重4、FP32一阶/二阶矩各4，共16 bytes；1B参数仅这些就是16 GB十进制，尚未加入activation、临时buffer和通信峰值。若梯度是FP32、不保留master或优化器低精度/分片，账本会变，因此16不是所有训练的常数。[ZeRO论文](https://arxiv.org/abs/1910.02054)分片的正是参数状态等对象，不是凭空消除它们。
+训练除权重外还要保存更新状态和backward所需activation，因此更容易被显存限制。一份权重之外，还要为更新它保存状态。取明确的mixed-precision Adam例子：每参数BF16权重2 bytes、BF16梯度2、FP32 master权重4、FP32一阶/二阶矩各4，共16 bytes；1B参数仅这些就是16 GB十进制，尚未加入activation、临时buffer和通信峰值。若梯度是FP32、不保留master或优化器低精度/分片，账本会变，因此16不是所有训练的常数。[ZeRO论文](https://arxiv.org/abs/1910.02054)分片的正是参数状态等对象，不是凭空消除它们。
 
 activation是forward中间结果，backward还要消费。一个 `B=4,S=2048,H=4096` 的BF16 hidden有 `4×2048×4096×2=64 MiB`；多层、多中间分支会留下更多。activation checkpoint只保留边界，等backward走到该段时，用边界输入重跑forward恢复中间量。比如省掉十份此类hidden，理想少保留640MiB，但付出对应重算和RNG/状态管理；若不重算却直接丢弃，backward缺少所需值。外部[PyTorch checkpoint文档](https://docs.pytorch.org/docs/2.14/checkpoint.html)规定了这类生命周期，本仓库的serving链不是它的实现。
 
@@ -1157,7 +1397,13 @@ activation是forward中间结果，backward还要消费。一个 `B=4,S=2048,H=4
 
 思想可以迁移，策略要重评估。参数/状态分片、低精度和峰值预算都通用；但训练每层临时all-gather可被大矩阵工作摊薄，Decode每轮少量位置却可能反复付同样通信延迟。保留KV本来就在避免跨轮重复工作：历史1K时重算或许可接受，历史32K、高并发时可能造成反复回退和排队。offload省设备空间却要算host容量、拷贝带宽和恢复次数；若释放/恢复引发更频繁回退，名义容量提高反而降低goodput。
 
-讲解可直接拿两张账本解释：“训练activation是给backward留证据，checkpoint把取回时点推迟到backward；推理KV是给下一query留上下文，删掉就会在用户路径上付重算或拷贝。我会先确认OOM对象，再比较恢复时间、容量收益与SLO，不能把训练成功策略直接照搬。”
+#### 追问1的回答
+
+**两种重算的对象和消费者。** 训练checkpoint丢的是forward activation，保留边界输入并在backward需要中间量时重跑；目标是可承受step时间内完成同一梯度计算。推理KV删除的是下一query要读的历史状态，保留token可重新Prefill，或保留host副本后load恢复；目标是用户TTFT/ITL与goodput。前者取回时点由backward依赖确定，后者每一轮Decode都可能立即需要，因此“每轮主动丢KV”会把一次可复用工作变成跨轮重复工作。当前token-ID输入的普通回退reset→waiting_queue重算，PD offload→retracted_queue→预分配/load_cpu_copy→waiting_queue恢复，并非统一重跑forward。input_embeds输入是显式例外：reset_for_retract清空output_ids后重新Prefill/generation，不承诺按原输出历史恢复；这是输入表示兼容性边界，不是训练activation checkpoint。
+
+#### 追问2的回答
+
+**状态分片哪些仍有对象。** 训练的梯度和Adam一二阶矩在纯生成推理不存在，分片它们不能再节省推理内存；权重仍存在，按TP/PP/EP永久切分或按需gather/offload可省本地驻留，却会增加通信。FSDP FULL_SHARD在forward前all-gather参数、forward后reshard，backward前再gather并对梯度reduce-scatter，这是外部[PyTorch FSDP的训练策略](https://docs.pytorch.org/docs/2.14/fsdp.html#torch.distributed.fsdp.ShardingStrategy)，不是本仓库的serving链。若按类似参数临时聚合做推理，梯度通信虽不需要，forward权重聚合仍真实发生；小batch Decode每轮都付它，可能满足加载但破坏ITL。offload同样必须计host容量、链路、预取和峰值，不能因训练大microbatch可遮住就认定推理也能遮住。
 
 ### 源码调用链与证据
 
@@ -1180,14 +1426,20 @@ Scheduler._add_request_to_queue(req,is_retracted=True)
 
 ### 生产实践追问
 
-- **推理OOM，团队建议上训练checkpoint，如何判断？** 先按峰值时点分权重、KV、临时activation、Graph/workspace；若占用主要是持续KV，checkpoint训练activation的机制没有对应backward消费者。用同一最大负载核算目标对象能省多少，明确新增计算落在哪个请求时段，再决定量化、分片、chunk或回退。
-- **offload后容量增大却ITL恶化，怎么找证据？** 对齐每请求release/reset、进入retracted_queue、预分配、load_cpu_copy和重新进入waiting_queue的时间，记录拷贝字节、恢复次数与排队。若请求反复进出并挤占正常轮次，应收紧接纳或调整预算；验收同时要求恢复后多轮输出一致和资源无泄漏。
-- **只测重入请求最终能完成够吗？** 不够；需在普通重算和PD CPU恢复分支分别检查committed/allocated长度、pool使用、等待上限和其它请求尾延迟。验收要求恢复成功且正常负载不陷入回退循环；权重变更rebootstrap另测，不从CPU-copy结果类推。
+- **推理OOM，团队建议上训练checkpoint，如何判断？** 先按峰值时点分权重、KV、临时activation、Graph/workspace；若占用主要是持续KV，checkpoint训练activation的机制没有对应backward消费者。用同一最大负载核算目标对象能省多少，明确新增计算落在哪个请求时段，再决定量化、分片、chunk或回退。 **具体处理：** 先对准真正峰值对象；KV主导就改KV表示/预算/接纳或恢复策略，临时activation主导可调chunk/执行形状，不能机械引入没有backward消费者的训练checkpoint。
+- **offload后容量增大却ITL恶化，怎么找证据？** 对齐每请求release/reset、进入retracted_queue、预分配、load_cpu_copy和重新进入waiting_queue的时间，记录拷贝字节、恢复次数与排队。若请求反复进出并挤占正常轮次，应收紧接纳或调整预算；验收同时要求恢复后多轮输出一致和资源无泄漏。 **具体处理：** 提高可保留热KV比例、降低恢复并发或收紧接纳以打断反复回退；host恢复时间纳入SLO，不能仅用最大可加载请求数评价。
+- **只测重入请求最终能完成够吗？** 不够；需在普通重算和PD CPU恢复分支分别检查committed/allocated长度、pool使用、等待上限和其它请求尾延迟。验收要求恢复成功且正常负载不陷入回退循环；权重变更rebootstrap另测，不从CPU-copy结果类推。 **具体处理：** 若恢复循环或资源不平衡就修队列/释放顺序与额度，分别验收重算/CPU-copy/rebootstrap分支，不把其中一种成功外推全部。
 
 ### 学习检查点
 
 1. 为什么 training 的 activation checkpoint 省内存，不意味着每轮 Decode 应主动丢弃历史 KV？
+
+   **解答：** checkpoint为低频backward依赖重建activation；KV是每个未来query都要读的跨轮状态。主动逐轮删除会反复Prefill历史并增加用户关键路径，只有容量压力或明确恢复策略下才值得计算换空间。
+
 2. 为什么参数分片方案“能加载模型”与“能低延迟服务”需要两份证据？
+
+   **解答：** 加载证明静态权重/初始状态能放进设备集合；低延迟服务还需最大Prefill、KV增长、Graph/workspace峰值和逐轮gather/offload时间达标。方案可能静态可行却因每token通信或恢复过慢而无法达到ITL。
+
 
 <a id="q59"></a>
 ## Q59 训练 Prefill Decode 的并行策略如何切换
@@ -1214,11 +1466,19 @@ Scheduler._add_request_to_queue(req,is_retracted=True)
 
 假设八卡同机、模型在TP4的推理内存预算内能装下，并且训练通过状态分片后也满足各自内存约束，可把训练TP4×DP2、Prefill两个TP4 worker或TP8/CP方案、Decode两个TP4副本列为候选。它们不是推荐结论：训练DP2要在副本间同步梯度，optimizer状态怎样分片还要另定；推理两个独立副本没有梯度同步，却复制权重并各自接请求；attention DP是在同一设备域内对请求/attention重新分组，MoE可使用另一套EP组。三个DP的对象和通信都不同。
 
-为什么还考虑PP/CP？PP按层切可减本地权重，但层间传输和pipeline bubble需要足够microbatch摊薄；低并发Decode可能难以填满。CP让长序列相关工作分布到多卡，能减本地长度/activation压力，却增加K/V或统计量的通信；是否适用于某模型/模式要看实现。Prefill长S的attention与activation压力可能使CP有价值，短Decode则要比较省掉的本地工作与新增细粒度通信。训练方法应查[Megatron-LM](https://arxiv.org/abs/1909.08053)、[ZeRO](https://arxiv.org/abs/1910.02054)，不能虚构SGLang的backward入口。
+PP/CP分别针对层切分与长上下文的容量和计算压力。PP按层切可减本地权重，但层间传输和pipeline bubble需要足够microbatch摊薄；低并发Decode可能难以填满。CP让长序列相关工作分布到多卡，能减本地长度/activation压力，却增加K/V或统计量的通信；是否适用于某模型/模式要看实现。Prefill长S的attention与activation压力可能使CP有价值，短Decode则要比较省掉的本地工作与新增细粒度通信。训练方法应查[Megatron-LM](https://arxiv.org/abs/1909.08053)、[ZeRO](https://arxiv.org/abs/1910.02054)，不能虚构SGLang的backward入口。
 
 MoE和MLA进一步改变账本：expert dispatch取决于真实路由而非平均激活FLOPs，MLA减少KV但仍有投影成本；不同阶段可能选不同attention kernel和Graph档位。PD若Prefill用TP8、Decode用两个TP4，需要确认KV head/层分片、layout、dtype和接收映射能正确转换，不能只把8除以4认为天然兼容。当前SGLang实际按group构造与mode选择runner/backend，候选配置只有通过支持和形状检查才值得测。
 
-口述可以形成三个有判定条件的方案：“训练先保证状态放得下，再最小化有效step；Prefill围绕长M/S与TTFT比较TP/CP；Decode围绕小M的通信、KV容量和ITL比较较小TP加副本。八卡预算相同，每个候选都需报实际shape、通信和达标容量；没有这些约束，我不会宣布唯一最优。”
+#### 追问1的回答
+
+**三种DP不复制同一套状态。** 训练DP副本处理不同样本，必须同步梯度后更新同一权重；若两副本梯度分别1和3，不同步会把同一参数更新为w−η和w−3η，同步平均梯度2才保持一致。梯度/optimizer可按ZeRO/FSDP另外分片，并非DP总是复制所有状态。两个推理副本通常不更新权重，只需版本一致和路由分配，KV是各自请求历史，不需同步梯度。SGLang attention DP在同一模型world内将请求/attention分组；attention_TP=1时attention权重可在多rank复制，但MoE专家仍可由EP分片，KV按请求放置，不能叫每rank复制全部MoE权重/所有请求KV。
+
+#### 追问2的回答
+
+**八卡方案的明确选择条件。** 在模型TP4可放下、训练状态经分片也可行的假设下，我给训练TP4×DP2、长Prefill TP8、低延迟Decode两个TP4作为初始实际方案：训练通过DP2扩global batch/吞吐且同步梯度；长Prefill用TP8分摊长M/S计算，若TTFT已合格而请求很多，则改两个TP4提高总服务率；Decode若TP4已满足ITL，优先保留两个副本的请求并发与KV容量，若单请求ITL仍超限才考虑TP8。它们有明确淘汰条件，而非仅列名词。
+
+举一个不冒充实测的已知服务曲线假设：两个TP4各达标6req/s、TP8达标9req/s且两者单请求延迟都合格，则选两个TP4的12req/s；若TP4 ITL为40ms、门槛30ms，而TP8为25ms，则即使裸吞吐少也必须选满足门槛的TP8或改变模型/精度。attention DP8+EP8表示attention TP1且专家覆盖八rank，它可能减少attention TP通信，却增加attention权重副本、跨布局dispatch和热点风险；只有这些副本放得下、expert批量和网络足够时才优于前两者。当前group与mode分派决定实际执行，不存在“同为八卡即等价”的保证。
 
 ### 源码调用链与证据
 
@@ -1236,14 +1496,20 @@ DeepseekV2AttentionMLA.dispatch_attn_forward_method(fb)
 
 ### 生产实践追问
 
-- **八卡TP8总吞吐高但ITL不达标，如何选替代？** 固定模型/采样、到达率与长度分布，比较TP8和两个TP4的单请求ITL、排队、KV上限及collective时间。若副本方案降低通信却因每副本batch/容量不足而排队，需要继续调负载分配；以满足SLO的goodput而非裸吞吐定胜负。
-- **长Prefill加CP是否有利，先算什么？** 记录S、本地query/history分布、activation/KV峰值与新增通信payload，预测减少的本地工作，再核实际backend支持和每rank时间。只有长输入TTFT/容量改善超过网络与同步成本，且Decode干扰可控，才采纳；短shape不应被平均收益掩盖。
-- **P8接D4×2上线前需什么证据？** 逐项核KV分片、接收映射、dtype/scale和实际transfer→commit→consume，先用已知长度/heads检查布局，再做多轮输出与故障恢复。若转换链未验证，即使两端单独跑得快，也不能认定PD方案可用。
+- **八卡TP8总吞吐高但ITL不达标，如何选替代？** 固定模型/采样、到达率与长度分布，比较TP8和两个TP4的单请求ITL、排队、KV上限及collective时间。若副本方案降低通信却因每副本batch/容量不足而排队，需要继续调负载分配；以满足SLO的goodput而非裸吞吐定胜负。 **具体处理：** 若TP4已达ITL且副本总达标容量更高，在本题八卡预算内选TP4×2；若只有TP8达单请求门槛，保留TP8并解决容量，不拿低延迟失败的高吞吐方案上线。
+- **长Prefill加CP是否有利，先算什么？** 记录S、本地query/history分布、activation/KV峰值与新增通信payload，预测减少的本地工作，再核实际backend支持和每rank时间。只有长输入TTFT/容量改善超过网络与同步成本，且Decode干扰可控，才采纳；短shape不应被平均收益掩盖。 **具体处理：** CP只在省下本地长序列工作/内存超过新增通信且backend支持时采用；否则保持较小CP/更多副本，按长输入TTFT与干扰决定。
+- **P8接D4×2上线前需什么证据？** 逐项核KV分片、接收映射、dtype/scale和实际transfer→commit→consume，先用已知长度/heads检查布局，再做多轮输出与故障恢复。若转换链未验证，即使两端单独跑得快，也不能认定PD方案可用。 **具体处理：** 先验证不同并行度KV映射/scale及真实transfer→commit→consume；不支持转换就统一P/D布局或补齐转换后再部署，不能只凭卡数除法引流。
 
 ### 学习检查点
 
 1. 为什么训练 DP2 需要梯度一致性，而两个推理副本通常只需要请求路由与版本一致性？
+
+   **解答：** 训练副本要对同一参数做同一optimizer更新，故各自样本梯度必须合并；推理副本通常不更新参数，维持相同版本即可分别服务不同请求。请求KV互不相同，强制同步反而没有语义必要。
+
 2. 为什么最优 Prefill 并行度不能只由 Decode 的最小延迟结果决定？
+
+   **解答：** Prefill有大的新token矩阵与长序列activation/attention压力，目标是TTFT/输入服务率；Decode新位置少、反复通信和KV驻留更突出，目标是ITL/达标容量。使小M Decode最短的一组TP/CP可能让大M Prefill计算或资源利用不优，所以须按各自约束选择。
+
 
 <a id="q60"></a>
 ## Q60 Softmax 数值稳定性与三遍两遍扫描
@@ -1266,7 +1532,7 @@ DeepseekV2AttentionMLA.dispatch_attn_forward_method(fb)
 
 先定义“一遍”：本题指完整扫描一行global-memory输入，不是一次max/sum归约，也不保证每次global load都实际穿透cache访问HBM。设输出每元素都要写出，且不保留整行、不落大中间数组。数学naive先扫描求 `z=Σexp(x)`，再扫描写 `exp(x_i)/z`，是2读1写，但大正数会溢出。safe先求m=max(x)，第二遍求 `l=Σexp(x−m)`，第三遍输出 `exp(x_i−m)/l`，是3读1写。online将max和l在第一遍合并维护，第二遍输出，变为2读1写。相应理想访问数是每元素3、4、3次，不是三个算法都同样稳定。
 
-为什么减max不改变概率？分子分母同时除以exp(m)，所以比例不变，且有限输入下所有指数的自变量不大于0。难点是流式读取时m还没最终确定。保存 `m=max(已见输入)`、`l=Σexp(已见输入−m)`；新块先得到自己的m_b/l_b，再设 `m'=max(m,m_b)`，`l'=l×exp(m−m')+l_b×exp(m_b−m')`。两个统计都转换到新公共基准，就能合并，不需要回扫旧块。与attention的online softmax相同，这里只维护分母，没有value加权和。
+减max保持概率不变，因为分子分母同时除以exp(m)，所以比例不变，且有限输入下所有指数的自变量不大于0。难点是流式读取时m还没最终确定。保存 `m=max(已见输入)`、`l=Σexp(已见输入−m)`；新块先得到自己的m_b/l_b，再设 `m'=max(m,m_b)`，`l'=l×exp(m−m')+l_b×exp(m_b−m')`。两个统计都转换到新公共基准，就能合并，不需要回扫旧块。与attention的online softmax相同，这里只维护分母，没有value加权和。
 
 算例仍用 `[0,ln2]` 和 `[ln4,0]`。第一块m=ln2，l=0.5+1=1.5；第二块m_b=ln4，l_b=1+0.25=1.25。合并时旧块乘0.5，得最终m=ln4、l=0.75+1.25=2。第二遍四个输出为 `[0.25,0.5,1,0.25]/2=[1/8,2/8,4/8,1/8]`，行和1。若更新m却不重标定旧l，会得到错误分母2.75；这说明少扫一遍依赖正确不变量，而不是把两个for循环简单拼在一起。[Online normalizer论文](https://arxiv.org/html/1805.02867v2#S2)给出这种推导。
 
@@ -1274,7 +1540,49 @@ DeepseekV2AttentionMLA.dispatch_attn_forward_method(fb)
 
 假设N=131072、输入输出FP32，一行512KiB；流式safe理想3读1写共2MiB，online为1.5MiB，行驻留为1MiB。实际时间仍受cache、指数吞吐、online依赖、pair归约和寄存器/spill影响，省0.5MiB不必然比新增计算便宜。当前dSpark temperature softmax有FlashInfer可用分支，Triton fallback则明确三次扫描并输出float32给接受侧Q；只有实际走到该fallback，讨论替换才有对象。
 
-FP16/BF16通常提升FP32做中间统计；前提仍是至少一个有限有效值。全mask的−inf会出现`−inf−(−inf)`，NaN、+inf、空行或无效temperature也需专门策略。任意加epsilon不修复未定义减法，还可能改变行和/分布。口述时可先报“我按global输入扫描计三遍/两遍”，再推m/l合并，最后说明行驻留和异常契约是另一维选择；这比单说“online更省访存”更完整。
+FP16/BF16通常提升FP32做中间统计；前提仍是至少一个有限有效值。全mask的−inf会出现`−inf−(−inf)`，NaN、+inf、空行或无效temperature也需专门策略。任意加epsilon不修复未定义减法，还可能改变行和/分布。
+
+#### 追问1的回答
+
+**扫描、归约、一次load和eager分解的口径。** 流式safe的“3遍”是3次完整输入读加1次输出写；online的“2遍”是1次合并max/sum输入读、1次归一化输入读和1次输出写。max/sum两种归约可以在一次global load后在片上完成，因此“2归约”不等于“2次读”。Triton教程naive是带稳定减max的多个PyTorch算子分解，含中间tensor；数学naive是不减max的Σexp(x)，不能只看名称套访存公式。行驻留safe的1读1写需要整行值仍可用，否则spill/重读后就不再符合该理想口径。
+
+#### 追问2的回答
+
+**两块合并及异常策略。** 两块(ln2,1.5)、(ln4,1.25)用新max ln4合并为l=1.5×0.5+1.25=2，再输出[1/8,2/8,4/8,1/8]。算法普通推导要求至少一项有限值：全−inf的差值未定义，+inf减+inf和NaN同样破坏普通递推。本题明确采用“NaN整行传播；k个+inf分得1/k，其它0；全−inf输出0”的数值策略；全0不是合法categorical分布，采样调用方必须报无合法候选，而不是默认继续。空输入输出空列表；temperature若由上层使用，必须是有限正数或另走明确greedy，不能把非法温度塞进softmax。
+
+下面是完整的两扫描CPU参考，输入是可重复遍历、执行期间不改变的一行float数，正常行没有整行中间缓存。Python使用双精度作教学reference，不冒充FP32 CUDA舍入或性能结果。第一遍同时检测异常并更新统计，第二遍写输出；异常行可以少做扫描，但不改变正常路径的计数。
+
+```python
+import math
+
+def online_softmax_row(xs):
+    n = len(xs)
+    if n == 0:
+        return []
+    m, total = -math.inf, 0.0
+    has_nan, positive_infs = False, 0
+    for value in xs:
+        if math.isnan(value):
+            has_nan = True
+        elif value == math.inf:
+            positive_infs += 1
+        elif value != -math.inf:
+            if m == -math.inf:  # 首个有限值；避免-inf减-inf。
+                m, total = value, 1.0
+            else:
+                new_m = max(m, value)
+                total = total * math.exp(m - new_m) + math.exp(value - new_m)
+                m = new_m
+    if has_nan:
+        return [math.nan] * n
+    if positive_infs:
+        return [1.0 / positive_infs if v == math.inf else 0.0 for v in xs]
+    if m == -math.inf:
+        return [0.0] * n  # 全mask；调用sampler前必须拒绝零质量行。
+    return [math.exp(v - m) / total for v in xs]
+```
+
+当前SGLang的SoftmaxTemp选择FlashInfer或Triton fallback，fallback本身仍有max/sum/output三次扫描；输出float32 Q进入AcceptSampling。把它换成两遍会减少输入读，却增加在线依赖/重标定，可能因cache命中、指数吞吐、归约或寄存器而慢。因此不能以这份CPU参考或少一个循环宣称当前GPU路径已加速。
 
 ### 源码调用链与证据
 
@@ -1291,14 +1599,20 @@ DSpark accept_draft_tokens: corrected_logits + temperatures
 
 ### 生产实践追问
 
-- **三遍改两遍反而慢，如何归因？** 固定真实词表/行数与实际fallback，记录global与HBM流量、指数/归约时间、寄存器和spill，核旧实现是否已从cache受益。若少的输入流量未处关键瓶颈而新增依赖占优，应保留三遍或按shape分派；验收完整Q构造/接受路径，不只测单循环。
-- **全mask出现NaN，应该加epsilon吗？** 先明确调用方对全mask/NaN/+inf的契约，检查首次无效运算是否为−inf减−inf；按约定选择专门输出或报错。验证正常行和、非负性及异常分支，不能以epsilon把错误悄悄转为另一分布。
-- **教程说一次读写，你说两遍，谁对？** 查整行是否驻留片上、输入扫描还是归约计数、是否物化中间tensor；逐项列输入/输出/临时量字节。把口径统一后再计时，若片上方案spill或越过资源阈值，就不能沿用理想1读1写预算。
+- **三遍改两遍反而慢，如何归因？** 固定真实词表/行数与实际fallback，记录global与HBM流量、指数/归约时间、寄存器和spill，核旧实现是否已从cache受益。若少的输入流量未处关键瓶颈而新增依赖占优，应保留三遍或按shape分派；验收完整Q构造/接受路径，不只测单循环。 **具体处理：** 若cache使省读收益很小且online依赖更贵，保留三遍或用shape分派；只有实际fallback全调用时间降低且Q分布过线才替换。
+- **全mask出现NaN，应该加epsilon吗？** 先明确调用方对全mask/NaN/+inf的契约，检查首次无效运算是否为−inf减−inf；按约定选择专门输出或报错。验证正常行和、非负性及异常分支，不能以epsilon把错误悄悄转为另一分布。 **具体处理：** 落实明确异常分支：NaN传播/上层拒绝，全mask输出约定值并阻止采样，+inf按明示策略处理；不以epsilon修补0/0或篡改概率。
+- **教程说一次读写，你说两遍，谁对？** 查整行是否驻留片上、输入扫描还是归约计数、是否物化中间tensor；逐项列输入/输出/临时量字节。把口径统一后再计时，若片上方案spill或越过资源阈值，就不能沿用理想1读1写预算。 **具体处理：** 区分行驻留与流式路径，资源不足/发生spill时退回适合长行的方案；不用“一个load语句”推断真正HBM访问次数。
 
 ### 学习检查点
 
 1. 为什么“有两次归约”不等于“有两次 global-memory 输入读取”？
+
+   **解答：** 归约次数是在统计阶段数值怎样合成，global读取次数取决于输入能否驻留片上。safe可load一次后用寄存器做max和sum两次归约，再store一次；反之长行分块放不下会重读。两者不是同一计数轴。
+
 2. 为什么数学 naive 与 online 都可有两次输入扫描，数值稳定性却不同？
+
+   **解答：** 数学naive第一遍直接exp(x)可溢出，online保持有限max基准并在基准变化时重标定旧和。比如x=[1000,1001]，naive指数溢出；online以1001为基准得到[exp(−1),1]再归一化，扫描同为两遍而稳定性不同。
+
 
 <a id="q61"></a>
 ## Q61 Warp 与 Block Softmax 如何覆盖不规则形状
@@ -1329,40 +1643,170 @@ N大、行数少时，一个warp的长循环可能并行度不足，或试图缓
 
 本仓库可对照MoE topk softmax，但它不是所有采样器的实现。launcher只为已枚举的1–512二次幂选专用warp模板，1024虽是二次幂仍fallback；33/1025/8193也走其它长度路径。fallback用 `moeSoftmax` 的CUB/block统计及workspace，再做top-k；专用路径还可融合top-k而不保存完整概率。需求不同就不能拿它只输出k个结果的性能冒充完整softmax。当前源码帮助学习执行边界，不是声称题内手写基线就是现用kernel。
 
-实现完成后，应说明验证方法：“我先让所有参与线程以中性值协作，不让列mask破坏同步；再按行数和N比较warp/block。测试要覆盖尾列、尾行、非连续stride、极值与异常策略，并查guarded memory和行和。正确后才找shape阈值，不会因N大或线程多就预设更快。”
+#### 追问1的回答
+
+**三个shape和归约选择。** 我的完整基线按N=33用warp一行，每lane最多2个值，省去CTA shared/barrier；N=1025在M≥128时仍用warp一行、最多33值/lane，让很多行提供并行度，M<128时用256线程block一行分摊为最多5值/thread；N=8193用256线程block一行、最多33值/thread，避免单warp最多257值的长循环。128行是明确的初始策略阈值，并非GPU实测最优；数值正确性不依赖这个阈值，资源/延迟证据决定后续调优。
+
+warp各lane先局部max，再5步xor shuffle得到全行max；各自累加exp后再5步shuffle求总和。block先做8个warp内部归约，lane0把8份写shared，全CTA barrier后首warp用中性值补到32lane再归约，写回全行统计，再barrier广播。sum重复相同两级过程。更大行若一CTA仍太慢，可三阶段分块：kernel1写每块max/normalizer及异常flag，kernel2按online pair规则合并整行统计，kernel3读取整行统计并归一化各块；同stream的kernel完成顺序构成跨CTA依赖，不能用__syncthreads冒充全局barrier。分块还多中间buffer/launch，故不是N大就必然采用。
+
+#### 追问2的回答
+
+**mask与异常不是同一个if。** full-mask shuffle要求全部32lane执行，不要求全部lane有有效列；无效列用max中性值−inf、sum0，尾行可以整warp一致退出，block尾列线程不能绕开barrier。输入NaN/+inf/全−inf是数值策略，必须在行统计统一后让所有参与者取一致分支；下面代码同时给出传播、均分+inf与全0策略，避免0/0。稀疏active-lane归约不在这份基线契约内：这里通过不提前退出lane来保持完整参与，不能把有效列bitmap直接当shuffle mask。
+
+下面代码是完整的FP32教学基线：输入 `x[M,row_stride]` 的row_stride按float元素计而非byte，行内连续，输出 `y[M,N]` 连续，两块内存不重叠，分配长度覆盖所有索引；维度与grid必须在设备支持范围内。mask以`−inf`表示，不另传稀疏lane mask。策略固定为：含NaN则整行NaN；若有k个`+inf`且无NaN，仅这些位置各为1/k；全`−inf`则全0；M或N为0不启动。全0行不是可采样概率，调用方必须将“无合法候选”作为错误/终止处理，不得交给categorical sampler。正常有限行用FP32累加，不追求与另一归约顺序逐位相同。它未在本轮编译或GPU运行，不能当作实测kernel。
+
+```cpp
+#include <cuda_runtime.h>
+#include <math_constants.h>
+#include <math.h>
+
+struct RowStat { float m; int nan_seen; int pos_inf; };
+
+__device__ __forceinline__ RowStat warp_stat(RowStat a) {
+    // 所有32个lane都执行；xor蝶形最终让每个lane得到全warp结果。
+    for (int d = 16; d > 0; d >>= 1) {
+        float other_m = __shfl_xor_sync(0xffffffffu, a.m, d);
+        int other_nan = __shfl_xor_sync(0xffffffffu, a.nan_seen, d);
+        int other_inf = __shfl_xor_sync(0xffffffffu, a.pos_inf, d);
+        a.m = fmaxf(a.m, other_m);
+        a.nan_seen |= other_nan;
+        a.pos_inf += other_inf;
+    }
+    return a;
+}
+__device__ __forceinline__ float warp_sum(float a) {
+    for (int d = 16; d > 0; d >>= 1)
+        a += __shfl_xor_sync(0xffffffffu, a, d);
+    return a;
+}
+__device__ __forceinline__ float special_value(float v, RowStat a) {
+    if (a.nan_seen) return CUDART_NAN_F;
+    if (a.pos_inf) return v == CUDART_INF_F ? 1.0f / a.pos_inf : 0.0f;
+    return 0.0f;  // 全-inf行；不会执行-inf减-inf。
+}
+
+// 固定128线程=4个完整warp；每warp一行，无CTA级barrier。
+__global__ void softmax_warp_f32(
+    const float* x, float* y, int M, int N, long long row_stride) {
+    int lane = threadIdx.x & 31;
+    int row = blockIdx.x * 4 + (threadIdx.x >> 5);
+    if (row >= M) return;  // 整warp一致退出；不让部分lane提前退出。
+    const float* xr = x + (long long)row * row_stride;
+    float* yr = y + (long long)row * N;
+    RowStat a{-CUDART_INF_F, 0, 0};
+    for (long long j = lane; j < N; j += 32) {
+        float v = xr[j];
+        a.nan_seen |= isnan(v);
+        a.pos_inf += (v == CUDART_INF_F);
+        a.m = fmaxf(a.m, v);
+    }
+    a = warp_stat(a);
+    if (a.nan_seen || a.pos_inf || a.m == -CUDART_INF_F) {
+        for (long long j = lane; j < N; j += 32) yr[j] = special_value(xr[j], a);
+        return;  // 这里也是整warp一致分支。
+    }
+    float z = 0.0f;
+    for (long long j = lane; j < N; j += 32) z += expf(xr[j] - a.m);
+    z = warp_sum(z);
+    for (long long j = lane; j < N; j += 32) yr[j] = expf(xr[j] - a.m) / z;
+}
+
+// 固定256线程=8个warp；每CTA一行。
+__device__ __forceinline__ RowStat block_stat_256(RowStat a, RowStat* tmp) {
+    int lane = threadIdx.x & 31, wid = threadIdx.x >> 5;
+    a = warp_stat(a);
+    if (lane == 0) tmp[wid] = a;
+    __syncthreads();  // 8份warp统计都已发布。
+    if (wid == 0) {
+        RowStat b{-CUDART_INF_F, 0, 0};
+        if (lane < 8) b = tmp[lane];  // 其它lane以中性值参加完整warp。
+        b = warp_stat(b);
+        if (lane == 0) tmp[0] = b;
+    }
+    __syncthreads();  // 全CTA取得同一个行统计。
+    return tmp[0];
+}
+__device__ __forceinline__ float block_sum_256(float z, float* tmp) {
+    int lane = threadIdx.x & 31, wid = threadIdx.x >> 5;
+    z = warp_sum(z);
+    if (lane == 0) tmp[wid] = z;
+    __syncthreads();
+    if (wid == 0) {
+        float t = lane < 8 ? tmp[lane] : 0.0f;
+        t = warp_sum(t);
+        if (lane == 0) tmp[0] = t;
+    }
+    __syncthreads();
+    return tmp[0];
+}
+__global__ void softmax_block_f32(
+    const float* x, float* y, int M, int N, long long row_stride) {
+    int row = blockIdx.x, tid = threadIdx.x;
+    if (row >= M) return;  // 整CTA一致；其后任何线程都不因col越界退出。
+    __shared__ RowStat stat_tmp[8];
+    __shared__ float sum_tmp[8];
+    const float* xr = x + (long long)row * row_stride;
+    float* yr = y + (long long)row * N;
+    RowStat a{-CUDART_INF_F, 0, 0};
+    for (long long j = tid; j < N; j += 256) {
+        float v = xr[j];
+        a.nan_seen |= isnan(v);
+        a.pos_inf += (v == CUDART_INF_F);
+        a.m = fmaxf(a.m, v);
+    }
+    a = block_stat_256(a, stat_tmp);
+    if (a.nan_seen || a.pos_inf || a.m == -CUDART_INF_F) {
+        for (long long j = tid; j < N; j += 256) yr[j] = special_value(xr[j], a);
+        return;  // 所有线程读到相同a，因此整CTA一致退出。
+    }
+    float z = 0.0f;
+    for (long long j = tid; j < N; j += 256) z += expf(xr[j] - a.m);
+    z = block_sum_256(z, sum_tmp);
+    for (long long j = tid; j < N; j += 256) yr[j] = expf(xr[j] - a.m) / z;
+}
+
+// 下面的阈值是明确的初始策略，不是已经测得的最优阈值。
+cudaError_t launch_softmax_f32(
+    const float* x, float* y, int M, int N, long long row_stride,
+    cudaStream_t stream) {
+    if (M < 0 || N < 0 || row_stride < N) return cudaErrorInvalidValue;
+    if (M == 0 || N == 0) return cudaSuccess;
+    if (x == nullptr || y == nullptr) return cudaErrorInvalidValue;
+    bool use_block = (N > 1025) || (N > 33 && M < 128);
+    if (use_block)
+        softmax_block_f32<<<M, 256, 0, stream>>>(x, y, M, N, row_stride);
+    else
+        softmax_warp_f32<<<((long long)M + 3) / 4, 128, 0, stream>>>(x, y, M, N, row_stride);
+    return cudaGetLastError();  // 只查launch错误；异步完成由调用方event/同步检查。
+}
+```
+
+这份代码所有shuffle helper都已定义，且仅用于完整32lane参与的warp。N=33时缺少第二个元素的lane只是不执行第二次load，仍参加相同归约；block尾列也是如此。FP16/BF16版本需要在load转FP32、store按输出契约cast，并按误差/资源重新选择阈值，不能直接把float指针强转来复用。输入输出跨行重叠或执行中被其它stream改写违反此基线契约。
 
 ### 源码调用链与证据
 
-现场可先写以下 CUDA 核心示意：每 warp 一行、block 大小为 32 的倍数，`row>=M` 为整 warp 一致返回；`warp_max_full/warp_sum_full` 均由 16、8、4、2、1 的 `__shfl_xor_sync(0xffffffff, value, delta)` 实现，所有 32 lanes 必须参与。它是三扫描正确性基线，不是本仓库补丁或声称最优实现：
+以上是题内完整教学基线，不是仓库补丁，也没有声称GPU验证。当前真实实现用于核对不同shape的分派和下一消费者：
 
-```cpp
-int lane = threadIdx.x & 31;
-int row = (blockIdx.x * blockDim.x + threadIdx.x) / 32;
-if (row >= M) return;  // 仅整warp一致的尾行可这样返回
-const float* xr = x + row * stride;
-float m = -CUDART_INF_F;
-for (int j=lane; j<N; j+=32) m = fmaxf(m, xr[j]);
-m = warp_max_full(m);
-float z = 0.f;
-for (int j=lane; j<N; j+=32) z += expf(xr[j]-m);
-z = warp_sum_full(z);
-for (int j=lane; j<N; j+=32) y[row*N+j] = expf(xr[j]-m)/z;
-```
-
-block 版本把步长改为 blockDim.x，采用 CUB BlockReduce 求 max，thread0 写 shared max 后全 CTA barrier；再局部求和、BlockReduce Sum、thread0 写 shared 分母、全 CTA barrier，最后所有线程按列边界写出。中性值和异常契约不变。当前可对照的真实链是 `sgl_kernel.moe.topk_softmax → C++ launcher → 已枚举的1–512二次幂专用warp kernel / 其余长度的moeSoftmax+topk → topk_weights/ids`；例如1024虽为二次幂，仍走fallback并分配workspace。这些结果由专家派发消费，不应概括成所有 sampler 的实现。
+当前可对照的真实链是 `sgl_kernel.moe.topk_softmax → C++ launcher → 已枚举的1–512二次幂专用warp kernel / 其余长度的moeSoftmax+topk → topk_weights/ids`；例如1024虽为二次幂，仍走fallback并分配workspace。这些结果由专家派发消费，不应概括成所有 sampler 的实现。
 
 Python/算子交界见 [topk_softmax wrapper](/Users/magician/PycharmProjects/sglang/sgl-kernel/python/sgl_kernel/moe.py:30)；真实 CUB max/sum 与两处 barrier 见 [moeSoftmax](/Users/magician/PycharmProjects/sglang/sgl-kernel/csrc/moe/moe_topk_softmax_kernels.cu:79)；warp 行分组与尾行 guard 见 [topkGatingSoftmax](/Users/magician/PycharmProjects/sglang/sgl-kernel/csrc/moe/moe_topk_softmax_kernels.cu:385)；不同长度的实际 launcher 选择见 [topkGatingSoftmaxKernelLauncher](/Users/magician/PycharmProjects/sglang/sgl-kernel/csrc/moe/moe_topk_softmax_kernels.cu:657)。Triton 的另一种片上行归约示例见 [官方教程](https://triton-lang.org/main/getting-started/tutorials/02-fused-softmax.html)。
 
 ### 生产实践追问
 
-- **N=32正确、N=33错，先看哪里？** 给第33列极大值，检查lane0第二次load、局部统计、全warp归约和最后store；给padding放哨兵检mask泄漏。若max包含尾列但sum漏掉，能直接定位阶段；验收33及tile±1、非连续stride的概率/行和和越界检查。
-- **block版偶发hang或NaN，怎样缩小？** 检查是否有列越界线程在barrier前return、thread0统计是否发布并同步、CUB临时存储是否过早复用；用少量尾行/尾列复现并运行同步/内存检查。所有CTA参与者路径一致后再谈误差，不把时序错误当浮点容差。
-- **8193该用warp还是block，怎么做决定？** 扫行数1到数千，记录每线程工作量、寄存器/spill、驻留和总时间，对比完整概率需求下的等价实现。若block在少行受益但多行退化，可按shape分派；专用top-k与完整softmax必须分开验收。
+- **N=32正确、N=33错，先看哪里？** 给第33列极大值，检查lane0第二次load、局部统计、全warp归约和最后store；给padding放哨兵检mask泄漏。若max包含尾列但sum漏掉，能直接定位阶段；验收33及tile±1、非连续stride的概率/行和和越界检查。 **具体处理：** 修第二列轮次load及统计mask，保留整warp归约；padding极大哨兵必须不影响m/z，首33列与reference一致后再调性能。
+- **block版偶发hang或NaN，怎样缩小？** 检查是否有列越界线程在barrier前return、thread0统计是否发布并同步、CUB临时存储是否过早复用；用少量尾行/尾列复现并运行同步/内存检查。所有CTA参与者路径一致后再谈误差，不把时序错误当浮点容差。 **具体处理：** 将所有barrier放到CTA统一路径，取消列越界提前return并修shared发布/复用顺序；异常分支必须基于全行统一统计。
+- **8193该用warp还是block，怎么做决定？** 扫行数1到数千，记录每线程工作量、寄存器/spill、驻留和总时间，对比完整概率需求下的等价实现。若block在少行受益但多行退化，可按shape分派；专用top-k与完整softmax必须分开验收。 **具体处理：** 先用给定256线程block完整基线，若多行工作已足且warp更快可调整阈值；保持相同完整概率输出和异常契约比较，不拿top-k专用输出作替代。
 
 ### 学习检查点
 
 1. 为什么 N=33 的后 31 个 lane 没有第二个有效元素，也不能因此退出同一轮 full-mask shuffle？
+
+   **解答：** 这些lane只缺少自己的第二个load，不缺少归约责任。full mask声明所有32lane都执行相同shuffle并可作为通信源；提前退出会让其它lane读取不存在的参与者。它们应保留第一次值/中性统计并一起归约。
+
 2. 为什么 block softmax 不能把 `__syncthreads()` 放进 `if (col<N)` 分支？
+
+   **解答：** col<N对不同线程可能真假不同，只有部分线程进入barrier会违反CTA同步契约并可能挂起。所有线程必须到同一barrier，越界线程只跳过load/store并带中性值，不能跳过协作。
+
 
 <a id="q62"></a>
 ## Q62 CUDA 优化建议何时收益何时适得其反
@@ -1393,7 +1837,13 @@ global coalescing是另一层。连续lane的地址若能覆盖少量对齐事�
 
 去分支也要看原分支的lane一致性。若整warp都选同一条路，本来没有lane divergence；改成两条重计算都做再select，可能增加算术、load与寄存器。若原来是真分歧，predication有时改善短分支，但昂贵路径未必值得同时执行。当前top-k模板按shape选BYTES_PER_LDG/VPT/ROWS_PER_WARP，AlignedArray有特定对齐前提；只对已枚举1–512二次幂走专用分支，其余fallback成本不同，不能把模板策略复制到任意shape。
 
-技术讨论中可逐项验证：“先用地址公式检查合并、bank和对齐，再看shared/寄存器带来的驻留及spill，最后区分真实分歧和多算工作。每次只改一项，用完整调用时间和误差决定保留；cache hit、向量宽度或代码行数变好都不是最终目标。”
+#### 追问1的回答
+
+**存储角色与目标。** 寄存器存每线程局部变量，线程间不能直接拿对方寄存器，warp shuffle是显式交换；shared存CTA协作/重用数据并需同步；L1/L2由硬件缓存global等访问，命中不等于程序具有共享所有权。更高occupancy只是更多驻留机会，float4只是更宽load指令，少branch只是控制流变化，它们必须最终减少关键路径而非当独立目标。若为提occupancy降低tile，导致每份数据重读，或float4增寄存器使spill，或删统一分支后同时计算两条重路径，均可能更慢。
+
+#### 追问2的回答
+
+**两个具体陷阱。** tile[32][32]列访问的bank=(32×lane+c)mod32=c，32个不同字落同bank；tile[32][33]在该标量模式变成(lane+c)mod32，可消除这类冲突。若全lane读完全同地址则是广播，不能据“同bank”判32路冲突。N1025的float行stride=4100bytes，第0/1/2/3行相对16-byte边界余数为0/4/8/12，之后循环；基址对齐不保证每行float4合法。行末只剩1元素也不能整向量越界读，因此用逐行对齐的矢量区间加标量尾部，或整行保留标量路径，不能直接reinterpret任意切片。
 
 ### 源码调用链与证据
 
@@ -1409,14 +1859,20 @@ topk_softmax Python wrapper → CUDA launcher按expert shape选模板
 
 ### 生产实践追问
 
-- **搬shared后慢了，先要哪三组证据？** 核输入是否有实际重用/转置收益，量global事务是否下降，再看bank冲突、barrier和每block资源/驻留。若global没省而同步增加，应去掉无效stage；若bank冲突主导，按具体地址映射修布局，不盲目加padding。
-- **float4只在第二行崩溃，怎样定位？** 用N=1025核row stride和各行16-byte余数，检查尾部长度、实际指针及reinterpret前提；回到标量安全路径比值。只有对齐/边界证明成立才允许向量load，验收涵盖奇数行宽、切片offset和非连续输入。
-- **无分支版指令更少却更慢，怎么判？** 检查原分支是否warp一致、新版是否多load/多算重路径，记录寄存器/spill和有效执行时间。若关键路径没有减少就回退或按shape选择；最后需在真实算子/整层中复验，避免microbenchmark资源隔离造成假收益。
+- **搬shared后慢了，先要哪三组证据？** 核输入是否有实际重用/转置收益，量global事务是否下降，再看bank冲突、barrier和每block资源/驻留。若global没省而同步增加，应去掉无效stage；若bank冲突主导，按具体地址映射修布局，不盲目加padding。 **具体处理：** 没有重用收益就撤掉shared staging，有明确bank映射问题才改padding/布局；若驻留受shared限制且节约不足就缩tile或回退。
+- **float4只在第二行崩溃，怎样定位？** 用N=1025核row stride和各行16-byte余数，检查尾部长度、实际指针及reinterpret前提；回到标量安全路径比值。只有对齐/边界证明成立才允许向量load，验收涵盖奇数行宽、切片offset和非连续输入。 **具体处理：** 按每行实际地址使用对齐区间+标量头尾，或选择安全标量路径；切片offset/stride不满足时禁止float4重解释。
+- **无分支版指令更少却更慢，怎么判？** 检查原分支是否warp一致、新版是否多load/多算重路径，记录寄存器/spill和有效执行时间。若关键路径没有减少就回退或按shape选择；最后需在真实算子/整层中复验，避免microbenchmark资源隔离造成假收益。 **具体处理：** 统一分支原无divergence时保留它；确有分歧才比较predication与额外工作，资源退化就拆开路径，不以指令数作为上线门槛。
 
 ### 学习检查点
 
 1. 为什么同一 shared 地址的广播不能与 32 个不同地址落同一 bank 混为一谈？
+
+   **解答：** 同地址可由硬件广播给多个lane；32个不同地址同bank需分批服务（具体宽指令按transaction分析）。二者虽bank编号相同，访问的字和仲裁需求不同，不能用同一冲突估计。
+
 2. 为什么更高 occupancy 仍可能伴随更慢 kernel？
+
+   **解答：** 提高驻留可能来自缩tile/增加block，代价可能是更多重复global读、额外归约/同步或更低重用；原来已足够隐藏延迟时也无收益。必须同时看实际流量、stall、spill和完整时间，occupancy提高不是性能的充分条件。
+
 
 <a id="q68"></a>
 ## Q68 DP 乘 TP 等于 EP 的适用前提与通信成本
@@ -1449,7 +1905,13 @@ topk_softmax Python wrapper → CUDA launcher按expert shape选模板
 
 负载分布也要计入。若四个DP分片token数是[1,1,1,61]，按SUM长度拼接总64槽，若全部按最大61填充则是244槽，后者有180槽padding。但当前 `DpPaddingMode` 会按阶段/分布选SUM或MAX，这个例子不能宣称现码每轮固定付244。Graph tier、idle/hybrid模式及后端可能改变选择；应记录实际padding模式和执行行数。更多DP在均衡负载下也许更好，在此类偏斜下却可能让资源利用、等待和网络尾部恶化。
 
-口述可直接展示两张rank图：“DP×TP=EP是某个attention与MoE复用设备域的特例，普遍关系是两套分解都等于W。性能取决于group成员、token分布和布局转换，不由等式保证。我会固定总八卡，核本地shape与真实通信，再用SLO goodput检验增DP是否值得。”
+#### 追问1的回答
+
+**每个维度与同一rank复用。** 全局TP域W是当前模型层所用的设备集合，attention在其内按DP分请求、CP分上下文、TP分张量，故aDP×aCP×aTP=W；MoE按mDP分专家副本、EP分专家、mTP分专家矩阵，故mDP×EP×mTP=W。两套分解复用同一组物理rank，不是把卡数再相乘；它们的group成员和数据布局可不同。只有aCP=mDP=mTP=1且EP覆盖W时，aDP×aTP=EP=W；这里的TP是attention局部TP，不是把CLI全局域W再乘一次DP。
+
+#### 追问2的回答
+
+**DP2→DP4为何EP不变却性能改变。** 固定W8、aCP1、mDP1、mTP1、EP8，aDP2时aTP4，aDP4时aTP2，EP始终8。每条请求的attention本地张量/collective范围缩小，但attention权重副本、局部请求batch与从attention布局转expert布局的dispatch/combine不同；热门请求可能使一个DP分片挤满、其它空闲。比如[1,1,1,61]总有效64，MAX-padding可变244槽，SUM为64；当前按模式/分布选择，不能宣称固定244。另一合法映射若mTP2、mDP1，则EP=8/2=4，即使aDP2×aTP4=8也不等于EP。因此“增DP一定扩大专家并行并加速”在卡数、映射和性能三层都不成立。
 
 ### 源码调用链与证据
 
@@ -1466,11 +1928,16 @@ initialize_model_parallel(W, attention_DP, attention_CP, EP, MoE_DP)
 
 ### 生产实践追问
 
-- **改DP后EP没变，算配置错吗？** 先列W、attention DP/CP/TP及MoE DP/EP/TP，再打印实际rank成员和模型层读取值，检查两套乘积各自等于W。若只是attention TP反向缩小，EP不变符合映射；若不整除或进入不支持分支，则在运行前纠正，不能硬套等式。
-- **DP更多却吞吐下降，怎么拆因果？** 固定总卡与请求分布，记录各DP token数、padding模式/执行行、expert assignment、dispatch/combine及最长rank。将均衡和[1,1,1,61]偏斜分别重放，判断是小batch、padding还是链路尾部；验收达标goodput及各rank负载，而非平均利用率。
-- **group大小正确但跨机慢或hang，查什么？** 核真实成员/顺序与物理拓扑，逐次对齐collective的shape、dtype、调用次序，区分EP发送与TP约简。修正后先验证数值/进展，再比较跨节点字节和延迟；大小相同不代表同一group或相同通信成本。
+- **改DP后EP没变，算配置错吗？** 先列W、attention DP/CP/TP及MoE DP/EP/TP，再打印实际rank成员和模型层读取值，检查两套乘积各自等于W。若只是attention TP反向缩小，EP不变符合映射；若不整除或进入不支持分支，则在运行前纠正，不能硬套等式。 **具体处理：** 乘积和成员与当前实现一致就保留配置并按真实布局评估；不整除/不支持就纠正或拒绝组合，不为满足错误等式改EP。
+- **DP更多却吞吐下降，怎么拆因果？** 固定总卡与请求分布，记录各DP token数、padding模式/执行行、expert assignment、dispatch/combine及最长rank。将均衡和[1,1,1,61]偏斜分别重放，判断是小batch、padding还是链路尾部；验收达标goodput及各rank负载，而非平均利用率。 **具体处理：** padding主导则按支持模式减少浪费/平衡请求，专家热点或链路主导则调布局/受控路由，增DP无净收益时回到较小DP。
+- **group大小正确但跨机慢或hang，查什么？** 核真实成员/顺序与物理拓扑，逐次对齐collective的shape、dtype、调用次序，区分EP发送与TP约简。修正后先验证数值/进展，再比较跨节点字节和延迟；大小相同不代表同一group或相同通信成本。 **具体处理：** 统一真实group成员、顺序、payload和调用次序；匹配后仍慢再按拓扑调整，不能以同size取代同一通信契约。
 
 ### 学习检查点
 
 1. 固定 W=8、EP=8 时，为什么 attention DP 从 2 到 4 只会改变 attention TP，而不是自动增加 EP？
+
+   **解答：** 固定W8和aCP1，aTP=W/aDP，所以2→4会令4→2；EP由另一套MoE分解决定，此例mDP=mTP1已经固定EP8。没有增加物理rank或改变MoE划分，就不会自动增加EP。
+
 2. 如果 MoE TP=2，为什么仅知道 attention DP×TP=8 仍不能推出 EP=8？
+
+   **解答：** 由mDP×EP×mTP=W，若mTP2且mDP1，则EP4；如果mDP也不为1，EP还会更小。attention乘积只约束其自身划分，缺少MoE TP/DP信息无法推出EP8。
